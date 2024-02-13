@@ -13,7 +13,7 @@ BosonicExchangeBase::BosonicExchangeBase(int nbosons, int np, int bead_num, doub
     pbc(pbc),
     L(L) {
 #if IPI_CONVENTION
-    beta = beta / np;
+    this->beta = beta / np;
 #endif
 }
 

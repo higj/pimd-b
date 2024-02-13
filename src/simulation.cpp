@@ -598,7 +598,7 @@ void Simulation::outputVelocities(int step) {
     vel_file.open(std::format("{}/velocity_{}.dat", OUTPUT_FOLDER_NAME, this_bead), std::ios::out | std::ios::app);
 
     vel_file << std::format("{}\n", natoms);
-    vel_file << std::format(" Atoms. MD step: {}\n", step);
+    vel_file << std::format(" Atoms. Timestep: {}\n", step);
 
     for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
         vel_file << (ptcl_idx + 1) << " 1";

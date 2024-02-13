@@ -12,9 +12,6 @@ BosonicExchange::BosonicExchange(int nbosons, int np, int bead_num, double beta,
     connection_probabilities(nbosons* nbosons),
     prim_est(nbosons + 1)
 {
-#if IPI_CONVENTION
-    beta = beta / np;
-#endif
     prepare_with_coordinates();
 }
 
