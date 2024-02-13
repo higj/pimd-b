@@ -1,24 +1,13 @@
 #include "old_bosonic_exchange.h"
-
-#include <numeric>
 #include "mpi.h"
 
-OldBosonicExchange::OldBosonicExchange(int nbosons, int np, int bead_num, double beta, double spring_constant,
-    const dVec x, const dVec x_prev, const dVec x_next, bool pbc, double L) : nbosons(nbosons),
-    np(np),
-    bead_num(bead_num),
-    labels(nbosons),
-    beta(beta),
-    spring_constant(spring_constant),
-    x(x), 
-    x_prev(x_prev),
-    x_next(x_next),
-    pbc(pbc),
-    L(L) {
-#if IPI_CONVENTION
-    beta = beta / np;
-#endif
+#include <numeric>
 
+OldBosonicExchange::OldBosonicExchange(int nbosons, int np, int bead_num, double beta, double spring_constant,
+    const dVec x, const dVec x_prev, const dVec x_next, bool pbc, double L) : 
+    BosonicExchangeBase(nbosons, np, bead_num, beta, spring_constant, x, x_prev, x_next, pbc, L),
+    labels(nbosons)
+{
     // Fill the labels array with numbers from 0 to nbosons-1
     std::iota(labels.begin(), labels.end(), 0);
 
@@ -28,13 +17,15 @@ OldBosonicExchange::OldBosonicExchange(int nbosons, int np, int bead_num, double
 
 /* ---------------------------------------------------------------------- */
 
-OldBosonicExchange::~OldBosonicExchange() {
+OldBosonicExchange::~OldBosonicExchange() 
+{
 }
 
 /* ---------------------------------------------------------------------- */
 
 // Tells which particle the neighboring P bead (which is connected to 1st bead of ptcl_idx) belongs to
-int OldBosonicExchange::neighbor_of_first(int ptcl_idx) {
+int OldBosonicExchange::neighbor_of_first(int ptcl_idx)
+{
     auto it = std::find(labels.begin(), labels.end(), ptcl_idx);
 
     return std::distance(labels.begin(), it);
@@ -43,45 +34,9 @@ int OldBosonicExchange::neighbor_of_first(int ptcl_idx) {
 /* ---------------------------------------------------------------------- */
 
 // Tells which particle the neighboring 1 bead (which is connected to P bead of ptcl_idx) belongs to
-int OldBosonicExchange::neighbor_of_last(int ptcl_idx) {
+int OldBosonicExchange::neighbor_of_last(int ptcl_idx)
+{
     return labels[ptcl_idx];
-}
-
-/* ---------------------------------------------------------------------- */
-
-void OldBosonicExchange::diff_two_beads(const dVec x1, int l1, const dVec x2, int l2,
-    double diff[NDIM]) {
-    l1 = l1 % nbosons;
-    l2 = l2 % nbosons;
-
-    for (int axis = 0; axis < NDIM; ++axis) {
-        double dx = x2(l2, axis) - x1(l1, axis);
-#if MINIM
-        if (pbc)
-            applyMinimumImage(dx, L);
-#endif
-        diff[axis] = dx;
-    }
-}
-
-/* ---------------------------------------------------------------------- */
-
-double OldBosonicExchange::get_potential() const {
-    return 0;
-}
-
-/* ---------------------------------------------------------------------- */
-
-void OldBosonicExchange::spring_force(dVec &f) {
-    if (bead_num == np - 1) {
-        spring_force_last_bead(f);
-    }
-    else if (bead_num == 0) {
-        spring_force_first_bead(f);
-    }
-    else {
-        spring_force_interior_bead(f);
-    }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -116,7 +71,6 @@ double OldBosonicExchange::get_elongest()
                 }
             }
 
-            // Check if Delta(E_sigma) of this permutation is bigger than that of the previous permutation
             max_delta = std::max(max_delta, delta_e_sigma);
         } while (std::next_permutation(local_labels.begin(), local_labels.end()));
 
@@ -193,7 +147,7 @@ void OldBosonicExchange::spring_force_last_bead(dVec& f)
     }
 
     // Return labels to the original state (identity permutation)
-    //std::sort(labels.begin(), labels.end());
+    std::sort(labels.begin(), labels.end());
 }
 
 /* ---------------------------------------------------------------------- */
@@ -253,38 +207,12 @@ void OldBosonicExchange::spring_force_first_bead(dVec& f)
     }
 
     // Return labels to the original state (identity permutation)
-    //std::sort(labels.begin(), labels.end());
+    std::sort(labels.begin(), labels.end());
 }
 
 /* ---------------------------------------------------------------------- */
 
-void OldBosonicExchange::spring_force_interior_bead(dVec& f)
+double OldBosonicExchange::prim_estimator()
 {
-    for (int l = 0; l < nbosons; l++) {
-        std::vector<double> sums(NDIM, 0.0);
-
-        double diff_prev[NDIM];
-        diff_two_beads(x, l, x_prev, l, diff_prev);
-
-        for (int axis = 0; axis < NDIM; ++axis) {
-            sums[axis] += diff_prev[axis];
-        }
-
-        double diff_next[3];
-        diff_two_beads(x, l, x_next, l, diff_next);
-
-        for (int axis = 0; axis < NDIM; ++axis) {
-            sums[axis] += diff_next[axis];
-        }
-
-        for (int axis = 0; axis < NDIM; ++axis) {
-            f(l, axis) += sums[axis] * spring_constant;
-        }
-    }
-}
-
-/* ---------------------------------------------------------------------- */
-
-double OldBosonicExchange::prim_estimator() {
     return 0.0; // TODO: Figure this out
 }

@@ -22,11 +22,7 @@
 #include "random_mars.h"
 #include "random_park.h"
 
-#if OLD_BOSONIC_ALGORITHM
-#include "old_bosonic_exchange.h"
-#else
-#include "bosonic_exchange.h"
-#endif
+#include "bosonic_exchange_base.h"
 
 
 class Observable;
@@ -55,6 +51,8 @@ public:
 	bool out_pos;     // Output trajectories?
 	bool out_vel;     // Output velocities?
 	bool out_force;   // Output forces?
+
+	std::unique_ptr<BosonicExchangeBase> bosonic_exchange;
 
 	std::vector<std::unique_ptr<Observable>> observables;
 

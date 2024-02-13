@@ -1,10 +1,17 @@
 #include "observable.h"
 #include "simulation.h"
 
+#if OLD_BOSONIC_ALGORITHM
+#include "old_bosonic_exchange.h"
+#else
+#include "bosonic_exchange.h"
+#endif
+
 Simulation::Simulation(int& rank, int& nproc, Params& paramObj, unsigned int seed) :
     this_bead(rank),
     nproc(nproc),
-    rand_gen(seed + rank)
+    rand_gen(seed + rank),
+    bosonic_exchange(nullptr)
 {
     getVariant(paramObj.sim["nbeads"], nbeads);
     getVariant(paramObj.sim["dt"], dt);
@@ -134,6 +141,14 @@ Simulation::Simulation(int& rank, int& nproc, Params& paramObj, unsigned int see
 
     // Update the coordinate arrays of neighboring particles
     updateNeighboringCoordinates();
+
+    if (bosonic) {
+#if OLD_BOSONIC_ALGORITHM
+        bosonic_exchange = std::make_unique<OldBosonicExchange>(natoms, nbeads, this_bead, beta, spring_constant, coord, prev_coord, next_coord, pbc, size);
+#else
+        bosonic_exchange = std::make_unique<BosonicExchange>(natoms, nbeads, this_bead, beta, spring_constant, coord, prev_coord, next_coord, pbc, size);
+#endif
+    }
 }
 
 Simulation::~Simulation() = default;
@@ -468,15 +483,8 @@ void Simulation::updateNeighboringCoordinates() {
 // account all the N! permutations, by setting OLD_BOSONIC_ALGORITHM to true.
 void Simulation::updateSpringForces(dVec& spring_force_arr) {
     if (bosonic) {
-#if OLD_BOSONIC_ALGORITHM
-        OldBosonicExchange bosonic_exchange(natoms, nbeads, this_bead, beta, spring_constant, coord, prev_coord, next_coord, pbc, size);
-#else
-        BosonicExchange bosonic_exchange(natoms, nbeads, this_bead, beta, spring_constant, coord, prev_coord, next_coord, pbc, size);
-#endif
-        bosonic_exchange.spring_force(spring_force_arr);
-
-        //spring_energy = (this_bead == 0) ? bosonic_exchange.get_potential() : 0.0;
-        //kinetic_estimator = (this_bead == 0) ? bosonic_exchange.prim_estimator() : 0.0;
+        bosonic_exchange->updateCoordinates(coord, prev_coord, next_coord);
+        bosonic_exchange->spring_force(spring_force_arr);
     } else {
         for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
             for (int axis = 0; axis < NDIM; ++axis) {
@@ -614,7 +622,7 @@ void Simulation::outputForces(int step) {
     force_file.open(std::format("{}/force_{}.dat", OUTPUT_FOLDER_NAME, this_bead), std::ios::out | std::ios::app);
 
     force_file << std::format("{}\n", natoms);
-    force_file << std::format(" Atoms. MD step: {}\n", step);
+    force_file << std::format(" Atoms. Timestep: {}\n", step);
 
     for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
         force_file << (ptcl_idx + 1) << " 1";

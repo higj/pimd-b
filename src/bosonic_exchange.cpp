@@ -1,23 +1,17 @@
 #include "bosonic_exchange.h"
+#include "mpi.h"
 
 BosonicExchange::BosonicExchange(int nbosons, int np, int bead_num, double beta, double spring_constant, 
-    const dVec x, const dVec x_prev, const dVec x_next, bool pbc, double L) : nbosons(nbosons),
-    np(np),
-    bead_num(bead_num),
+    const dVec x, const dVec x_prev, const dVec x_next, bool pbc, double L) : 
+    BosonicExchangeBase(nbosons, np, bead_num, beta, spring_constant, x, x_prev, x_next, pbc, L),
     temp_nbosons_array(nbosons),
     separate_atom_spring(nbosons),
-    E_kn(int(nbosons * (nbosons + 1) / 2)),
+    E_kn(int(nbosons* (nbosons + 1) / 2)),
     V(nbosons + 1),
     V_backwards(nbosons + 1),
-    connection_probabilities(nbosons * nbosons),
-    beta(beta),
-    spring_constant(spring_constant),
-    x(x), 
-    x_prev(x_prev),
-    x_next(x_next),
-    pbc(pbc),
-    L(L),
-    prim_est(nbosons + 1) {
+    connection_probabilities(nbosons* nbosons),
+    prim_est(nbosons + 1)
+{
 #if IPI_CONVENTION
     beta = beta / np;
 #endif
@@ -26,7 +20,8 @@ BosonicExchange::BosonicExchange(int nbosons, int np, int bead_num, double beta,
 
 /* ---------------------------------------------------------------------- */
 
-void BosonicExchange::prepare_with_coordinates() {
+void BosonicExchange::prepare_with_coordinates()
+{
     evaluate_cycle_energies();
     if (bead_num == 0 || bead_num == np - 1) {
         // Exterior beads
@@ -38,29 +33,22 @@ void BosonicExchange::prepare_with_coordinates() {
 
 /* ---------------------------------------------------------------------- */
 
-BosonicExchange::~BosonicExchange() {
+BosonicExchange::~BosonicExchange()
+{
 }
 
 /* ---------------------------------------------------------------------- */
 
-void BosonicExchange::diff_two_beads(const dVec x1, int l1, const dVec x2, int l2,
-    double diff[NDIM]) {
-    l1 = l1 % nbosons;
-    l2 = l2 % nbosons;
-
-    for (int axis = 0; axis < NDIM; ++axis) {
-        double dx = x2(l2, axis) - x1(l1, axis);
-#if MINIM
-        if (pbc)
-            applyMinimumImage(dx, L);
-#endif
-        diff[axis] = dx;
-    }
+void BosonicExchange::updateCoordinates(const dVec new_x, const dVec new_x_prev, const dVec new_x_next)
+{
+    BosonicExchangeBase::updateCoordinates(new_x, new_x_prev, new_x_next);
+    prepare_with_coordinates();
 }
 
 /* ---------------------------------------------------------------------- */
 
-double BosonicExchange::distance_squared_two_beads(const dVec x1, int l1, const dVec x2, int l2) {
+double BosonicExchange::distance_squared_two_beads(const dVec x1, int l1, const dVec x2, int l2)
+{
     double diff[NDIM];
     diff_two_beads(x1, l1, x2, l2, diff);
 
@@ -134,14 +122,16 @@ void BosonicExchange::evaluate_cycle_energies()
 
 /* ---------------------------------------------------------------------- */
 
-double BosonicExchange::get_Enk(int m, int k) {
+double BosonicExchange::get_Enk(int m, int k)
+{
     int end_of_m = m * (m + 1) / 2;
     return E_kn[end_of_m - k];
 }
 
 /* ---------------------------------------------------------------------- */
 
-void BosonicExchange::set_Enk(int m, int k, double val) {
+void BosonicExchange::set_Enk(int m, int k, double val)
+{
     int end_of_m = m * (m + 1) / 2;
     E_kn[end_of_m - k] = val;
 }
@@ -176,7 +166,10 @@ void BosonicExchange::Evaluate_VBn()
     }
 }
 
-void BosonicExchange::Evaluate_V_backwards() {
+/* ---------------------------------------------------------------------- */
+
+void BosonicExchange::Evaluate_V_backwards()
+{
     V_backwards[nbosons] = 0.0;
 
     for (int l = nbosons - 1; l > 0; l--) {
@@ -207,42 +200,31 @@ void BosonicExchange::Evaluate_V_backwards() {
     V_backwards[0] = V[nbosons];
 }
 
-
 /* ---------------------------------------------------------------------- */
 
-double BosonicExchange::get_potential() const {
+double BosonicExchange::get_potential() const
+{
     return V[nbosons];
 }
 
 /* ---------------------------------------------------------------------- */
 
-double BosonicExchange::get_Vn(int n) const {
+double BosonicExchange::get_Vn(int n) const
+{
     return V[n];
 }
 
 /* ---------------------------------------------------------------------- */
 
-double BosonicExchange::get_E_kn_serial_order(int i) const {
+double BosonicExchange::get_E_kn_serial_order(int i) const
+{
     return E_kn[i];
 }
 
 /* ---------------------------------------------------------------------- */
 
-void BosonicExchange::spring_force(dVec &f) {
-    if (bead_num == np - 1) {
-        spring_force_last_bead(f);
-    }
-    else if (bead_num == 0) {
-        spring_force_first_bead(f);
-    }
-    else {
-        spring_force_interior_bead(f);
-    }
-}
-
-/* ---------------------------------------------------------------------- */
-
-void BosonicExchange::evaluate_connection_probabilities() {
+void BosonicExchange::evaluate_connection_probabilities()
+{
     for (int l = 0; l < nbosons - 1; l++) {
         double direct_link_probability = 1.0 - (exp(-beta *
             (V[l + 1] + V_backwards[l + 1] -
@@ -331,37 +313,12 @@ void BosonicExchange::spring_force_first_bead(dVec& f)
 
 /* ---------------------------------------------------------------------- */
 
-void BosonicExchange::spring_force_interior_bead(dVec& f)
-{
-    for (int l = 0; l < nbosons; l++) {
-        std::vector<double> sums(NDIM, 0.0);
-
-        double diff_prev[NDIM];
-        diff_two_beads(x, l, x_prev, l, diff_prev);
-
-        for (int axis = 0; axis < NDIM; ++axis) {
-            sums[axis] += diff_prev[axis];
-        }
-
-        double diff_next[3];
-        diff_two_beads(x, l, x_next, l, diff_next);
-
-        for (int axis = 0; axis < NDIM; ++axis) {
-            sums[axis] += diff_next[axis];
-        }
-
-        for (int axis = 0; axis < NDIM; ++axis) {
-            f(l, axis) += sums[axis] * spring_constant;
-        }
-    }
-}
-
-/* ---------------------------------------------------------------------- */
-
 // Primitive kinetic energy estimator for bosons.
 // Corresponds to Eqns. (4)-(5) in SI of pnas.1913365116
 double BosonicExchange::prim_estimator()
 {
+    if (bead_num != 0) return 0.0;
+
     prim_est[0] = 0.0;
 
     for (int m = 1; m < nbosons + 1; ++m) {
