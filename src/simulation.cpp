@@ -535,7 +535,7 @@ void Simulation::printReport(std::ofstream& out_file) const {
         std::string bosonic_alg_name = "Feldman-Hirshberg [O(N^2) scaling]";
 
 #if OLD_BOSONIC_ALGORITHM
-        bosonic_alg_name = "Primitive[O(N!) scaling]";
+        bosonic_alg_name = "Primitive [O(N!) scaling]";
 #endif
 
         out_file << formattedReportLine("Bosonic algorithm", bosonic_alg_name);

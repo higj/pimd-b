@@ -36,7 +36,7 @@ public:
 	// Map holding the output parameters
 	std::unordered_map<std::string, std::variant<int, double, bool>> out;
 
-	Params(std::string filename = "config");
+	Params(std::string filename);
 
 	void setSimParam(std::string name, sim_types value);
 	void setSysParam(std::string name, sys_types value);

@@ -10,11 +10,25 @@ int main(int argc, char** argv) {
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 	MPI_Comm_size(MPI_COMM_WORLD, &size);
 
+	std::string config_filename = "config.ini";
+
 	for (int i = 1; i < argc; ++i) {
 		if (std::strcmp(argv[i], "--dim") == 0) {
 			std::cout << "Program was compiled for " << NDIM << "-dimensional systems." << std::endl;
 
 			return 0;
+		}
+		else if (std::strcmp(argv[i], "-in") == 0) {
+			// Check if there is another argument after "-in"
+			if (i + 1 < argc) {
+				config_filename = argv[i + 1];
+				// Increment i to skip the next argument as it has been consumed as the filename
+				++i;
+			}
+			else {
+				std::cerr << "Error: -in option requires a filename argument." << std::endl;
+				return 1;
+			}
 		}
 	}
 
@@ -23,7 +37,7 @@ int main(int argc, char** argv) {
 	try {
 		printStatus("Initializing the simulation parameters", rank);
 
-		Params params;
+		Params params(config_filename);
 
 		unsigned int initial_seed = static_cast<unsigned int>(time(nullptr));
 

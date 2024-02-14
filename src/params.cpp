@@ -6,9 +6,9 @@
 #include <regex>
 #include <format>
 
-Params::Params(std::string filename) : reader(filename + ".ini") {
+Params::Params(std::string filename) : reader(filename) {
 
-	if (reader.ParseError() < 0) throw std::invalid_argument(std::format("Unable to read the configuration file {}.ini", filename));
+	if (reader.ParseError() < 0) throw std::invalid_argument(std::format("Unable to read the configuration file {}", filename));
 
 	/****** Simulation params ******/
 	sim["dt"] = getQuantity("time", reader.Get(Sections::SIMULATION, "dt", "1.0 femtosecond"));
