@@ -1,4 +1,5 @@
-﻿#include "pimdb.h"
+﻿#include "params.h"
+#include "simulation.h"
 #include <cstring>
 
 int main(int argc, char** argv) {

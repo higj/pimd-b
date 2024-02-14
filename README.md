@@ -82,7 +82,7 @@ Currently, the following potentials are available:
 * **Pair interaction potentials**: `free`, `harmonic` and `dipole`
 
 Each potential comes with its own parameters that must be provided in the configuration file. For example, the harmonic potential 
-requires the `omega` parameter that sets the angular frequency of the oscillator, in energy units (e.g., `omega` is in fact $\hbar\omega$).
+requires the `omega` parameter that sets the angular frequency of the oscillator, in energy units (i.e., `omega` is in fact $\hbar\omega$).
 
 All pair interaction potentials require the `cutoff` parameter. By default, the cutoff distance is set to a negative value, which tells the program to calculate all interactions, regardless of the distance between a given pair of particles. Setting cutoff to zero will disable interactions altogether.
 A positive cutoff aborts the calculation of the interaction force if the inter-particle distance is larger than the specified cutoff distance.

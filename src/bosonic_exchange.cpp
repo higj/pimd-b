@@ -44,22 +44,6 @@ void BosonicExchange::updateCoordinates(const dVec new_x, const dVec new_x_prev,
 
 /* ---------------------------------------------------------------------- */
 
-double BosonicExchange::distance_squared_two_beads(const dVec x1, int l1, const dVec x2, int l2)
-{
-    double diff[NDIM];
-    diff_two_beads(x1, l1, x2, l2, diff);
-
-    double dist_sqrd = 0.0;
-
-    for (int axis = 0; axis < NDIM; ++axis) {
-        dist_sqrd += diff[axis] * diff[axis];
-    }
-
-    return dist_sqrd;
-}
-
-/* ---------------------------------------------------------------------- */
-
 void BosonicExchange::evaluate_cycle_energies()
 {
     for (int i = 0; i < nbosons; i++) {
@@ -338,8 +322,12 @@ double BosonicExchange::prim_estimator()
 
         prim_est[m] = sig / sig_denom_m;
     }
-
+#if IPI_CONVENTION
+    // Recall that everywhere in this class "beta" is actually 1/(kB*T*P) (assuming i-Pi convention)
+    return 0.5 * NDIM * nbosons / beta + prim_est[nbosons] / np;
+#else
     return 0.5 * np * NDIM * nbosons / beta + prim_est[nbosons];
+#endif
 }
 
 /* ---------------------------------------------------------------------- */

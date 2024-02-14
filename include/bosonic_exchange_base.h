@@ -15,6 +15,7 @@ public:
 
 protected:
     void diff_two_beads(const dVec x1, int l1, const dVec x2, int l2, double diff[NDIM]);
+    double distance_squared_two_beads(const dVec x1, int l1, const dVec x2, int l2);
 
     void spring_force_interior_bead(dVec& f);
     virtual void spring_force_first_bead(dVec& f);

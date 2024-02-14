@@ -25,7 +25,6 @@ private:
     void prepare_with_coordinates();
     void evaluate_cycle_energies();
     
-    double distance_squared_two_beads(const dVec x1, int l1, const dVec x2, int l2);
     double get_Enk(int m, int k);
     void set_Enk(int m, int k, double val);
     void evaluate_connection_probabilities();

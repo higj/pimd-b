@@ -13,35 +13,39 @@
 #include "units.h"
 
 #ifndef NDIM
-#define NDIM 1  // Number of spatial dimensions
+#define NDIM 1                       // Number of spatial dimensions
 #endif
 
 #ifndef PROGRESS
-#define PROGRESS false  // Display progress bar?
+#define PROGRESS false               // Display progress bar?
 #endif
 
 #ifndef MINIM
-#define MINIM false  // Apply minimum image convention when PBC are used
+#define MINIM false                  // Apply minimum image convention when PBC are used
 #endif
 
 #ifndef WRAP
-#define WRAP false  // Wrap coordinates when PBC are used
+#define WRAP false                   // Wrap coordinates when PBC are used
 #endif
 
 #ifndef RECENTER
-#define RECENTER false  // Recenter polymer when the initial bead moves outside of the fundamental cell?
+#define RECENTER false               // Recenter polymer when the initial bead moves outside of the fundamental cell?
 #endif
 
 #ifndef OLD_BOSONIC_ALGORITHM
 #define OLD_BOSONIC_ALGORITHM false  // Enable the old bosonic algorithm that scales as O(N!)?
 #endif
 
-// In the i-Pi convention [J. Chem. Phys. 133, 124104 (2010)], the Boltzmann exponents have
-// the form exp[-(beta/P)H], where H is the classical Hamiltonian of the ring polymers. 
-// Taking 1/P outside the Hamiltonian slightly changes the spring constant, as well as
-// the expressions for the spring energy and the external forces.
-// Setting this pre-processor directive to false amounts to adopting Tuckerman's convention,
-// where exp(-beta*H) (the Hamiltonians are related through H_tuckerman = H_ipi / P).
+// In the "i-Pi convention" [J. Chem. Phys. 133, 124104 (2010); also J. Chem. Phys. 74, 4078–4095 (1981)], 
+// the Boltzmann exponents have the form exp[-(beta/P)H], where H is the classical Hamiltonian of the 
+// ring polymers. This results in a canonical distribution at P times the physical temperature.
+// In constrast, "Tuckerman's convention" [J. Chem. Phys. 99, 2796–2808 (1993)] uses weights of the form exp(-beta*H),
+// such that the temperature of the canonical ensemble coincides with the physical temperature.
+// Notably, the classical Hamiltonians of the two conventions differ, with the spring constant
+// in the i-Pi convention being P times larger than that in Tuckerman's convention. Additionally, the i-Pi convention
+// lacks a 1/P prefactor in front of the external potential. The Hamiltonians of the two conventions are related through
+// H_tuckerman = H_ipi / P. Note however that the expressions for the various estimators are unaffected by this choice.
+// Setting the following pre-processor directive to false amounts to adopting Tuckerman's convention.
 #ifndef IPI_CONVENTION
 #define IPI_CONVENTION true
 #endif
@@ -158,10 +162,10 @@ void printError(const std::string& msg, int this_rank, const std::string& err_ty
 void printProgress(int this_step, int total_steps, int this_rank, int out_rank = 0);
 
 // To handle periodic boundary conditions, we employ the Class C storage
-// concept [Z. Phys. Chem. 227 (2013) 345–352]: we allow atoms to move
-// outside the primary simulation box. That is, we do not fold
-// the coordinates into the simulation box. Instead, we account for the PBC
-// when calculating the distances between particles (or any spatial vector differences).
+// concept [Z. Phys. Chem. 227 (2013) 345–352], allowing atoms to move
+// outside the primary simulation box. That is, the coordinates are not folded
+// into the simulation box. Instead, we account for the PBC when calculating the
+// distances between particles (or any spatial vector differences).
 // This is done using Algorithm C4. It calculates the remainded of dx
 // on the interval [-L/2, L/2].
 void applyMinimumImage(double& dx, double L);
