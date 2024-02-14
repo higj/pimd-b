@@ -8,11 +8,8 @@
 // Internally this simulation uses the atomic units.
 // All physical quantities passed to the simulation are
 // converted to atomic units.
-// TODO: Convert output data to desired units
 // https://en.wikipedia.org/wiki/Hartree_atomic_units
-// https://github.com/i-pi/i-pi/blob/master/ipi/utils/units.py
 
-// See: https://scicomp.stackexchange.com/a/31003/43039
 namespace Constants {
 	constexpr double kB = 1.0;         // Boltzmann constant
 	constexpr double hbar = 1.0;       // Reduced Planck's constant

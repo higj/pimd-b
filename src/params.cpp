@@ -146,7 +146,7 @@ std::string Params::getSysParam(std::string name) {
 	return reader.Get("sys", name, "none");
 }
 
-// Takes an string and splits it into several strings based on a delimiter
+// Splits a string into several strings based on a delimiter
 std::vector<std::string> Params::splitString(const std::string& line, char delimiter) {
 	std::stringstream ss(line);
 	std::vector<std::string> tokens;

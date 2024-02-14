@@ -176,7 +176,11 @@ void Simulation::genMomentum(dVec &momenta_arr) {
 
 // Sample the Maxwell-Boltzmann distribution
 double Simulation::sampleMB() {
-    std::normal_distribution<double> normal(0.0, 1/sqrt(beta * mass));
+#if IPI_CONVENTION
+    std::normal_distribution<double> normal(0.0, 1/sqrt(beta * mass / nbeads));
+#else
+    std::normal_distribution<double> normal(0.0, 1 / sqrt(beta * mass));
+#endif
 
     return normal(rand_gen);    
 }
