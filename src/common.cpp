@@ -6,6 +6,11 @@ void printMsg(const std::string& msg, int this_rank, int out_rank) {
     }
 }
 
+void printInfo(const std::string& info, bool& info_flag, int this_rank, int out_rank) {
+    printMsg(info, this_rank, out_rank);
+    info_flag = true;
+}
+
 void printStatus(const std::string& status, int this_rank, int out_rank) {
     printMsg("[*] " + status, this_rank, out_rank);
 }

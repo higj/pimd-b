@@ -152,6 +152,9 @@ using dVec = VectorArray<double, NDIM>;
 // Print a general message on "out_rank" (by default, the root rank is 0)
 void printMsg(const std::string& msg, int this_rank, int out_rank = 0);
 
+// Print an info message on "out_rank" (by default, the root rank is 0)
+void printInfo(const std::string& info, bool& info_flag, int this_rank, int out_rank = 0);
+
 // Print a status message on "out_rank" (by default, the root rank is 0)
 void printStatus(const std::string& status, int this_rank, int out_rank = 0);
 
