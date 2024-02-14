@@ -9,6 +9,8 @@ public:
         const dVec x, const dVec x_prev, const dVec x_next, bool pbc, double L);
     ~OldBosonicExchange();
 
+    void updateCoordinates(const dVec new_x, const dVec new_x_prev, const dVec new_x_next) override;
+
     double prim_estimator();
 
 protected:

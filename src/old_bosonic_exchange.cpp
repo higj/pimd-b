@@ -23,6 +23,16 @@ OldBosonicExchange::~OldBosonicExchange()
 
 /* ---------------------------------------------------------------------- */
 
+void OldBosonicExchange::updateCoordinates(const dVec new_x, const dVec new_x_prev, const dVec new_x_next)
+{
+    BosonicExchangeBase::updateCoordinates(new_x, new_x_prev, new_x_next);
+
+    // Recalculate e_longest after each coordinate update
+    e_longest = get_elongest();
+}
+
+/* ---------------------------------------------------------------------- */
+
 // Tells which particle the neighboring P bead (which is connected to 1st bead of ptcl_idx) belongs to
 int OldBosonicExchange::neighbor_of_first(int ptcl_idx)
 {
