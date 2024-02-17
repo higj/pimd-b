@@ -102,12 +102,6 @@ private:
 	int this_bead;  // Current process id ("rank" of MPI_Comm_rank)
 	int nproc;      // Number of processes ("size" of MPI_Comm_size)
 	unsigned int params_seed;
-
-	double spring_energy; // TODO: Consider removing
-
-	// Left for the bosonic case. 
-	// TODO: Remove after finishing integrating bosonic estimator into observables class.
-	double kinetic_estimator; 
 		
 	void printReport(std::ofstream& out_file) const;
 

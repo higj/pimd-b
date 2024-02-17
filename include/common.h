@@ -140,7 +140,7 @@ private:
     std::vector<T> m_arr;
 };
 
-// Use a non-member operator overload to for the right-hand side case
+// Use a non-member operator overload for the right-hand side case
 template<typename T, int dim>
 VectorArray<T, dim> operator*(const T& lhs_scalar, VectorArray<T, dim> rhs_vec) {
     return rhs_vec * lhs_scalar;

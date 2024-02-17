@@ -19,7 +19,6 @@ int main(int argc, char** argv) {
 	try {
 		for (int i = 1; i < argc; ++i) {
 			if (std::strcmp(argv[i], "--dim") == 0) {
-				//std::cout << " " << NDIM << "-dimensional systems." << std::endl;
 				printInfo(std::format("Program was compiled for {}-dimensional systems", NDIM), info_flag, rank);
 			}
 			else if (std::strcmp(argv[i], "-in") == 0) {
@@ -32,9 +31,6 @@ int main(int argc, char** argv) {
 				else {
 					throw std::invalid_argument("-in option requires a filename argument");
 				}
-			}
-			else {
-				throw std::invalid_argument("Invalid command-line argument");
 			}
 		}
 

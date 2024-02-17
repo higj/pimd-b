@@ -11,9 +11,9 @@
 // https://en.wikipedia.org/wiki/Hartree_atomic_units
 
 namespace Constants {
-	constexpr double kB = 1.0;         // Boltzmann constant
-	constexpr double hbar = 1.0;       // Reduced Planck's constant
-	constexpr double amu = 1822.8885;  // Atomic mass unit (in terms of electron masses)
+    constexpr double kB = 1.0;         // Boltzmann constant
+    constexpr double hbar = 1.0;       // Reduced Planck's constant
+    constexpr double amu = 1822.8885;  // Atomic mass unit (in terms of electron masses)
 }
 
 // TODO: Add the option to detect short prefixes and units (e.g., "fs" or "femtosec" in addition to "femtoseconds")
