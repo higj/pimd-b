@@ -98,11 +98,11 @@ public:
 
 	dVec getSeparation(int first_ptcl, int second_ptcl) const;
 
-private:
 	int this_bead;  // Current process id ("rank" of MPI_Comm_rank)
 	int nproc;      // Number of processes ("size" of MPI_Comm_size)
 	unsigned int params_seed;
-		
+
+private:		
 	void printReport(std::ofstream& out_file) const;
 
 	std::string init_pos_type;

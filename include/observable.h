@@ -42,6 +42,7 @@ public:
 
     void calculate() override;
 private:
+    double primitiveKineticDistinguishable();
     void calculateKinetic();
     void calculatePotential();
 };

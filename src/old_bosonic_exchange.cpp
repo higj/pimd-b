@@ -222,7 +222,52 @@ void OldBosonicExchange::spring_force_first_bead(dVec& f)
 
 /* ---------------------------------------------------------------------- */
 
-double OldBosonicExchange::prim_estimator()
-{
-    return 0.0; // TODO: Figure this out
+// This method should be called only at timeslice=0
+double OldBosonicExchange::prim_estimator() {
+    const dVec x_first_bead = x;
+    const dVec x_last_bead = x_prev;
+
+    double numerator = 0.0;
+    double denom_weight = 0.0;
+
+    do {
+        double weight = 0.0;
+
+        for (int l = 0; l < nbosons; ++l) {
+            std::vector<double> sums(NDIM, 0.0);
+
+            double diff_prev[NDIM];
+
+            // Last bead (P) of some particle (depending on the permutation) minus first bead (1) of the l-th particle
+            diff_two_beads(x_first_bead, l, x_last_bead, neighbor_of_first(l), diff_prev);
+
+            // Coordinate differences corresponding to exterior beads
+            for (int axis = 0; axis < NDIM; ++axis) {
+                weight += diff_prev[axis] * diff_prev[axis];
+            }
+        }
+
+        double delta_spring_energy = 0.5 * spring_constant * weight - e_longest;
+        weight = exp(-beta * delta_spring_energy);
+
+        // Delta(E^sigma) is ready only at this point. We multiply Delta(E^sigma) by the weight
+        // and add the result to the numerator (and also update the denominator by adding the 
+        // weight of the current permutation).
+        numerator += delta_spring_energy * weight;
+        denom_weight += weight;
+
+    } while (std::next_permutation(labels.begin(), labels.end()));
+
+    // Return labels to the original state (identity permutation)
+    std::sort(labels.begin(), labels.end());
+
+    double bosonic_spring_energy = numerator / denom_weight;
+
+#if IPI_CONVENTION
+    bosonic_spring_energy /= np;
+#endif
+
+    // Recall that everywhere in this class "beta" is actually 1/(kB*T*P) (assuming i-Pi convention).
+    // The spring energies due to all bead pairs except 1 and P are classical.
+    return bosonic_spring_energy;
 }

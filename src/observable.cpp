@@ -29,30 +29,48 @@ void EnergyObservable::calculate() {
     calculatePotential();
 }
 
-void EnergyObservable::calculateKinetic() {
-    if (sim.bosonic) {
-        quantities["kinetic"] = sim.bosonic_exchange->prim_estimator();
-    } else {
-        double spring_energy = 0.0;
+// Calculates the contribution of the current imaginary time-slice to
+// the primitive kinetic energy estimator of distinguishable particles.
+double EnergyObservable::primitiveKineticDistinguishable() {
+    double spring_energy = 0.0;
 
-        for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
-            for (int axis = 0; axis < NDIM; ++axis) {
-                double diff = sim.coord(ptcl_idx, axis) - sim.next_coord(ptcl_idx, axis);
+    for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
+        for (int axis = 0; axis < NDIM; ++axis) {
+            double diff = sim.coord(ptcl_idx, axis) - sim.prev_coord(ptcl_idx, axis);
 #if MINIM
-                if (pbc)
-                    applyMinimumImage(diff, sim.size);
+            if (pbc)
+                applyMinimumImage(diff, sim.size);
 #endif
-                spring_energy += diff * diff;
+            spring_energy += diff * diff;
+        }
     }
-}
 
-        spring_energy = 0.5 * sim.mass * sim.omega_p * sim.omega_p * spring_energy;
+    spring_energy = 0.5 * sim.mass * sim.omega_p * sim.omega_p * spring_energy;
 
 #if IPI_CONVENTION
-        spring_energy /= sim.nbeads;
+    spring_energy /= sim.nbeads;
 #endif
 
-        quantities["kinetic"] = 0.5 * NDIM * sim.natoms / sim.beta - spring_energy;
+    return spring_energy;
+}
+
+void EnergyObservable::calculateKinetic() {
+    double prefactor = 0.5 * NDIM * sim.natoms / sim.beta;
+
+    if (sim.bosonic) {
+#if OLD_BOSONIC_ALGORITHM
+        if (sim.this_bead == 0) {
+            quantities["kinetic"] = prefactor - sim.bosonic_exchange->prim_estimator();
+        } else {
+            quantities["kinetic"] = prefactor - primitiveKineticDistinguishable();
+        }
+#else
+        if (sim.this_bead == 0) {
+            quantities["kinetic"] = prefactor * sim.nbeads + sim.bosonic_exchange->prim_estimator();
+        }
+#endif
+    } else {
+        quantities["kinetic"] = prefactor - primitiveKineticDistinguishable();
     }
 
     quantities["kinetic"] = Units::unit_to_user("energy", out_unit, quantities["kinetic"]);

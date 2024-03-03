@@ -296,8 +296,6 @@ void Simulation::run() {
     
     /**** Main loop performing molecular dynamics steps ****/
     for (int step = 0; step <= steps; ++step) {
-        kinetic_estimator = 0.0;
-
         for (const auto& observable : observables) {
             observable->resetValues();
         }
@@ -492,18 +490,17 @@ void Simulation::updateSpringForces(dVec& spring_force_arr) {
     } else {
         for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
             for (int axis = 0; axis < NDIM; ++axis) {
-                if (pbc) {
-                    double d_prev = prev_coord(ptcl_idx, axis) - coord(ptcl_idx, axis);
-                    double d_next = next_coord(ptcl_idx, axis) - coord(ptcl_idx, axis);
+                double d_prev = prev_coord(ptcl_idx, axis) - coord(ptcl_idx, axis);
+                double d_next = next_coord(ptcl_idx, axis) - coord(ptcl_idx, axis);
+
 #if MINIM
+                if (pbc) {
                     applyMinimumImage(d_prev, size);
                     applyMinimumImage(d_next, size);
-#endif
-                    spring_force_arr(ptcl_idx, axis) = spring_constant * (d_prev + d_next);
-                } else {
-                    spring_force_arr(ptcl_idx, axis) = spring_constant * (prev_coord(ptcl_idx, axis) +
-                        next_coord(ptcl_idx, axis) - 2 * coord(ptcl_idx, axis));
                 }
+#endif
+
+                spring_force_arr(ptcl_idx, axis) = spring_constant * (d_prev + d_next);
             }
         }
     }
