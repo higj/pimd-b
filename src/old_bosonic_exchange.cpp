@@ -3,9 +3,9 @@
 
 #include <numeric>
 
-OldBosonicExchange::OldBosonicExchange(int nbosons, int np, int bead_num, double beta, double spring_constant,
+OldBosonicExchange::OldBosonicExchange(int nbosons, int np, int bead_num, double _beta, double spring_constant,
     const dVec x, const dVec x_prev, const dVec x_next, bool pbc, double L) : 
-    BosonicExchangeBase(nbosons, np, bead_num, beta, spring_constant, x, x_prev, x_next, pbc, L),
+    BosonicExchangeBase(nbosons, np, bead_num, _beta, spring_constant, x, x_prev, x_next, pbc, L),
     labels(nbosons)
 {
     // Fill the labels array with numbers from 0 to nbosons-1

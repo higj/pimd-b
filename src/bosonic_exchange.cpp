@@ -1,9 +1,9 @@
 #include "bosonic_exchange.h"
 #include "mpi.h"
 
-BosonicExchange::BosonicExchange(int nbosons, int np, int bead_num, double beta, double spring_constant, 
+BosonicExchange::BosonicExchange(int nbosons, int np, int bead_num, double _beta, double spring_constant, 
     const dVec x, const dVec x_prev, const dVec x_next, bool pbc, double L) : 
-    BosonicExchangeBase(nbosons, np, bead_num, beta, spring_constant, x, x_prev, x_next, pbc, L),
+    BosonicExchangeBase(nbosons, np, bead_num, _beta, spring_constant, x, x_prev, x_next, pbc, L),
     temp_nbosons_array(nbosons),
     separate_atom_spring(nbosons),
     E_kn(int(nbosons* (nbosons + 1) / 2)),
@@ -81,11 +81,11 @@ void BosonicExchange::evaluate_cycle_energies()
 
         for (int v = 0; v < nbosons; v++) {
             set_Enk(v + 1, 1,
-                -0.5 * spring_constant * separate_atom_spring[v]);
+                0.5 * spring_constant * separate_atom_spring[v]);
 
             for (int u = v - 1; u >= 0; u--) {
                 double val = get_Enk(v + 1, v - u) +
-                    -0.5 * spring_constant * (
+                    0.5 * spring_constant * (
                         // Eint(u)
                         separate_atom_spring[u] - distance_squared_two_beads(x_first_bead, u, x_last_bead, u)
                         // connect u to u+1
@@ -322,11 +322,11 @@ double BosonicExchange::prim_estimator()
 
         prim_est[m] = sig / sig_denom_m;
     }
+
 #if IPI_CONVENTION
-    // Recall that everywhere in this class "beta" is actually 1/(kB*T*P) (assuming i-Pi convention)
-    return 0.5 * NDIM * nbosons / beta + prim_est[nbosons] / np;
+    return prim_est[nbosons] / np;
 #else
-    return 0.5 * np * NDIM * nbosons / beta + prim_est[nbosons];
+    return prim_est[nbosons];
 #endif
 }
 
