@@ -54,6 +54,7 @@ private:
 	std::vector<std::string> external_potential_names;     // Allowed external potential names
 	std::vector<std::string> allowed_coord_init_methods;   // Allowed coordinate initialization methods
 	std::vector<std::string> allowed_vel_init_methods;     // Allowed velocity initialization methods
+	std::vector<std::string> allowed_propagators;          // Allowed time propagation algorithms
 
 	std::vector<std::string> splitString(const std::string& line, char delimiter = ' ');
 

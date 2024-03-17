@@ -18,6 +18,7 @@
 #include "common.h"
 #include "params.h"
 #include "potential.h"
+#include "propagator.h"
 
 #include "random_mars.h"
 #include "random_park.h"
@@ -75,9 +76,12 @@ public:
 	void zeroMomentum();
 	
 	double sampleMB();
+	
+	std::unique_ptr<Propagator> propagator;
 
 	void langevinStep();
 	void vvStep();
+	void nmStep();
 	void run();
 	void forceIniCond(dVec pos_arr, dVec momentum_arr);
 
@@ -107,6 +111,7 @@ private:
 
 	std::string init_pos_type;
 	std::string init_vel_type;
+	std::string propagator_type;
 
 	std::string external_potential_name;
 	std::string interaction_potential_name;
