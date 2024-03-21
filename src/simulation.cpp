@@ -355,7 +355,7 @@ void Simulation::run() {
                     MPI_Allreduce(&local_quantity_value, &quantity_value, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
                     if (this_bead == 0)
-                        out_file << std::format(" {:^16.8e}", quantity_value);
+                        out_file << std::format(" {:^16.12e}", quantity_value);
                 }
             }
             
@@ -582,7 +582,7 @@ void Simulation::outputTrajectories(int step) {
 
         for (int axis = 0; axis < NDIM; ++axis)
             // TODO: Make the units configurable
-            xyz_file << " " << Units::unit_to_user("length", "angstrom", coord(ptcl_idx, axis));
+            xyz_file << std::format(" {:^16.12e}", Units::unit_to_user("length", "angstrom", coord(ptcl_idx, axis)));
 #if NDIM == 1
         xyz_file << " 0.0 0.0";
 #elif NDIM == 2
@@ -606,7 +606,7 @@ void Simulation::outputVelocities(int step) {
 
         for (int axis = 0; axis < NDIM; ++axis)
             // TODO: Make the units configurable
-            vel_file << " " << Units::unit_to_user("velocity", "angstrom/ps", momenta(ptcl_idx, axis) / mass);
+            vel_file << std::format(" {:^16.12e}", Units::unit_to_user("velocity", "angstrom/ps", momenta(ptcl_idx, axis) / mass));
 #if NDIM == 1
         vel_file << " 0.0 0.0";
 #elif NDIM == 2
@@ -629,7 +629,7 @@ void Simulation::outputForces(int step) {
         force_file << (ptcl_idx + 1) << " 1";
 
         for (int axis = 0; axis < NDIM; ++axis)
-            force_file << " " << Units::unit_to_user("force", "ev/ang", forces(ptcl_idx, axis));
+            force_file << std::format(" {:^16.12e}", Units::unit_to_user("force", "ev/ang", forces(ptcl_idx, axis)));
 #if NDIM == 1
         force_file << " 0.0 0.0";
 #elif NDIM == 2
