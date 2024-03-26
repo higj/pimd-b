@@ -91,6 +91,7 @@ public:
 
 	void updateForces();
 	void updateSpringForces(dVec &spring_force_arr);
+	void updatePhysicalForces(dVec &physical_forces_arr);
 	
 	void getNextCoords(dVec& next);
 	void getPrevCoords(dVec& prev);

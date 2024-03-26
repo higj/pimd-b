@@ -438,35 +438,12 @@ void Simulation::updateForces() {
     // classical isomorphism) and the non-spring forces (due to either an external potential 
     // or interactions).
     dVec spring_forces(natoms), physical_forces(natoms);
-
+    
+    // Calculate the internal (spring) forces
     updateSpringForces(spring_forces);
 
     // Calculate the external forces acting on the particles
-    physical_forces = (-1.0) * ext_potential->gradV(coord);
-
-    if (int_pot_cutoff != 0.0) {
-        for (int ptcl_one = 0; ptcl_one < natoms; ++ptcl_one) {
-            for (int ptcl_two = ptcl_one + 1; ptcl_two < natoms; ++ptcl_two) {
-                dVec diff = getSeparation(ptcl_one, ptcl_two);  // Vectorial distance
-                double distance = diff.norm(0);                 // Scalar distance
-
-                // If the distance between the particles exceeds the cutoff length
-                // then we assume the interaction is negligible and do not bother
-                // calculating the force.
-                // We use the convention that when cutoff < 0 then the interaction is
-                // calculated for all distances.
-                if (distance < int_pot_cutoff || int_pot_cutoff < 0.0) {
-                    dVec force_on_one(1);
-                    force_on_one = (-1.0) * int_potential->gradV(diff);
-
-                    for (int axis = 0; axis < NDIM; ++axis) {
-                        physical_forces(ptcl_one, axis) += force_on_one(0, axis);
-                        physical_forces(ptcl_two, axis) -= force_on_one(0, axis);
-                    }
-                }
-            }
-        }
-    }
+    updatePhysicalForces(physical_forces);
 
     for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
@@ -510,6 +487,35 @@ void Simulation::updateSpringForces(dVec& spring_force_arr) {
 #endif
 
                 spring_force_arr(ptcl_idx, axis) = spring_constant * (d_prev + d_next);
+            }
+        }
+    }
+}
+
+// Updates the force vector acted on a specific bead by the external potential and the internal interactions
+void Simulation::updatePhysicalForces(dVec& physical_force_arr) {
+    physical_force_arr = (-1.0) * ext_potential->gradV(coord);
+
+    if (int_pot_cutoff != 0.0) {
+        for (int ptcl_one = 0; ptcl_one < natoms; ++ptcl_one) {
+            for (int ptcl_two = ptcl_one + 1; ptcl_two < natoms; ++ptcl_two) {
+                dVec diff = getSeparation(ptcl_one, ptcl_two);  // Vectorial distance
+                double distance = diff.norm(0);                 // Scalar distance
+
+                // If the distance between the particles exceeds the cutoff length
+                // then we assume the interaction is negligible and do not bother
+                // calculating the force.
+                // We use the convention that when cutoff < 0 then the interaction is
+                // calculated for all distances.
+                if (distance < int_pot_cutoff || int_pot_cutoff < 0.0) {
+                    dVec force_on_one(1);
+                    force_on_one = (-1.0) * int_potential->gradV(diff);
+
+                    for (int axis = 0; axis < NDIM; ++axis) {
+                        physical_force_arr(ptcl_one, axis) += force_on_one(0, axis);
+                        physical_force_arr(ptcl_two, axis) -= force_on_one(0, axis);
+                    }
+                }
             }
         }
     }
@@ -592,7 +598,8 @@ void Simulation::outputTrajectories(int step) {
 
         for (int axis = 0; axis < NDIM; ++axis)
             // TODO: Make the units configurable
-            xyz_file << " " << Units::unit_to_user("length", "angstrom", coord(ptcl_idx, axis));
+            //xyz_file << " " << Units::unit_to_user("length", "angstrom", coord(ptcl_idx, axis));
+            xyz_file << std::format(" {:^20.12e}", Units::unit_to_user("length", "angstrom", coord(ptcl_idx, axis)));
 #if NDIM == 1
         xyz_file << " 0.0 0.0";
 #elif NDIM == 2
@@ -616,7 +623,8 @@ void Simulation::outputVelocities(int step) {
 
         for (int axis = 0; axis < NDIM; ++axis)
             // TODO: Make the units configurable
-            vel_file << " " << Units::unit_to_user("velocity", "angstrom/ps", momenta(ptcl_idx, axis) / mass);
+            //vel_file << " " << Units::unit_to_user("velocity", "angstrom/ps", momenta(ptcl_idx, axis) / mass);
+            vel_file << std::format(" {:^20.12e}", Units::unit_to_user("velocity", "angstrom/ps", momenta(ptcl_idx, axis) / mass));
 #if NDIM == 1
         vel_file << " 0.0 0.0";
 #elif NDIM == 2
@@ -639,7 +647,8 @@ void Simulation::outputForces(int step) {
         force_file << (ptcl_idx + 1) << " 1";
 
         for (int axis = 0; axis < NDIM; ++axis)
-            force_file << " " << Units::unit_to_user("force", "ev/ang", forces(ptcl_idx, axis));
+            //force_file << " " << Units::unit_to_user("force", "ev/ang", forces(ptcl_idx, axis));
+            force_file << std::format(" {:^20.12e}", Units::unit_to_user("force", "ev/ang", forces(ptcl_idx, axis)));
 #if NDIM == 1
         force_file << " 0.0 0.0";
 #elif NDIM == 2
