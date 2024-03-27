@@ -21,12 +21,14 @@ void Observable::resetValues() {
 Observable::~Observable() = default;
 
 EnergyObservable::EnergyObservable(const Simulation& _sim, int _freq, const std::string& _out_unit) : Observable(_sim, _freq, _out_unit) {
-    initialize({ "kinetic", "potential", "ext_pot", "int_pot", "virial" });
+    initialize({ "classical_kinetic", "classical_potential", "kinetic", "potential", "ext_pot", "int_pot", "virial" });
 }
 
 void EnergyObservable::calculate() {
+    calculateClassicalKinetic();
     calculateKinetic();
     calculatePotential();
+    calculateClassicalPotential();
 }
 
 // Calculates the contribution of the current imaginary time-slice to
@@ -52,6 +54,29 @@ double EnergyObservable::primitiveKineticDistinguishable() {
 #endif
 
     return spring_energy;
+}
+
+void EnergyObservable::calculateClassicalKinetic() {
+    double prefactor =  1 / (2 * sim.mass), kinetic = 0.0, mom;
+    for (int axis = 0; axis < NDIM; ++axis) {
+        for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
+            mom = sim.momenta(ptcl_idx, axis);
+            kinetic += prefactor * mom * mom;
+        }
+    }
+    quantities["classical_kinetic"] = Units::unit_to_user("energy", out_unit, kinetic);
+}
+
+void EnergyObservable::calculateClassicalPotential() {
+    double prefactor = 0.5 * sim.mass * sim.omega_p *sim.omega_p, potential = 0.0, dx1, dx2;
+    for (int axis = 0; axis < NDIM; ++axis) {
+        for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
+            dx1 = sim.coord(ptcl_idx, axis) - sim.prev_coord(ptcl_idx, axis);
+            dx2 = sim.coord(ptcl_idx, axis) - sim.next_coord(ptcl_idx, axis);
+            potential += prefactor * (dx1 * dx1 + dx2 * dx2);
+        }
+    }
+    quantities["classical_potential"] = Units::unit_to_user("energy", out_unit, potential / 2 /* account for degenerracies*/) + sim.nbeads * quantities["potential"];  // requires 'quantities["potential"]' to be calculated first
 }
 
 void EnergyObservable::calculateKinetic() {
