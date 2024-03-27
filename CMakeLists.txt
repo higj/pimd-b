@@ -11,6 +11,9 @@ endif()
 
 project (pimdb)
 
+list(APPEND CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/cmake/modules/")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules/")
+
 # Search the directory tree for files that match the pattern
 file(GLOB_RECURSE PIMDB_SRC src/*.cpp)
 file(GLOB_RECURSE PIMDB_HEADERS src/*.h)
@@ -24,19 +27,17 @@ include_directories(libs)
 add_executable(pimdb ${PIMDB_SRC} ${PIMDB_HEADERS} ${PIMDB_LIBS})
 
 # MPI
-option(ENABLE_MPI "Enable MPI parallelization" ON)
+find_package(MPI REQUIRED)
+#include_directories(${FFTW3_INCLUDE_DIR})
 
-if(ENABLE_MPI)
-    find_package(MPI REQUIRED)
-    include_directories(${MPI_INCLUDE_PATH})
-    set(CMAKE_C_FLAGS "${CMAKE_FLAGS} ${MPI_FLAGS}")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MPI_CXX_FLAGS}")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${MPI_EXE_LINKER_FLAGS}")
-endif(ENABLE_MPI)
+include_directories(${MPI_INCLUDE_PATH})
 
-if(ENABLE_MPI)
-    target_link_libraries(pimdb ${MPI_C_LIBRARIES})
-endif(ENABLE_MPI)
+set(CMAKE_C_FLAGS "${CMAKE_FLAGS} ${MPI_FLAGS}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MPI_CXX_FLAGS}")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${MPI_EXE_LINKER_FLAGS}")
+
+target_link_libraries(pimdb ${MPI_C_LIBRARIES})
+#target_link_libraries(pimdb ${MPI_C_LIBRARIES} ${FFTW3_LIBRARIES})
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)
   set_property(TARGET pimdb PROPERTY CXX_STANDARD 20)

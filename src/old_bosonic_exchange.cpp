@@ -267,7 +267,5 @@ double OldBosonicExchange::prim_estimator() {
     bosonic_spring_energy /= np;
 #endif
 
-    // Recall that everywhere in this class "beta" is actually 1/(kB*T*P) (assuming i-Pi convention).
-    // The spring energies due to all bead pairs except 1 and P are classical.
     return bosonic_spring_energy;
 }

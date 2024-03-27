@@ -11,7 +11,7 @@
 // https://en.wikipedia.org/wiki/Hartree_atomic_units
 
 namespace Constants {
-    constexpr double kB = 1.0;         // Boltzmann constant
+    constexpr double kB = 1.0;         // Boltzmann constant (in Hartrees per atomic unit of temperature)
     constexpr double hbar = 1.0;       // Reduced Planck's constant
     constexpr double amu = 1822.8885;  // Atomic mass unit (in terms of electron masses)
 }

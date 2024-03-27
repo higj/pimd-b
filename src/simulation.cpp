@@ -643,26 +643,24 @@ void Simulation::outputForces(int step) {
 
 // Zero the linear momentum of a group of atoms by subtracting the velocity
 // of the center of mass from the velocity of each atom.
+// The calculation assumes that all atoms have the same mass, in which case the 
+// center of mass momentum is given by p_c=m*v_c=(p_1+..+p_n)/n, where n
+// is the number of particles (here n=N*P).
 void Simulation::zeroMomentum() {
-    dVec momentum_cm(1);
-    const int cm_size = momentum_cm.size();
+    dVec momentum_cm(1);           // Resulting center of mass momentum vector
+    dVec momentum_cm_per_bead(1);  // Contribution of the current time-slice to the center of mass momentum vector
 
-    if (this_bead == 0) {
-        double denom = natoms;
-        dVec momentum_cm_per_bead(1);
-
-        for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
-            for (int axis = 0; axis < NDIM; ++axis) {
-                momentum_cm(0, axis) += momenta(ptcl_idx, axis);
-            }
-        }
-
+    for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
-            momentum_cm(0, axis) /= denom;
+            momentum_cm_per_bead(0, axis) += momenta(ptcl_idx, axis);
         }
     }
 
-    MPI_Bcast(momentum_cm.data(), cm_size, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    for (int axis = 0; axis < NDIM; ++axis) {
+        momentum_cm_per_bead(0, axis) /= (natoms * nbeads);
+    }
+
+    MPI_Allreduce(momentum_cm_per_bead.data(), momentum_cm.data(), momentum_cm.size(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
     for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
