@@ -42,7 +42,7 @@ $$
 For interior beads, that is, for $j=2,\dots,P-1$, the forces coincide with the ordinary spring forces in systems of distinguishable particles, i.e.,
 
 $$
--\nabla_{\mathbf{r}_{\ell}^{j}}E^{\sigma}=-m\omega_{p}^{2}\left(2\mathbf{r}_{\ell}^{j}-\mathbf{r}_{\ell}^{j+1}-\mathbf{r}_{\ell}^{j-1}\right).
+-\nabla_{\mathbf{r}_ {\ell}^{j}}E^{\sigma}=-m\omega_ {p}^{2}\left(2\mathbf{r} _{\ell}^{j}-\mathbf{r}_ {\ell}^{j+1}-\mathbf{r}_ {\ell}^{j-1}\right).
 $$
 
 Exchange effects only affect the forces acting on the exterior beads ($j=1,P$). We use these facts to optimize the old bosonic algorithm. Note however that the scaling of the old bosonic algorithm remains $\mathcal{O}(N!)$.
