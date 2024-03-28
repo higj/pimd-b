@@ -12,7 +12,7 @@
 In the case of bosons, the partition function must be evaluated in a properly symmetrized basis. As a result, the partition function contains contributions from $N!$ permutations, where $N$ is the number of quantum particles. A naive bosonic PIMD algorithm takes into account all the $N!$ permutations. Labeling the spring energy due to a specific permutation $\sigma$ as
 
 $$
-E^{\sigma}=\frac{1}{2}m\omega_{p}^{2}\sum_{\ell=1}^{N}\sum_{j=1}^{P}\left(\mathbf{r}_ {\ell}^{j}-\mathbf{r}_ {\ell}^{j+1}\right)^{2},\;\text{where}\;\mathbf{r}_ {\ell}^{P+1}=\mathbf{r}_ {\sigma\left(\ell\right)}^{1},
+E^{\sigma}=\frac{1}{2}m\omega_{p}^{2}\sum_{\ell=1}^{N}\sum_{j=1}^{P}\left(\mathbf{r}_ {\ell}^{j}-\mathbf{r}_ {\ell}^{j+1}\right)^{2},\\;\text{where} \\; \mathbf{r}_ {\ell}^{P+1}=\mathbf{r}_ {\sigma\left(\ell\right)}^{1},
 $$
 
 one can define an effective bosonic ring polymer potential as
