@@ -45,7 +45,22 @@ $$
 -\nabla_{\mathbf{r}_ {\ell}^{j}}E^{\sigma}=-m\omega_ {p}^{2}\left(2\mathbf{r}_ {\ell}^{j}-\mathbf{r}_ {\ell}^{j+1}-\mathbf{r}_ {\ell}^{j-1}\right).
 $$
 
-Exchange effects only affect the forces acting on the exterior beads ($j=1,P$). We use these facts to optimize the old bosonic algorithm. Note however that the scaling of the old bosonic algorithm remains $\mathcal{O}(N!)$.
+Bosonic exchange affects only the forces acting on the exterior beads ($j=1,P$). Note however that the aforementioned optimizations do not change the scaling of this algorithm which remains $\mathcal{O}(N!)$.
+
+For the primitive kinetic energy estimator, we use the following convenient expression:
+
+$$
+\left\langle K\right\rangle =\frac{dNP}{2\beta}-E_{\mathrm{sp,interior}}-\left\langle \frac{\sum_{\sigma}\Delta E^{\sigma}e^{-\beta\Delta E^{\sigma}}}{\sum_{\sigma}e^{-\beta\Delta E^{\sigma}}}\right\rangle,
+$$
+
+where
+
+$$
+E_{\mathrm{sp,interior}}=\frac{1}{2}m\omega_{P}^{2}\sum_{\ell=1}^{N}\sum_{j=1}^{P-1}\left(\mathbf{r}_ {\ell}^{j}-\mathbf{r}_ {\ell}^{j+1}\right)^{2},
+$$
+
+is the spring energy of the interior beads.
+
 
 ## Installation
 
