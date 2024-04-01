@@ -68,15 +68,20 @@ void EnergyObservable::calculateClassicalKinetic() {
 }
 
 void EnergyObservable::calculateClassicalPotential() {
-    double prefactor = 0.5 * sim.mass * sim.omega_p *sim.omega_p, potential = 0.0, dx1, dx2;
-    for (int axis = 0; axis < NDIM; ++axis) {
-        for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
-            dx1 = sim.coord(ptcl_idx, axis) - sim.prev_coord(ptcl_idx, axis);
-            dx2 = sim.coord(ptcl_idx, axis) - sim.next_coord(ptcl_idx, axis);
-            potential += prefactor * (dx1 * dx1 + dx2 * dx2);
+    double prefactor = 0.5 * sim.mass * sim.omega_p *sim.omega_p, potential = 0.0, dx;
+    if (sim.bosonic) {
+        potential = sim.bosonic_exchange->classical_potential();  // not inside if statement because some calculations might require multithreading
+        if (sim.this_bead != 0)  // Trust only the root process calculation
+            potential = 0.0;
+    } else {
+        for (int axis = 0; axis < NDIM; ++axis) {
+            for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
+                dx = sim.coord(ptcl_idx, axis) - sim.prev_coord(ptcl_idx, axis);
+                potential += prefactor * (dx * dx);
+            }
         }
     }
-    quantities["classical_potential"] = Units::unit_to_user("energy", out_unit, potential / 2 /* account for degenerracies*/) + sim.nbeads * quantities["potential"];  // requires 'quantities["potential"]' to be calculated first
+    quantities["classical_potential"] = Units::unit_to_user("energy", out_unit, potential) + sim.nbeads * quantities["potential"];  // requires 'quantities["potential"]' to be calculated first
 }
 
 void EnergyObservable::calculateKinetic() {

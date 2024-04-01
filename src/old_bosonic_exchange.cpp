@@ -222,6 +222,48 @@ void OldBosonicExchange::spring_force_first_bead(dVec& f)
 
 /* ---------------------------------------------------------------------- */
 
+// Only the return value of timeslice=0 is valid
+double OldBosonicExchange::classical_potential()
+{
+    // Calculate spring energy of the inner beads
+    double connection = 0.0, E_int = 0.0, V_ext = 0.0;
+    double dist = 0.0;
+    if (bead_num > 0) {
+        for (int l = 0; l < nbosons; ++l) {
+            for (int axis = 0; axis < NDIM; ++axis) {
+                dist = x(l, axis) - x_prev(l, axis);
+                connection += dist * dist;
+            }
+        }
+        connection *= 0.5 * spring_constant;
+    } else {
+        int N_factorial = 0;
+        double E_ext_sigma;
+        V_ext;
+        
+        do {
+            ++N_factorial;  // The lazy way to compute N!
+            E_ext_sigma = 0.0;
+            for (int l = 0; l < nbosons; ++l) {
+                for (int axis = 0; axis < NDIM; ++axis) {
+                    dist = x_prev(neighbor_of_first(l), axis) - x(l, axis);
+                    E_ext_sigma += dist * dist;
+                }
+            }
+            // E_ext_sigma = 1/2 m omega_P^2 sum(l=1,N){ (r_sigma(l)^P - r_l^1)^2 }
+            E_ext_sigma *= 0.5 * spring_constant;
+            V_ext += exp(-beta * E_ext_sigma);
+        } while (std::next_permutation(labels.begin(), labels.end()));
+        // V_ext = -1/beta * ln( 1/N! sum(sigma){ e^(-beta E_ext_sigma) } )
+        V_ext = -1 / beta * log(V_ext / N_factorial);
+    }
+    // E_int = 1/2 m omega_P^2 S sum(l=1,N){ sum(k=1,P-1){ (r_l^k - r_l^(k+1))^2 } }
+    MPI_Reduce(&connection, &E_int, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    return E_int + V_ext;
+}
+
+/* ---------------------------------------------------------------------- */
+
 // This method should be called only at timeslice=0
 double OldBosonicExchange::prim_estimator() {
     const dVec x_first_bead = x;

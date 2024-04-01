@@ -11,6 +11,7 @@ public:
     virtual void updateCoordinates(const dVec new_x, const dVec new_x_prev, const dVec new_x_next);
     void spring_force(dVec& f);
 
+    virtual double classical_potential();
     virtual double prim_estimator();
 
 protected:

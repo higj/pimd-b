@@ -252,7 +252,7 @@ void BosonicExchange::spring_force_last_bead(dVec& f)
         }
 
         for (int axis = 0; axis < NDIM; ++axis) {
-            f(l, axis) += sums[axis] * spring_constant;
+            f(l, axis) = sums[axis] * spring_constant;
         }
     }
 }
@@ -287,9 +287,16 @@ void BosonicExchange::spring_force_first_bead(dVec& f)
         }
 
         for (int axis = 0; axis < NDIM; ++axis) {
-            f(l, axis) += sums[axis] * spring_constant;
+            f(l, axis) = sums[axis] * spring_constant;
         }
     }
+}
+
+/* ---------------------------------------------------------------------- */
+
+double BosonicExchange::classical_potential()
+{
+    return get_potential();
 }
 
 /* ---------------------------------------------------------------------- */

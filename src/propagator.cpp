@@ -167,13 +167,24 @@ NormalModesPropagator::~NormalModesPropagator() {
 }
 
 void NormalModesPropagator::step() {
-    if (sim.bosonic)
-        throw std::runtime_error("Normal modes integrator not yet implemented for bosonic systems");
-    
     // Propagate momenta under external forces
-    for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx)
-        for (int axis = 0; axis < NDIM; ++axis)
-            sim.momenta(ptcl_idx, axis) += 0.5 * sim.dt * ext_forces(ptcl_idx, axis);
+    if (!sim.bosonic) {
+        for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx)
+            for (int axis = 0; axis < NDIM; ++axis)
+                sim.momenta(ptcl_idx, axis) += 0.5 * sim.dt * ext_forces(ptcl_idx, axis);
+    } else if (sim.this_bead == 0 || sim.this_bead == sim.nbeads - 1) {
+        double inner_springs;
+        for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
+            for (int axis = 0; axis < NDIM; ++axis) {
+                inner_springs = -sim.spring_constant * (2 * sim.coord(ptcl_idx, axis) - sim.prev_coord(ptcl_idx, axis) - sim.next_coord(ptcl_idx, axis));
+                sim.momenta(ptcl_idx, axis) += 0.5 * sim.dt * (ext_forces(ptcl_idx, axis) + spring_forces(ptcl_idx, axis) - inner_springs);
+            }
+        }
+    } else {
+        for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx)
+            for (int axis = 0; axis < NDIM; ++axis)
+                sim.momenta(ptcl_idx, axis) += 0.5 * sim.dt * ext_forces(ptcl_idx, axis);
+    }
     
     // Share data with other processes
     for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
@@ -235,10 +246,24 @@ void NormalModesPropagator::step() {
     sim.updatePhysicalForces(ext_forces);
     sim.updateSpringForces(spring_forces);
     
-    // Propagation of momenta under external forces
-    for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx)
-        for (int axis = 0; axis < NDIM; ++axis)
-            sim.momenta(ptcl_idx, axis) += 0.5 * sim.dt * ext_forces(ptcl_idx, axis);    
+    // Propagate momenta under external forces
+    if (!sim.bosonic) {
+        for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx)
+            for (int axis = 0; axis < NDIM; ++axis)
+                sim.momenta(ptcl_idx, axis) += 0.5 * sim.dt * ext_forces(ptcl_idx, axis);
+    } else if (sim.this_bead == 0 || sim.this_bead == sim.nbeads - 1) {
+        double inner_springs;
+        for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
+            for (int axis = 0; axis < NDIM; ++axis) {
+                inner_springs = -sim.spring_constant * (2 * sim.coord(ptcl_idx, axis) - sim.prev_coord(ptcl_idx, axis) - sim.next_coord(ptcl_idx, axis));
+                sim.momenta(ptcl_idx, axis) += 0.5 * sim.dt * (ext_forces(ptcl_idx, axis) + spring_forces(ptcl_idx, axis) - inner_springs);
+            }
+        }
+    } else {
+        for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx)
+            for (int axis = 0; axis < NDIM; ++axis)
+                sim.momenta(ptcl_idx, axis) += 0.5 * sim.dt * ext_forces(ptcl_idx, axis);
+    }
 }
 
 inline int NormalModesPropagator::_glob_idx(int axis, int atom, int bead) { return axis*axis_stride + atom*atom_stride + bead; }

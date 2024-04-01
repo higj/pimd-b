@@ -14,7 +14,8 @@ public:
     double get_E_kn_serial_order(int i) const;
 
     void updateCoordinates(const dVec new_x, const dVec new_x_prev, const dVec new_x_next) override;
-
+    
+    double classical_potential();
     double prim_estimator();
 
 protected:
