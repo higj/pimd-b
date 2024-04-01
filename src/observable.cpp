@@ -82,6 +82,7 @@ void EnergyObservable::calculateClassicalPotential() {
         }
     }
     quantities["classical_potential"] = Units::unit_to_user("energy", out_unit, potential) + sim.nbeads * quantities["potential"];  // requires 'quantities["potential"]' to be calculated first
+    quantities["classical_potential"] = Units::unit_to_user("energy", out_unit, potential) + sim.nbeads * quantities["potential"];  // requires 'quantities["potential"]' to be calculated first
 }
 
 void EnergyObservable::calculateKinetic() {
