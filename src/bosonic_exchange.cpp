@@ -183,7 +183,7 @@ void BosonicExchange::Evaluate_V_backwards()
 
 /* ---------------------------------------------------------------------- */
 
-double BosonicExchange::get_potential() const
+double BosonicExchange::effectivePotential()
 {
     return V[nbosons];
 }
@@ -224,7 +224,7 @@ void BosonicExchange::evaluate_connection_probabilities()
 
 /* ---------------------------------------------------------------------- */
 
-void BosonicExchange::spring_force_last_bead(dVec& f)
+void BosonicExchange::springForceLastBead(dVec& f)
 {
     const dVec x_first_bead = x_next;
     const dVec x_last_bead = x;
@@ -259,7 +259,7 @@ void BosonicExchange::spring_force_last_bead(dVec& f)
 
 /* ---------------------------------------------------------------------- */
 
-void BosonicExchange::spring_force_first_bead(dVec& f)
+void BosonicExchange::springForceFirstBead(dVec& f)
 {
     const dVec x_first_bead = x;
     const dVec x_last_bead = x_prev;
@@ -296,7 +296,7 @@ void BosonicExchange::spring_force_first_bead(dVec& f)
 
 // Primitive kinetic energy estimator for bosons.
 // Corresponds to Eqns. (4)-(5) in SI of pnas.1913365116
-double BosonicExchange::prim_estimator()
+double BosonicExchange::primEstimator()
 {
     if (bead_num != 0) return 0.0;
 

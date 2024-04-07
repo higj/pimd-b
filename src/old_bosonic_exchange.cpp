@@ -102,7 +102,46 @@ double OldBosonicExchange::get_elongest()
 
 /* ---------------------------------------------------------------------- */
 
-void OldBosonicExchange::spring_force_last_bead(dVec& f)
+double OldBosonicExchange::effectivePotential() {
+    // If the current time-slice is not the last one, then the spring energy is the 
+    // same as the interior spring energy.
+    if (bead_num != np - 1)
+        return interiorSpringEnergy();
+
+    long permutation_counter = 0;
+    double weights_sum = 0.0;
+
+    // Iterate over all permutations and calculate the weights
+    // associated with the exterior beads.
+    do {
+        permutation_counter++;
+        double diff2 = 0.0;
+
+        for (int ptcl_idx = 0; ptcl_idx < nbosons; ++ptcl_idx) {
+            double diff[NDIM];
+
+            diff_two_beads(x, ptcl_idx, x_next, neighbor_of_last(ptcl_idx), diff);
+
+            // Coordinate differences corresponding to exterior beads
+            for (int axis = 0; axis < NDIM; ++axis) {
+                diff2 += diff[axis] * diff[axis];
+            }
+        }
+
+        weights_sum += exp(-beta * 0.5 * spring_constant * diff2);
+
+    } while (std::next_permutation(labels.begin(), labels.end()));
+
+    // Return labels to the original state (identity permutation)
+    std::sort(labels.begin(), labels.end());
+
+    /// @todo In the i-Pi convention, beta is beta/P, so think how it affects the calculation
+    return (-1.0 / beta) * log(weights_sum / permutation_counter);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void OldBosonicExchange::springForceLastBead(dVec& f)
 {
     const dVec x_first_bead = x_next;
     const dVec x_last_bead = x;
@@ -162,7 +201,7 @@ void OldBosonicExchange::spring_force_last_bead(dVec& f)
 
 /* ---------------------------------------------------------------------- */
 
-void OldBosonicExchange::spring_force_first_bead(dVec& f)
+void OldBosonicExchange::springForceFirstBead(dVec& f)
 {
     const dVec x_first_bead = x;
     const dVec x_last_bead = x_prev;
@@ -223,7 +262,7 @@ void OldBosonicExchange::spring_force_first_bead(dVec& f)
 /* ---------------------------------------------------------------------- */
 
 // This method should be called only at timeslice=0
-double OldBosonicExchange::prim_estimator() {
+double OldBosonicExchange::primEstimator() {
     const dVec x_first_bead = x;
     const dVec x_last_bead = x_prev;
 
@@ -234,8 +273,6 @@ double OldBosonicExchange::prim_estimator() {
         double weight = 0.0;
 
         for (int l = 0; l < nbosons; ++l) {
-            std::vector<double> sums(NDIM, 0.0);
-
             double diff_prev[NDIM];
 
             // Last bead (P) of some particle (depending on the permutation) minus first bead (1) of the l-th particle
@@ -247,8 +284,11 @@ double OldBosonicExchange::prim_estimator() {
             }
         }
 
-        double delta_spring_energy = 0.5 * spring_constant * weight - e_longest;
-        weight = exp(-beta * delta_spring_energy);
+        //double delta_spring_energy = 0.5 * spring_constant * weight - e_longest;
+        //weight = exp(-beta * delta_spring_energy);
+
+        double delta_spring_energy = 0.5 * spring_constant * weight;
+        weight = exp(-beta * (delta_spring_energy - e_longest));
 
         // Delta(E^sigma) is ready only at this point. We multiply Delta(E^sigma) by the weight
         // and add the result to the numerator (and also update the denominator by adding the 

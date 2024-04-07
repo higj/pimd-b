@@ -46,8 +46,15 @@ void BosonicExchangeBase::diff_two_beads(const dVec x1, int l1, const dVec x2, i
     }
 }
 
-/* ---------------------------------------------------------------------- */
-
+/**
+ * Calculates the distance squared between two beads.
+ * 
+ * @param x1 Coordinates of the first bead
+ * @param l1 Particle index of the first bead
+ * @param x2 Coordinates of the second bead
+ * @param l2 Particle index of the second bead
+ * @return Distance squared between the two beads
+ */
 double BosonicExchangeBase::distance_squared_two_beads(const dVec x1, int l1, const dVec x2, int l2)
 {
     double diff[NDIM];
@@ -64,21 +71,53 @@ double BosonicExchangeBase::distance_squared_two_beads(const dVec x1, int l1, co
 
 /* ---------------------------------------------------------------------- */
 
-void BosonicExchangeBase::spring_force(dVec& f) {
+void BosonicExchangeBase::springForce(dVec& f) {
     if (bead_num == np - 1) {
-        spring_force_last_bead(f);
+        springForceLastBead(f);
     }
     else if (bead_num == 0) {
-        spring_force_first_bead(f);
+        springForceFirstBead(f);
     }
     else {
-        spring_force_interior_bead(f);
+        springForceInteriorBead(f);
     }
 }
 
 /* ---------------------------------------------------------------------- */
 
-void BosonicExchangeBase::spring_force_interior_bead(dVec& f)
+double BosonicExchangeBase::effectivePotential() {
+    return 0.0;
+}
+
+/**
+ * Calculates the spring energy contribution of the current and the next time-slice,
+ * provided that the connection is interior (i.e., not the spring energy between 1st and last bead).
+ * This method cannot be called from the last time-slice.
+ * 
+ * @return Spring energy contribution of the current and the next time-slice
+ */
+double BosonicExchangeBase::interiorSpringEnergy() {
+    if (bead_num == np - 1)
+        throw std::runtime_error("interiorSpringEnergy() called for the last time-slice");
+
+    double interior_spring_energy = 0.0;
+
+    for (int ptcl_idx = 0; ptcl_idx < nbosons; ++ptcl_idx) {
+        for (int axis = 0; axis < NDIM; ++axis) {
+            double diff = x(ptcl_idx, axis) - x_next(ptcl_idx, axis);
+            interior_spring_energy += diff * diff;
+        }
+    }
+
+    /// @todo Check if division by nbeads is necessary if i-Pi convention is used
+    interior_spring_energy *= 0.5 * spring_constant;
+
+    return interior_spring_energy;
+}
+
+/* ---------------------------------------------------------------------- */
+
+void BosonicExchangeBase::springForceInteriorBead(dVec& f)
 {
     for (int l = 0; l < nbosons; l++) {
         std::vector<double> sums(NDIM, 0.0);
@@ -105,19 +144,19 @@ void BosonicExchangeBase::spring_force_interior_bead(dVec& f)
 
 /* ---------------------------------------------------------------------- */
 
-void BosonicExchangeBase::spring_force_first_bead(dVec& f)
+void BosonicExchangeBase::springForceFirstBead(dVec& f)
 {
 }
 
 /* ---------------------------------------------------------------------- */
 
-void BosonicExchangeBase::spring_force_last_bead(dVec& f)
+void BosonicExchangeBase::springForceLastBead(dVec& f)
 {
 }
 
 /* ---------------------------------------------------------------------- */
 
-double BosonicExchangeBase::prim_estimator()
+double BosonicExchangeBase::primEstimator()
 {
 	return 0.0;
 }

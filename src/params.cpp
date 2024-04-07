@@ -189,7 +189,7 @@ bool Params::parseTokenParentheses(const std::string& input, std::string& token,
 	// Define a regular expression for the specified format
 	// TODO: Generalize regex to catch cases such as "foo()" and "foo" (without parentheses)	
 	// Catch "foo(bar)", "foo()" and "foo"
-	std::regex pattern(R"(\s*(\w+)\(([\w\.]*)\)\s*|\s*(\w+)\s*)");
+	std::regex pattern(R"(\s*(\w+)\((.*)\)\s*|\s*(\w+)\s*)");
 
 	// Match the input string against the pattern
 	std::smatch matches;

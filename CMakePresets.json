@@ -34,9 +34,11 @@
             "name": "x64-release",
             "displayName": "x64 Release",
             "inherits": "x64-debug",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Release"
-            }
+          "cacheVariables": {
+            "CMAKE_BUILD_TYPE": "Release",
+            "OLD_BOSONIC_ALGORITHM": "0",
+            "NDIM": "3"
+          }
         },
         {
             "name": "x86-debug",

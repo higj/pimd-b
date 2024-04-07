@@ -12,7 +12,7 @@
 In the case of bosons, the partition function must be evaluated in a properly symmetrized basis. As a result, the partition function contains contributions from $N!$ permutations, where $N$ is the number of quantum particles. A naive bosonic PIMD algorithm takes into account all the $N!$ permutations. Labeling the spring energy due to a specific permutation $\sigma$ as
 
 $$
-E^{\sigma}=\frac{1}{2}m\omega_{p}^{2}\sum_{\ell=1}^{N}\sum_{j=1}^{P}\left(\mathbf{r}_ {\ell}^{j}-\mathbf{r}_ {\ell}^{j+1}\right)^{2},\\;\text{where} \\; \mathbf{r}_ {\ell}^{P+1}=\mathbf{r}_ {\sigma\left(\ell\right)}^{1},
+E^{\sigma}=\frac{1}{2}m\omega_{P}^{2}\sum_{\ell=1}^{N}\sum_{j=1}^{P}\left(\mathbf{r}_ {\ell}^{j}-\mathbf{r}_ {\ell}^{j+1}\right)^{2},\\;\text{where} \\; \mathbf{r}_ {\ell}^{P+1}=\mathbf{r}_ {\sigma\left(\ell\right)}^{1},
 $$
 
 one can define an effective bosonic ring polymer potential as
@@ -30,10 +30,16 @@ $$
 It is not actually necessary to evaluate all the terms in $E^{\sigma}$ when calculating the weights. Indeed, let us define $\Delta E^{\sigma}$ as 
 
 $$
-\Delta E^{\sigma}=E^{\sigma}-\frac{1}{2}m\omega_ {p}^{2}\sum_ {\ell=1}^{N}\sum_ {j=1}^{P-1}\left(\mathbf{r}_ {\ell}^{j}-\mathbf{r}_ {\ell}^{j+1}\right)^{2}=\frac{1}{2}m\omega_{p}^{2}\sum_{\ell=1}^{N}\left(\mathbf{r}_ {\ell}^{P}-\mathbf{r}_ {\sigma\left(\ell\right)}^{1}\right)^{2}.
+\Delta E^{\sigma}=E^{\sigma}-\frac{1}{2}m\omega_ {P}^{2}\sum_ {\ell=1}^{N}\sum_ {j=1}^{P-1}\left(\mathbf{r}_ {\ell}^{j}-\mathbf{r}_ {\ell}^{j+1}\right)^{2}=\frac{1}{2}m\omega_ {P}^{2}\sum_{\ell=1}^{N}\left(\mathbf{r}_ {\ell}^{P}-\mathbf{r}_ {\sigma\left(\ell\right)}^{1}\right)^{2}.
 $$
 
 Since $E^{\sigma} - \Delta E^{\sigma}$ is the same for all permutations, we can write
+
+$$
+V_{B}=\left(E^{\sigma}-\Delta E^{\sigma}\right)-\frac{1}{\beta}\ln\left[\frac{1}{N!}\sum_{\sigma}e^{-\beta\Delta E^{\sigma}}\right],
+$$
+
+and also
 
 $$
 \mathbf{f}_ {\ell}^{j}=-\frac{\sum_{\sigma}e^{-\beta\Delta E^{\sigma}}\nabla_{\mathbf{r}_ {\ell}^{j}}E^{\sigma}}{\sum_{\sigma}e^{-\beta\Delta E^{\sigma}}}.
@@ -42,10 +48,25 @@ $$
 For interior beads, that is, for $j=2,\dots,P-1$, the forces coincide with the ordinary spring forces in systems of distinguishable particles, i.e.,
 
 $$
--\nabla_{\mathbf{r}_ {\ell}^{j}}E^{\sigma}=-m\omega_ {p}^{2}\left(2\mathbf{r}_ {\ell}^{j}-\mathbf{r}_ {\ell}^{j+1}-\mathbf{r}_ {\ell}^{j-1}\right).
+-\nabla_{\mathbf{r}_ {\ell}^{j}}E^{\sigma}=-m\omega_ {P}^{2}\left(2\mathbf{r}_ {\ell}^{j}-\mathbf{r}_ {\ell}^{j+1}-\mathbf{r}_ {\ell}^{j-1}\right).
 $$
 
-Exchange effects only affect the forces acting on the exterior beads ($j=1,P$). We use these facts to optimize the old bosonic algorithm. Note however that the scaling of the old bosonic algorithm remains $\mathcal{O}(N!)$.
+Bosonic exchange affects only the forces acting on the exterior beads ($j=1,P$). Note however that the aforementioned optimizations do not change the scaling of this algorithm which remains $\mathcal{O}(N!)$.
+
+For the primitive kinetic energy estimator, we use the following convenient expression:
+
+$$
+\left\langle K\right\rangle =\frac{dNP}{2\beta}-E_{\mathrm{sp,interior}}-\left\langle \frac{\sum_{\sigma}\Delta E^{\sigma}e^{-\beta\Delta E^{\sigma}}}{\sum_{\sigma}e^{-\beta\Delta E^{\sigma}}}\right\rangle,
+$$
+
+where
+
+$$
+E_{\mathrm{sp,interior}}=\frac{1}{2}m\omega_{P}^{2}\sum_{\ell=1}^{N}\sum_{j=1}^{P-1}\left(\mathbf{r}_ {\ell}^{j}-\mathbf{r}_ {\ell}^{j+1}\right)^{2},
+$$
+
+is the spring energy of the interior beads.
+
 
 ## Installation
 
@@ -100,7 +121,6 @@ nbeads = 4
 bosonic = true
 pbc = true
 seed = 12345
-estimators = virial,potential
 initial_position = random
 
 [system]

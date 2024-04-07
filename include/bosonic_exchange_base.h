@@ -9,17 +9,19 @@ public:
     ~BosonicExchangeBase();
 
     virtual void updateCoordinates(const dVec new_x, const dVec new_x_prev, const dVec new_x_next);
-    void spring_force(dVec& f);
+    void springForce(dVec& f);
+    virtual double effectivePotential();
 
-    virtual double prim_estimator();
+    virtual double primEstimator();
 
 protected:
     void diff_two_beads(const dVec x1, int l1, const dVec x2, int l2, double diff[NDIM]);
     double distance_squared_two_beads(const dVec x1, int l1, const dVec x2, int l2);
 
-    void spring_force_interior_bead(dVec& f);
-    virtual void spring_force_first_bead(dVec& f);
-    virtual void spring_force_last_bead(dVec& f);
+    double interiorSpringEnergy();
+    void springForceInteriorBead(dVec& f);
+    virtual void springForceFirstBead(dVec& f);
+    virtual void springForceLastBead(dVec& f);
 
     const int nbosons;
     const int np;

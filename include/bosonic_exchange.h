@@ -9,17 +9,17 @@ public:
         const dVec x, const dVec x_prev, const dVec x_next, bool pbc, double L);
     ~BosonicExchange();
 
-    double get_potential() const;
+    double effectivePotential() override;
     double get_Vn(int n) const;
     double get_E_kn_serial_order(int i) const;
 
     void updateCoordinates(const dVec new_x, const dVec new_x_prev, const dVec new_x_next) override;
 
-    double prim_estimator();
+    double primEstimator();
 
 protected:
-    void spring_force_first_bead(dVec& f) override;
-    void spring_force_last_bead(dVec& f) override;
+    void springForceFirstBead(dVec& f) override;
+    void springForceLastBead(dVec& f) override;
 
 private:
     void prepare_with_coordinates();

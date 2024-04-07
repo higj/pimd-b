@@ -68,7 +68,12 @@ Simulation::Simulation(int& rank, int& nproc, Params& paramObj, unsigned int see
     if (init_pos_type == "xyz") {
         // Load initial Cartesian coordinates from the provided .xyz file
         std::string xyz_filename = std::get<std::string>(paramObj.sim["init_pos_xyz_filename"]);
-        loadXYZ(xyz_filename, coord);
+
+        /// @todo Remove the bead_num==0 condition later.
+        /// This is placed for testing purposes, to compare the
+        /// simulation results against i-Pi.
+        if (this_bead == 0)
+            loadXYZ(xyz_filename, coord);
     } else {
         // Generate random positions (sample from a uniform distribution)
         genRandomPositions(coord);
@@ -138,6 +143,7 @@ Simulation::Simulation(int& rank, int& nproc, Params& paramObj, unsigned int see
     /***** Observables *****/
     ObservableFactory obs_factory;
     observables.push_back(obs_factory.createQuantity("energy", *this, sfreq, "kelvin"));
+    observables.push_back(obs_factory.createQuantity("classical", *this, sfreq, "kelvin"));
 
     // Update the coordinate arrays of neighboring particles
     updateNeighboringCoordinates();
@@ -153,9 +159,13 @@ Simulation::Simulation(int& rank, int& nproc, Params& paramObj, unsigned int see
 
 Simulation::~Simulation() = default;
 
-// Generate random positions in the interval [-L/2, L/2], along each axis.
-// TODO: Add ability to generate non-random positions (e.g., lattice)
+/**
+ * Generates random positions in the interval [-L/2, L/2] for each particle along each axis.
+ * 
+ * @param pos_arr Array to store the generated positions.
+ */
 void Simulation::genRandomPositions(dVec &pos_arr) {
+    /// @todo Add ability to generate non-random positions (e.g., lattice)
     std::uniform_real_distribution<double> u_dist(-0.5 * size, 0.5 * size);
 
     for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
@@ -165,17 +175,25 @@ void Simulation::genRandomPositions(dVec &pos_arr) {
     }
 }
 
-// Generate momenta from the Maxwell-Boltzmann distribution
+/**
+ * Generates momenta according to the Maxwell-Boltzmann distribution.
+ * 
+ * @param momenta_arr Array to store the generated momenta.
+ */
 void Simulation::genMomentum(dVec &momenta_arr) {
     for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
-            momenta_arr(ptcl_idx, axis) = mass * sampleMB();
+            momenta_arr(ptcl_idx, axis) = mass * sampleMaxwellBoltzmann();
         }
     }
 }
 
-// Sample the Maxwell-Boltzmann distribution
-double Simulation::sampleMB() {
+/**
+ * Samples velocities from the Maxwell-Boltzmann distribution.
+ * 
+ * @return Sampled velocity from the Maxwell-Boltzmann distribution.
+ */
+double Simulation::sampleMaxwellBoltzmann() {
 #if IPI_CONVENTION
     std::normal_distribution<double> normal(0.0, 1/sqrt(beta * mass / nbeads));
 #else
@@ -185,7 +203,9 @@ double Simulation::sampleMB() {
     return normal(rand_gen);    
 }
 
-// Perform a single Langevin step
+/**
+ * @brief Perform a single Langevin step for the molecular dynamics simulation.
+ */
 void Simulation::langevinStep() {
     std::normal_distribution<double> normal;
 
@@ -207,7 +227,10 @@ void Simulation::langevinStep() {
     }
 }
 
-void Simulation::vvStep() {
+/**
+ * @brief Velocity-Verlet step for the molecular dynamics simulation.
+ */
+void Simulation::velocityVerletStep() {
     // First step: momenta are propagated by half a step ("B" step)
     for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
@@ -221,6 +244,16 @@ void Simulation::vvStep() {
             coord(ptcl_idx, axis) += dt * momenta(ptcl_idx, axis) / mass;
         }
     }
+
+#if WRAP
+    if (pbc) {
+        for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
+            for (int axis = 0; axis < NDIM; ++axis) {
+                periodicWrap(coord(ptcl_idx, axis), size);
+            }
+        }
+    }
+#endif
 
 #if RECENTER
     // Recentering should be attempted only in the case of periodic boundary conditions.
@@ -274,7 +307,9 @@ void Simulation::vvStep() {
     }
 }
 
-// Perform an MD run using the OBABO scheme
+/**
+ * @brief Perform a molecular dynamics run using the OBABO scheme.
+ */
 void Simulation::run() {
     std::filesystem::create_directory(OUTPUT_FOLDER_NAME);
     std::ofstream out_file;
@@ -282,7 +317,7 @@ void Simulation::run() {
     if (this_bead == 0) {
         out_file.open(std::format("{}/simulation.out", OUTPUT_FOLDER_NAME, this_bead), std::ios::out | std::ios::app);
 
-        /**** Header ****/
+        // Header of the output file
         out_file << std::format("{:^16s}", "step");
 
         for (const auto& observable : observables) {
@@ -294,7 +329,7 @@ void Simulation::run() {
         out_file << "\n";
     }
     
-    /**** Main loop performing molecular dynamics steps ****/
+    // Main loop performing molecular dynamics steps
     for (int step = 0; step <= steps; ++step) {
         for (const auto& observable : observables) {
             observable->resetValues();
@@ -317,7 +352,7 @@ void Simulation::run() {
         if (fixcom)
             zeroMomentum();
 
-        vvStep();
+        velocityVerletStep();
 
         // "O" step
         if (enable_t)
@@ -355,7 +390,7 @@ void Simulation::run() {
                     MPI_Allreduce(&local_quantity_value, &quantity_value, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
                     if (this_bead == 0)
-                        out_file << std::format(" {:^20.12e}", quantity_value);
+                        out_file << std::format(" {:^16.8e}", quantity_value);
                 }
             }
             
@@ -374,12 +409,19 @@ void Simulation::run() {
     }
 }
 
-// Force the provided initial conditions
+/**
+ * @brief Impose the initial conditions for the simulation.
+ */
 void Simulation::forceIniCond(dVec pos_arr, dVec momentum_arr) {
     coord = pos_arr;
     momenta = momentum_arr;
 }
 
+/**
+ * Obtains the coordinates from the previous timeslice.
+ * 
+ * @param prev Vector to store the previous coordinates.
+ */
 void Simulation::getPrevCoords(dVec &prev) {
     const int coord_size = coord.size();
 
@@ -402,6 +444,11 @@ void Simulation::getPrevCoords(dVec &prev) {
     MPI_Barrier(MPI_COMM_WORLD);
 }
 
+/**
+ * Obtains the coordinates from the next timeslice.
+ * 
+ * @param next Vector to store the next coordinates.
+ */
 void Simulation::getNextCoords(dVec& next) {
     const int coord_size = coord.size();
 
@@ -424,6 +471,10 @@ void Simulation::getNextCoords(dVec& next) {
     MPI_Barrier(MPI_COMM_WORLD);
 }
 
+/**
+ * @brief Updates the forces acting on the particles. Evaluates both the spring forces
+ * and the external forces.
+ */
 void Simulation::updateForces() {
     // We distinguish between two types of forces: spring forces between the beads (due to the 
     // classical isomorphism) and the non-spring forces (due to either an external potential 
@@ -431,33 +482,7 @@ void Simulation::updateForces() {
     dVec spring_forces(natoms), physical_forces(natoms);
 
     updateSpringForces(spring_forces);
-
-    // Calculate the external forces acting on the particles
-    physical_forces = (-1.0) * ext_potential->gradV(coord);
-
-    if (int_pot_cutoff != 0.0) {
-        for (int ptcl_one = 0; ptcl_one < natoms; ++ptcl_one) {
-            for (int ptcl_two = ptcl_one + 1; ptcl_two < natoms; ++ptcl_two) {
-                dVec diff = getSeparation(ptcl_one, ptcl_two);  // Vectorial distance
-                double distance = diff.norm(0);                 // Scalar distance
-
-                // If the distance between the particles exceeds the cutoff length
-                // then we assume the interaction is negligible and do not bother
-                // calculating the force.
-                // We use the convention that when cutoff < 0 then the interaction is
-                // calculated for all distances.
-                if (distance < int_pot_cutoff || int_pot_cutoff < 0.0) {
-                    dVec force_on_one(1);
-                    force_on_one = (-1.0) * int_potential->gradV(diff);
-
-                    for (int axis = 0; axis < NDIM; ++axis) {
-                        physical_forces(ptcl_one, axis) += force_on_one(0, axis);
-                        physical_forces(ptcl_two, axis) -= force_on_one(0, axis);
-                    }
-                }
-            }
-        }
-    }
+    updatePhysicalForces(physical_forces);
 
     for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
@@ -472,21 +497,28 @@ void Simulation::updateForces() {
     }
 }
 
+/**
+ * @brief Updates the neighboring coordinates arrays.
+ */
 void Simulation::updateNeighboringCoordinates() {
     getPrevCoords(prev_coord);
     getNextCoords(next_coord);
 }
 
-// Updates the force vector exerted on a specific bead by the two neighboring beads.
-// In the distinguishable case, the force is given by Eqn. (12.6.4) in Tuckerman (1st ed).
-// In the bosonic case, by default, the forces are evaluated using the algorithm 
-// described in https://doi.org/10.1063/5.0173749. It is also possible to perform the
-// bosonic simulation using the original (ineffcient) algorithm, that takes into
-// account all the N! permutations, by setting OLD_BOSONIC_ALGORITHM to true.
-void Simulation::updateSpringForces(dVec& spring_force_arr) {
+/**
+ * Updates the spring force vector exerted on a specific bead by the two neighboring beads.
+ * In the distinguishable case, the force is given by Eqn. (12.6.4) in Tuckerman (1st ed).
+ * In the bosonic case, by default, the forces are evaluated using the algorithm 
+ * described in https://doi.org/10.1063/5.0173749. It is also possible to perform the
+ * bosonic simulation using the original (ineffcient) algorithm, that takes into
+ * account all the N! permutations, by setting OLD_BOSONIC_ALGORITHM to true.
+ * 
+ * @param spring_force_arr Vector to store the spring forces.
+ */
+void Simulation::updateSpringForces(dVec& spring_force_arr) const {
     if (bosonic) {
         bosonic_exchange->updateCoordinates(coord, prev_coord, next_coord);
-        bosonic_exchange->spring_force(spring_force_arr);
+        bosonic_exchange->springForce(spring_force_arr);
     } else {
         for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
             for (int axis = 0; axis < NDIM; ++axis) {
@@ -506,9 +538,50 @@ void Simulation::updateSpringForces(dVec& spring_force_arr) {
     }
 }
 
-// Return the vectorial distance between two particles at the same imaginary timeslice.
-// Mathematically equivalent to r1-r2, where r1 and r2 are the position-vectors
-// of the first and second particles, respectively.
+/**
+ * Updates the physical forces acting on the particles. This includes both the forces
+ * due external potentials and the interaction forces between the particles.
+ * 
+ * @param physical_force_arr Vector to store the physical forces.
+ */
+void Simulation::updatePhysicalForces(dVec& physical_force_arr) const {
+    // Calculate the external forces acting on the particles
+    physical_force_arr = (-1.0) * ext_potential->gradV(coord);
+
+    if (int_pot_cutoff != 0.0) {
+        for (int ptcl_one = 0; ptcl_one < natoms; ++ptcl_one) {
+            for (int ptcl_two = ptcl_one + 1; ptcl_two < natoms; ++ptcl_two) {
+                dVec diff = getSeparation(ptcl_one, ptcl_two);  // Vectorial distance
+                double distance = diff.norm(0);                 // Scalar distance
+
+                // If the distance between the particles exceeds the cutoff length
+                // then we assume the interaction is negligible and do not bother
+                // calculating the force.
+                // We use the convention that when cutoff < 0 then the interaction is
+                // calculated for all distances.
+                if (distance < int_pot_cutoff || int_pot_cutoff < 0.0) {
+                    dVec force_on_one(1);
+                    force_on_one = (-1.0) * int_potential->gradV(diff);
+
+                    for (int axis = 0; axis < NDIM; ++axis) {
+                        physical_force_arr(ptcl_one, axis) += force_on_one(0, axis);
+                        physical_force_arr(ptcl_two, axis) -= force_on_one(0, axis);
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Returns the vectorial distance between two particles at the same imaginary timeslice.
+ * Mathematically equivalent to r1-r2, where r1 and r2 are the position-vectors
+ * of the first and second particles, respectively.
+ * 
+ * @param first_ptcl Index of the first particle.
+ * @param second_ptcl Index of the second particle.
+ * @return Vectorial distance between the two particles.
+ */
 dVec Simulation::getSeparation(int first_ptcl, int second_ptcl) const {
     dVec sep(1);
     for (int axis = 0; axis < NDIM; ++axis) {
@@ -523,7 +596,9 @@ dVec Simulation::getSeparation(int first_ptcl, int second_ptcl) const {
     return sep;
 }
 
-// Print a summary of simulation parameters at the end of the simulation.
+/**
+ * @brief Prints a summary of the simulation parameters at the end of the simulation.
+ */
 void Simulation::printReport(std::ofstream& out_file) const {
     out_file << "---------\nParameters\n---------\n";
 
@@ -570,6 +645,11 @@ void Simulation::printReport(std::ofstream& out_file) const {
     out_file << formattedReportLine("Using i-Pi convention", IPI_CONVENTION);
 }
 
+/**
+ * Outputs the trajectories of the particles to an xyz file.
+ * 
+ * @param step Current step of the simulation.
+ */
 void Simulation::outputTrajectories(int step) {
     std::ofstream xyz_file;
     xyz_file.open(std::format("{}/position_{}.xyz", OUTPUT_FOLDER_NAME, this_bead), std::ios::out | std::ios::app);
@@ -594,6 +674,11 @@ void Simulation::outputTrajectories(int step) {
     xyz_file.close();
 }
 
+/**
+ * Outputs the velocities of the particles to a dat file.
+ * 
+ * @param step Current step of the simulation.
+ */
 void Simulation::outputVelocities(int step) {
     std::ofstream vel_file;
     vel_file.open(std::format("{}/velocity_{}.dat", OUTPUT_FOLDER_NAME, this_bead), std::ios::out | std::ios::app);
@@ -618,6 +703,11 @@ void Simulation::outputVelocities(int step) {
     vel_file.close();
 }
 
+/**
+ * Outputs the forces acting on the particles to a dat file.
+ *
+ * @param step Current step of the simulation.
+ */
 void Simulation::outputForces(int step) {
     std::ofstream force_file;
     force_file.open(std::format("{}/force_{}.dat", OUTPUT_FOLDER_NAME, this_bead), std::ios::out | std::ios::app);
@@ -641,11 +731,13 @@ void Simulation::outputForces(int step) {
     force_file.close();
 }
 
-// Zero the linear momentum of a group of atoms by subtracting the velocity
-// of the center of mass from the velocity of each atom.
-// The calculation assumes that all atoms have the same mass, in which case the 
-// center of mass momentum is given by p_c=m*v_c=(p_1+..+p_n)/n, where n
-// is the number of particles (here n=N*P).
+/**
+ * @brief Zero the linear momentum of a group of atoms by subtracting the velocity
+ * of the center of mass from the velocity of each atom.
+ * The calculation assumes that all atoms have the same mass, in which case the
+ * center of mass momentum is given by p_c=m*v_c=(p_1+..+p_n)/n, where n=N*P
+ * is the total number of beads in the system.
+ */
 void Simulation::zeroMomentum() {
     dVec momentum_cm(1);           // Resulting center of mass momentum vector
     dVec momentum_cm_per_bead(1);  // Contribution of the current time-slice to the center of mass momentum vector
@@ -669,6 +761,11 @@ void Simulation::zeroMomentum() {
     }
 }
 
+/**
+ * Prints information for debugging purposes.
+ * 
+ * @param text Text to print.
+ */
 void Simulation::printDebug(const std::string& text) {
     if (this_bead == 0) {
         std::ofstream debug;
