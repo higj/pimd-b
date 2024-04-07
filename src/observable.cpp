@@ -57,7 +57,7 @@ std::unique_ptr<Observable> ObservableFactory::createQuantity(const std::string&
  * @brief Energy observable class constructor.
  */
 EnergyObservable::EnergyObservable(const Simulation& _sim, int _freq, const std::string& _out_unit) : Observable(_sim, _freq, _out_unit) {
-    initialize({ "kinetic", "potential", "ext_pot", "int_pot", "virial", "kinetic_wind"});
+    initialize({ "kinetic", "potential", "ext_pot", "int_pot", "virial" });
 }
 
 void EnergyObservable::calculate() {
