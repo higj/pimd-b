@@ -61,6 +61,7 @@ pbc = true
 seed = 12345
 estimators = virial,potential
 initial_position = random
+propagator = cartesian
 
 [system]
 temperature = 1.0 kelvin
@@ -91,6 +92,13 @@ The `initial_position` option allows to specify the method of initialization for
 
 * `random` (default): samples random positions in each Cartesian direction from a uniform distribution on the interval $[-L/2, L/2]$, where $L$ is the linear size of the system
 * `xyz(<filename>.xyz)`: initializes the coordinates based on the provided `.xyz` file. A given particle is initialized at the same location across all imaginary time-slices (beads).
+
+The `propagator` option allows one to specify the time propagation scheme to be used during the simulation. Currently, two options are evailable:
+
+* `cartesian` (default): plain old velocity verlet time propagation of the original cartesian coordinates and momenta. Works well for both distinguishable and bosonic systems
+
+* `normal_modes`: propagation of the normal modes of the ring polymers, using the symmetric Trotter expansion. Works fine for distinguishable particles - bosonic normal mode propagation is still in development
+
 
 Internally, the simulation uses atomic units. However, the input parameters may be provided in the units of your choosing (e.g., electron-volts for energy).
 
