@@ -7,16 +7,17 @@ int main(int argc, char** argv) {
 
     int rank, size;
 
-    double sim_exec_time_start = 0.0;
-    double sim_exec_time_end = 0.0;
-    bool info_flag = false;
-
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
     std::string config_filename = "config.ini";
 
     try {
+        bool info_flag = false;
+
+        // Check for command line arguments.
+        // If the "--dim" flag is present, print the dimension of the system and exit.
+        // If the "-in" flag is present, use the next argument as the configuration filename. Otherwise, use the default filename.
         for (int i = 1; i < argc; ++i) {
             if (std::strcmp(argv[i], "--dim") == 0) {
                 printInfo(std::format("Program was compiled for {}-dimensional systems", NDIM), info_flag, rank);
@@ -34,25 +35,28 @@ int main(int argc, char** argv) {
             }
         }
 
+        // If we got to this point, and no info has been requested then initiate the simulation
         if (!info_flag) {
             printMsg(LOGO, rank);
             printStatus("Initializing the simulation parameters", rank);
 
+            // Load the simulation parameters from the configuration file
             Params params(config_filename);
 
-            unsigned int initial_seed = static_cast<unsigned int>(time(nullptr));
+            // Initialize the random number generator seed using the current time
+            const unsigned int initial_seed = static_cast<unsigned int>(time(nullptr));
 
             Simulation sim(rank, size, params, initial_seed);
 
             printStatus("Running the simulation", rank);
 
             MPI_Barrier(MPI_COMM_WORLD);
-            sim_exec_time_start = MPI_Wtime();
+            const double sim_exec_time_start = MPI_Wtime();
 
             sim.run();
 
             MPI_Barrier(MPI_COMM_WORLD);
-            sim_exec_time_end = MPI_Wtime();
+            const double sim_exec_time_end = MPI_Wtime();
 
             printStatus(std::format("Simulation finished running successfully (Runtime = {:.3} sec)", 
                 sim_exec_time_end - sim_exec_time_start), rank);

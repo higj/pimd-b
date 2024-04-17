@@ -1,27 +1,15 @@
 #pragma once
 
 #include <string>
-#include <unordered_map>
-#include <numeric>
 #include <random>
-#include <cmath>
 #include <ctime>
-#include <optional>
-#include <functional>
-
-#include <iostream>
-#include <fstream>
-
 #include <memory>
 #include "mpi.h"
 
+#include "random_mars.h"
 #include "common.h"
 #include "params.h"
 #include "potential.h"
-
-#include "random_mars.h"
-#include "random_park.h"
-
 #include "bosonic_exchange_base.h"
 
 
@@ -59,7 +47,7 @@ public:
 	std::mt19937 rand_gen;
 	std::unique_ptr<RanMars> mars_gen;
 
-	Simulation(int &rank, int &nproc, Params &paramObj, unsigned int seed = static_cast<unsigned int>(time(nullptr)));
+	Simulation(int &rank, int &nproc, Params &param_obj, unsigned int seed = static_cast<unsigned int>(time(nullptr)));
 	~Simulation();
 
 	dVec coord, momenta, forces;
@@ -73,13 +61,16 @@ public:
 	void genMomentum(dVec &momenta_arr);
 
 	void zeroMomentum();
-	
-	double sampleMaxwellBoltzmann();
+
+	void initializePositions(dVec& coord_arr, const VariantMap& sim_params);
+	void initializeMomenta(dVec& momentum_arr);
+    std::unique_ptr<Potential> initializePotential(const std::string& potential_name, const VariantMap& potential_options);
+
+    double sampleMaxwellBoltzmann();
 
 	void langevinStep();
 	void velocityVerletStep();
 	void run();
-	void forceIniCond(dVec pos_arr, dVec momentum_arr);
 
 	std::unique_ptr<Potential> ext_potential;
 	std::unique_ptr<Potential> int_potential;
@@ -112,5 +103,5 @@ private:
 	std::string external_potential_name;
 	std::string interaction_potential_name;
 
-	void printDebug(const std::string& text);
+	void printDebug(const std::string& text) const;
 };

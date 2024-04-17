@@ -14,9 +14,9 @@ class Observable {
 public:
     explicit Observable(const Simulation& _sim, int _freq, const std::string& _out_unit);
     virtual void calculate() = 0;
-    ~Observable();
+    virtual ~Observable() = default;
 
-    void initialize(std::vector<std::string> _labels);
+    void initialize(const std::vector<std::string>& _labels);
     void resetValues();
 
     tsl::ordered_map<std::string, double> quantities;
@@ -42,7 +42,7 @@ public:
 
     void calculate() override;
 private:
-    double primitiveKineticDistinguishable();
+    double primitiveKineticDistinguishable() const;
     void calculateKinetic();
     void calculatePotential();
 };

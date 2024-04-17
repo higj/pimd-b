@@ -2,8 +2,6 @@
 
 #include <unordered_map>
 #include <string>
-#include <regex>
-#include <stdexcept>
 
 // Internally this simulation uses the atomic units.
 // All physical quantities passed to the simulation are
@@ -145,14 +143,70 @@ namespace Units {
             {"atomic_unit", 1.00},
             {"ev/ang^2", 0.010290858},
         }},
+        /*{"dipole", {
+           {"", 1.00},
+           {"automatic", 1.00},
+           {"atomic_unit", 1.00},
+           {"debye", 0.393430307},
+           {"coulombmeter", 1.2081944},
+        }},
+        {"polarizability", {
+           {"", 1.00},
+           {"automatic", 1.00},
+           {"atomic_unit", 1.00},
+           {"angstrom3", 6.748334231},
+           {"bohr3", 1.00},
+        }},
+        {"charge", {
+           {"", 1.00},
+           {"automatic", 1.00},
+           {"atomic_unit", 1.00},
+           {"coulomb", 1.00},
+           {"elementary", 1.00},
+        }},
+        {"dipolemoment", {
+           {"", 1.00},
+           {"automatic", 1.00},
+           {"atomic_unit", 1.00},
+           {"debye", 0.393430307},
+           {"coulombmeter", 1.2081944},
+        }},
+        {"electricfield", {
+           {"", 1.00},
+           {"automatic", 1.00},
+           {"atomic_unit", 1.00},
+           {"volt/angstrom", 0.00051422063},
+           {"volt/meter", 0.00051422063},
+        }},
+        {"magneticfield", {
+           {"", 1.00},
+           {"automatic", 1.00},
+           {"atomic_unit", 1.00},
+           {"tesla", 0.000013996246},
+           {"gauss", 0.13996246},
+        }},
+        {"magneticmoment", {
+           {"", 1.00},
+           {"automatic", 1.00},
+           {"atomic_unit", 1.00},
+           {"bohrmagneton", 1.00},
+           {"nuclearmagneton", 0.0015212021},
+        }},
+        {"conductivity", {
+           {"", 1.00},
+           {"automatic", 1.00},
+           {"atomic_unit", 1.00},
+           {"siemens/meter", 1.00},
+           {"siemens/cm", 100.00},
+        }}*/
     };
 
     // Separates base unit from the metric prefix (if it exists)
-    std::tuple<std::string, std::string> separate_prefix_unit(const std::string& unit);
+    std::tuple<std::string, std::string> separatePrefixUnit(const std::string& unit);
 
     // Converts quantity from given units to internal (atomic) units
-    double unit_to_internal(const std::string& family, const std::string& unit, double number);
+    double convertToInternal(const std::string& family, const std::string& unit, double number);
 
     // Converts the internal (atomic) units to the desired output units
-    double unit_to_user(const std::string& family, const std::string& unit, double number);
+    double convertToUser(const std::string& family, const std::string& unit, double number);
 }
