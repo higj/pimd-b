@@ -33,7 +33,7 @@ def get_number_of_beads(input_file):
         config.read(input_file)
         
         # Extract the value associated with the "nbeads" key
-        nbeads_value = config.getint('simulation', 'nbeads')
+        nbeads_value = int(config.get('simulation', 'nbeads'))
         
         return nbeads_value
     except configparser.MissingSectionHeaderError:
