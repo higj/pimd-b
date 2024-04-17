@@ -68,4 +68,6 @@ jobs:
     - run: pip install -r ${{github.workspace}}/tests/requirements.txt
 
     - name: Run regression tests
-      run: python ${{github.workspace}}/tests/main.py ${{github.workspace}}/build ${{github.workspace}}/tests/cases
+      run: |
+        export OPENMPI_BIN=/home/${USER}/.openmpi/bin/
+        python ${{github.workspace}}/tests/main.py ${{github.workspace}}/build ${{github.workspace}}/tests/cases
