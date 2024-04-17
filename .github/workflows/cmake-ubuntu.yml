@@ -3,8 +3,12 @@ name: Compile on Ubuntu
 on:
   push:
     branches: [ "master" ]
+    paths-ignore:
+      - '**/README.md'
   pull_request:
     branches: [ "master" ]
+    paths-ignore:
+      - '**/README.md'
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
@@ -20,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     
     - name: Cache dependencies
       id: cache-dependencies
