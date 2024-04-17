@@ -44,8 +44,10 @@ def get_number_of_beads(input_file):
 
 def run_simulation(executable_dir, input_file):
     nbeads = get_number_of_beads(input_file)
-    #mpirun_command = ['mpirun', '-np', f"{nbeads}", os.path.join(executable_dir, 'pimdb'), '-partition', f"{nbeads}x1", '-in', input_file]
-    mpirun_command = ['mpirun', '--oversubscribe', '-np', str(nbeads), (executable_dir / 'pimdb').as_posix(), '-partition', f"{nbeads}x1", '-in', input_file.as_posix()]
+    
+    mpirun_bin_dir = os.environ['OPENMPI_BIN']
+    mpi = Path(mpirun_bin_dir) / 'mpirun'
+    mpirun_command = [mpi, '--oversubscribe', '-np', str(nbeads), (executable_dir / 'pimdb').as_posix(), '-partition', f"{nbeads}x1", '-in', input_file.as_posix()]
     
     # Windows version
     #mpirun_command = ['mpiexec', '-n', str(nbeads), (executable_dir / 'pimdb.exe').as_posix(), '-in', input_file.as_posix()]
