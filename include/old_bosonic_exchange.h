@@ -3,28 +3,27 @@
 #include "common.h"
 #include "bosonic_exchange_base.h"
 
-class OldBosonicExchange : public BosonicExchangeBase {
+class OldBosonicExchange final : public BosonicExchangeBase {
 public:
-    OldBosonicExchange(int nbosons, int np, int bead_num, double beta, double spring_constant,
-        const dVec x, const dVec x_prev, const dVec x_next, bool pbc, double L);
-    ~OldBosonicExchange();
+    OldBosonicExchange(int nbosons_, int np_, int bead_num_, double beta_, double spring_constant_,
+        const dVec& x_, const dVec& x_prev_, const dVec& x_next_, bool pbc_, double size_);
+    ~OldBosonicExchange() override = default;
 
     double effectivePotential() override;
-    void updateCoordinates(const dVec new_x, const dVec new_x_prev, const dVec new_x_next) override;
-
-    double primEstimator();
+    void prepare() override;
+    double primEstimator() override;
 
 protected:
     void springForceFirstBead(dVec& f) override;
     void springForceLastBead(dVec& f) override;
 
 private:
-    int neighbor_of_first(int ptcl_idx);
-    int neighbor_of_last(int ptcl_idx);
+    int firstBeadNeighbor(int ptcl_idx) const;
+    int lastBeadNeighbor(int ptcl_idx) const;
 
-    double get_elongest();
+    double getMaxExteriorSpringEnergy();
 
     std::vector<int> labels;  // Particle labels
 
-    double e_longest;
+    double e_shift;
 };

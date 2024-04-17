@@ -1,8 +1,11 @@
+#include <iostream>
+#include <fstream>
+
 #include "common.h"
 
 void printMsg(const std::string& msg, int this_rank, int out_rank) {
     if (this_rank == out_rank) {
-        std::cout << msg << std::endl;
+        std::cout << msg << '\n';
     }
 }
 
@@ -44,7 +47,7 @@ void periodicWrap(double& x, double L) {
     x -= L * std::nearbyint(x / L);
 }
 
-void loadXYZ(const std::string& xyz_filename, dVec& destination) {
+void loadTrajectories(const std::string& xyz_filename, dVec& destination) {
     std::ifstream inputFile(xyz_filename);
 
     if (!inputFile.is_open())
@@ -82,7 +85,7 @@ void loadXYZ(const std::string& xyz_filename, dVec& destination) {
         // TODO: Add a check that the number of dimensions in the .xyz file matches NDIM
         for (int j = 0; j < NDIM; ++j) {
             inputFile >> destination(i, j);
-            destination(i, j) = Units::unit_to_internal("length", "angstrom", destination(i, j));
+            destination(i, j) = Units::convertToInternal("length", "angstrom", destination(i, j));
         }   
     }
 
@@ -121,7 +124,7 @@ void loadMomenta(const std::string& vel_filename, double mass, dVec& destination
         for (int j = 0; j < NDIM; ++j) {
             inputFile >> destination(i, j);
             // For LAMMPS velocity files
-            destination(i, j) = mass * Units::unit_to_internal("velocity", "angstrom/ps", destination(i, j));
+            destination(i, j) = mass * Units::convertToInternal("velocity", "angstrom/ps", destination(i, j));
 
             // For i-Pi velocity files
             //destination(i, j) = mass * destination(i, j);

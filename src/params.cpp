@@ -1,14 +1,13 @@
 #include "params.h"
 
-#include <iostream>
 #include <sstream>
-#include <type_traits>
 #include <regex>
 #include <format>
 
-Params::Params(std::string filename) : reader(filename) {
+Params::Params(const std::string& filename) : reader(filename) {
 
-	if (reader.ParseError() < 0) throw std::invalid_argument(std::format("Unable to read the configuration file {}", filename));
+	if (reader.ParseError() < 0)
+		throw std::invalid_argument(std::format("Unable to read the configuration file {}", filename));
 
 	/****** Simulation params ******/
 	sim["dt"] = getQuantity("time", reader.Get(Sections::SIMULATION, "dt", "1.0 femtosecond"));
@@ -18,15 +17,15 @@ Params::Params(std::string filename) : reader(filename) {
 	if (std::get<double>(sim["gamma"]) == -1.0)
 		sim["gamma"] = 1 / (100.0 * std::get<double>(sim["dt"]));
 
-	sim["steps"] = static_cast<long>(atof(reader.Get(Sections::SIMULATION, "steps", "1e5").c_str()));  // Scientific notation
-	sim["sfreq"] = reader.GetLong(Sections::SIMULATION, "sfreq", 1000); // TODO: Add support for scientific notation
+	sim["steps"] = static_cast<long>(std::stod(reader.Get(Sections::SIMULATION, "steps", "1e5")));  // Scientific notation
+	sim["sfreq"] = reader.GetLong(Sections::SIMULATION, "sfreq", 1000); /// @todo: Add support for scientific notation
 	sim["enable_t"] = reader.GetBoolean(Sections::SIMULATION, "enable_thermostat", true);
 	sim["nbeads"] = reader.GetInteger(Sections::SIMULATION, "nbeads", 4);
 
-	if (int nbeads = std::get<int>(sim["nbeads"]); nbeads < 2) 
+	if (int nbeads = std::get<int>(sim["nbeads"]); nbeads < 2)
 		throw std::invalid_argument(std::format("The specified number of beads ({}) is less than two!", nbeads));
 
-	sim["seed"] = static_cast<unsigned int>(atof(reader.Get(Sections::SIMULATION, "seed", "1234").c_str()));
+	sim["seed"] = static_cast<unsigned int>(std::stod(reader.Get(Sections::SIMULATION, "seed", "1234")));
 
 	/****** Flags ******/
 	// Bosonic or distinguishable simulation?
@@ -37,12 +36,12 @@ Params::Params(std::string filename) : reader(filename) {
 	sim["pbc"] = reader.GetBoolean(Sections::SIMULATION, "pbc", false);
 
 	std::string init_pos_type, init_pos_specification;
-	
+
 	if (!parseTokenParentheses(reader.Get(Sections::SIMULATION, "initial_position", "random"), init_pos_type, init_pos_specification)) {
 		throw std::invalid_argument("The coordinate initialization method format is invalid!");
 	}
 
-	allowed_coord_init_methods = { "random", "xyz" }; // TODO: Add "cell" option
+	allowed_coord_init_methods = { "random", "xyz" }; /// @todo Add "cell" option
 
 	if (!labelInArray(init_pos_type, allowed_coord_init_methods))
 		throw std::invalid_argument(std::format("The specified coordinate initialization method ({}) is not supported!", init_pos_type));
@@ -68,7 +67,7 @@ Params::Params(std::string filename) : reader(filename) {
 	if (double temp = std::get<double>(sys["temperature"]); temp <= 0.0) {
 		throw std::invalid_argument(std::format("The specified temperature ({0:4.3f} kelvin) is unphysical!", temp));
 	}
-	
+
 	sys["natoms"] = reader.GetInteger(Sections::SYSTEM, "natoms", 1);
 	if (int natoms = std::get<int>(sys["natoms"]); natoms < 1)
 		throw std::invalid_argument(std::format("The specified number of particles ({}) is smaller than one!", natoms));
@@ -81,20 +80,25 @@ Params::Params(std::string filename) : reader(filename) {
 	if (double size = std::get<double>(sys["size"]); size <= 0.0)
 		throw std::invalid_argument(std::format("The provided system size ({0:4.3f}) is unphysical!", size));
 
-	interaction_potential_names = { "aziz", "free", "harmonic", "dipole" };
-	external_potential_names = { "free", "harmonic", "double_well"};
+	allowed_int_potential_names = { "aziz", "free", "harmonic", "dipole" };
+	allowed_ext_potential_names = { "free", "harmonic", "double_well" };
 
 	/****** Interaction potential ******/
 
 	std::string interaction_name = reader.GetString(Sections::INT_POTENTIAL, "name", "free");
 
-	if (!labelInArray(interaction_name, interaction_potential_names))
+	if (!labelInArray(interaction_name, allowed_int_potential_names))
 		throw std::invalid_argument(std::format("The specified interaction potential ({}) is not supported!", interaction_name));
 
 	interaction_pot["name"] = interaction_name;
 	interaction_pot["cutoff"] = getQuantity("length", reader.Get(Sections::INT_POTENTIAL, "cutoff", "-1.0 angstrom"));
 
-	if (interaction_name == "harmonic") {
+
+	if (interaction_name == "free") {
+		// In the special case of free particles, the cutoff distance is set to zero
+	    interaction_pot["cutoff"] = 0.0;
+    }
+    else if (interaction_name == "harmonic") {
 		// In atomic units, the angular frequency of the oscillator has the same dimensions as the energy
 		interaction_pot["omega"] = getQuantity("energy", reader.Get(Sections::INT_POTENTIAL, "omega", "1.0 millielectronvolt"));
 	}
@@ -110,7 +114,7 @@ Params::Params(std::string filename) : reader(filename) {
 
 	std::string external_name = reader.GetString(Sections::EXT_POTENTIAL, "name", "free");
 
-	if (!labelInArray(external_name, external_potential_names))
+	if (!labelInArray(external_name, allowed_ext_potential_names))
 		throw std::invalid_argument(std::format("The specified external potential ({}) is not supported!", external_name));
 
 	external_pot["name"] = external_name;
@@ -130,20 +134,8 @@ Params::Params(std::string filename) : reader(filename) {
 	out["forces"] = reader.GetBoolean(Sections::OUTPUT, "forces", false);
 }
 
-bool Params::labelInArray(const std::string& label, const std::vector<std::string>& arr) {
+bool Params::labelInArray(const std::string& label, const StringsList& arr) {
 	return std::find(arr.begin(), arr.end(), label) != arr.end();
-}
-
-void Params::setSimParam(std::string name, sim_types value) {
-	sim[name] = value;
-}
-
-void Params::setSysParam(std::string name, sys_types value) {
-	sys[name] = value;
-}
-
-std::string Params::getSysParam(std::string name) {
-	return reader.Get("sys", name, "none");
 }
 
 // Splits a string into several strings based on a delimiter
@@ -162,38 +154,42 @@ std::vector<std::string> Params::splitString(const std::string& line, char delim
 // Parse a string containing a numerical value and a unit
 std::pair<double, std::string> Params::parseQuantity(const std::string& input) {
 	std::istringstream iss(input);
-	double value;
-	std::string unit;
+    std::string unit;
 
 	// Read the floating-point number and the unit
 	// See: https://en.cppreference.com/w/cpp/io/basic_istream/operator_gtgt
-	if (iss >> value >> std::ws >> unit) {
+	if (double value; iss >> value >> std::ws >> unit) {
 		return std::make_pair(value, unit);
-	} else {
-		throw std::invalid_argument("Invalid input format");
 	}
+
+    throw std::invalid_argument("Invalid input format");
 }
 
-// Accepts a string of the format "<number> <unit>" and returns the numerical
-// value of the quantity in internal (atomic) units.
+/**
+ * Accepts a string of the format "<number> <unit>" and returns the numerical
+ * value of the quantity in internal (atomic) units.
+ *
+ * @param family The family of units to which the quantity belongs.
+ * @param input The string containing the numerical value and the unit.
+ * @return The numerical value of the quantity in internal units.
+ */
 double Params::getQuantity(const std::string& family, const std::string& input) {
 	// Extract numerical value and specified unit
 	auto [value, raw_unit] = parseQuantity(input);
 
 	// Match the provided unit to known units.
-	return Units::unit_to_internal(family, raw_unit, value);
+	return Units::convertToInternal(family, raw_unit, value);
 }
 
 // Used to parse strings of the format "token(value)"
 bool Params::parseTokenParentheses(const std::string& input, std::string& token, std::string& value) {
 	// Define a regular expression for the specified format
-	// TODO: Generalize regex to catch cases such as "foo()" and "foo" (without parentheses)	
+	// @todo Generalize regex to catch cases such as "foo()" and "foo" (without parentheses)	
 	// Catch "foo(bar)", "foo()" and "foo"
-	std::regex pattern(R"(\s*(\w+)\((.*)\)\s*|\s*(\w+)\s*)");
+    const std::regex pattern(R"(\s*(\w+)\((.*)\)\s*|\s*(\w+)\s*)");
 
 	// Match the input string against the pattern
-	std::smatch matches;
-	if (std::regex_match(input, matches, pattern)) {
+    if (std::smatch matches; std::regex_match(input, matches, pattern)) {
 		// Check if there are matched groups
 		if (matches.size() == 4 && (matches[1].matched || matches[3].matched)) {
 			// Extract token and value from the matched groups

@@ -1,38 +1,26 @@
 #include "bosonic_exchange_base.h"
 
-BosonicExchangeBase::BosonicExchangeBase(int nbosons, int np, int bead_num, double beta, double spring_constant,
-    const dVec x, const dVec x_prev, const dVec x_next, bool pbc, double L) : 
-    nbosons(nbosons),
-    np(np),
-    bead_num(bead_num),
-    beta(beta),
-    spring_constant(spring_constant),
-    x(x),
-    x_prev(x_prev),
-    x_next(x_next),
-    pbc(pbc),
-    L(L) {
+BosonicExchangeBase::BosonicExchangeBase(int nbosons_, int np_, int bead_num_, double beta_, double spring_constant_,
+    const dVec& x_, const dVec& x_prev_, const dVec& x_next_, bool pbc_, double size_) : 
+    nbosons(nbosons_),
+    nbeads(np_),
+    bead_num(bead_num_),
+    spring_constant(spring_constant_),
+    beta(beta_),
+    x(x_),
+    x_prev(x_prev_),
+    x_next(x_next_),
+    pbc(pbc_),
+    size(size_) {
 #if IPI_CONVENTION
-    this->beta = beta / np;
+    beta = beta_ / nbeads;
 #endif
 }
 
 /* ---------------------------------------------------------------------- */
 
-BosonicExchangeBase::~BosonicExchangeBase() {
-}
-
-/* ---------------------------------------------------------------------- */
-
-void BosonicExchangeBase::updateCoordinates(const dVec new_x, const dVec new_x_prev, const dVec new_x_next) {
-    x = new_x;
-    x_prev = new_x_prev;
-    x_next = new_x_next;
-}
-
-/* ---------------------------------------------------------------------- */
-
-void BosonicExchangeBase::diff_two_beads(const dVec x1, int l1, const dVec x2, int l2, double diff[NDIM]) {
+void BosonicExchangeBase::getBeadsSeparation(const dVec x1, int l1, const dVec x2, int l2, double diff[NDIM]) const
+{
     l1 = l1 % nbosons;
     l2 = l2 % nbosons;
 
@@ -40,7 +28,7 @@ void BosonicExchangeBase::diff_two_beads(const dVec x1, int l1, const dVec x2, i
         double dx = x2(l2, axis) - x1(l1, axis);
 #if MINIM
         if (pbc)
-            applyMinimumImage(dx, L);
+            applyMinimumImage(dx, size);
 #endif
         diff[axis] = dx;
     }
@@ -55,10 +43,10 @@ void BosonicExchangeBase::diff_two_beads(const dVec x1, int l1, const dVec x2, i
  * @param l2 Particle index of the second bead
  * @return Distance squared between the two beads
  */
-double BosonicExchangeBase::distance_squared_two_beads(const dVec x1, int l1, const dVec x2, int l2)
+double BosonicExchangeBase::getBeadsSeparationSquared(const dVec x1, int l1, const dVec x2, int l2) const
 {
     double diff[NDIM];
-    diff_two_beads(x1, l1, x2, l2, diff);
+    getBeadsSeparation(x1, l1, x2, l2, diff);
 
     double dist_sqrd = 0.0;
 
@@ -72,7 +60,7 @@ double BosonicExchangeBase::distance_squared_two_beads(const dVec x1, int l1, co
 /* ---------------------------------------------------------------------- */
 
 void BosonicExchangeBase::springForce(dVec& f) {
-    if (bead_num == np - 1) {
+    if (bead_num == nbeads - 1) {
         springForceLastBead(f);
     }
     else if (bead_num == 0) {
@@ -83,12 +71,6 @@ void BosonicExchangeBase::springForce(dVec& f) {
     }
 }
 
-/* ---------------------------------------------------------------------- */
-
-double BosonicExchangeBase::effectivePotential() {
-    return 0.0;
-}
-
 /**
  * Calculates the spring energy contribution of the current and the next time-slice,
  * provided that the connection is interior (i.e., not the spring energy between 1st and last bead).
@@ -96,8 +78,9 @@ double BosonicExchangeBase::effectivePotential() {
  * 
  * @return Spring energy contribution of the current and the next time-slice
  */
-double BosonicExchangeBase::interiorSpringEnergy() {
-    if (bead_num == np - 1)
+double BosonicExchangeBase::interiorSpringEnergy() const
+{
+    if (bead_num == nbeads - 1)
         throw std::runtime_error("interiorSpringEnergy() called for the last time-slice");
 
     double interior_spring_energy = 0.0;
@@ -117,46 +100,27 @@ double BosonicExchangeBase::interiorSpringEnergy() {
 
 /* ---------------------------------------------------------------------- */
 
-void BosonicExchangeBase::springForceInteriorBead(dVec& f)
+void BosonicExchangeBase::springForceInteriorBead(dVec& f) const
 {
     for (int l = 0; l < nbosons; l++) {
         std::vector<double> sums(NDIM, 0.0);
 
         double diff_prev[NDIM];
-        diff_two_beads(x, l, x_prev, l, diff_prev);
+        getBeadsSeparation(x, l, x_prev, l, diff_prev);
 
         for (int axis = 0; axis < NDIM; ++axis) {
             sums[axis] += diff_prev[axis];
         }
 
         double diff_next[3];
-        diff_two_beads(x, l, x_next, l, diff_next);
+        getBeadsSeparation(x, l, x_next, l, diff_next);
 
         for (int axis = 0; axis < NDIM; ++axis) {
             sums[axis] += diff_next[axis];
         }
 
         for (int axis = 0; axis < NDIM; ++axis) {
-            f(l, axis) += sums[axis] * spring_constant;
+            f(l, axis) = sums[axis] * spring_constant;
         }
     }
-}
-
-/* ---------------------------------------------------------------------- */
-
-void BosonicExchangeBase::springForceFirstBead(dVec& f)
-{
-}
-
-/* ---------------------------------------------------------------------- */
-
-void BosonicExchangeBase::springForceLastBead(dVec& f)
-{
-}
-
-/* ---------------------------------------------------------------------- */
-
-double BosonicExchangeBase::primEstimator()
-{
-	return 0.0;
 }

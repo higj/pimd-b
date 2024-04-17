@@ -1,7 +1,5 @@
-
-
 # PIMD-B++	
-
+![Ubuntu compilation check](https://github.com/higj/pimd-b/actions/workflows/cmake-ubuntu.yml/badge.svg)
 
 ## Introduction 
 
@@ -140,7 +138,7 @@ omega = 3.0 millielectronvolt
 Currently, the following potentials are available:
 
 * **External potentials**: `free`, `harmonic` and `double_well` 
-* **Pair interaction potentials**: `free`, `harmonic` and `dipole`
+* **Pair interaction potentials**: `free`, `harmonic`, `dipole` and `aziz`
 
 Each potential comes with its own parameters that must be provided in the configuration file. For example, the harmonic potential 
 requires the `omega` parameter that sets the angular frequency of the oscillator, in energy units (i.e., `omega` is in fact $\hbar\omega$).
@@ -153,7 +151,34 @@ The `initial_position` option allows to specify the method of initialization for
 * `random` (default): samples random positions in each Cartesian direction from a uniform distribution on the interval $[-L/2, L/2]$, where $L$ is the linear size of the system
 * `xyz(<filename>.xyz)`: initializes the coordinates based on the provided `.xyz` file. A given particle is initialized at the same location across all imaginary time-slices (beads).
 
+The `size` option defines the linear size of the system. Currently, only cube geometry is supported. In the absence of periodic boundary conditions, `size` only affects the way initial positions are generated. However, if periodic boundary conditions are enabled, the system size also affects the cutoff distance for interactions, as well as the estimators. Also, the coordinates may be wrapped in this case, and minimum image convention can potentially be employed, if such functionality is desired.
+
 Internally, the simulation uses atomic units. However, the input parameters may be provided in the units of your choosing (e.g., electron-volts for energy).
+
+The following options are available in the `[simulation]` and `[system]` sections of the configuration file:
+
+| Option | Description |
+| :-----------: | ----------- |
+|`dt`     |  Timestep for MD (units of time) |
+|`steps`     |  Total number of MD steps (can be written in scientific notation) |
+|`threshold`     |  Defines the percentage of steps to throw away for thermalization (float between 0 and 1) |
+|`sfreq`     | Frequency at which the observables are calculated in the production stage |
+|`enable_thermostat`     |  If set to `false`, the Langevin thermostat will be disabled (NVE run) |
+|`gamma`    |  Friction coefficient for the Langevin thermostat in units of inverse time (Default: $\frac{1}{100\Delta t}$) |
+|`nbeads`     |  Number of imaginary time-slices (beads) |
+|`bosonic`     |  Set to `true`/`false` for bosonic/distinguishable PIMD (Default: `false`) |
+|`pbc`     |  Set to `true` to enable periodic boundary conditions (Default: `false`) |
+|`fixcom`     |  Set to `true` to remove the center of mass motion (Default: `true`) |
+|`seed`     | Random number generator seed |
+|`initial_position`     | Method for generating the initial positions of the beads |
+|`initial_velocity`     | Method for generating the initial velocities of the beads. `random` samples from the Maxwell-Boltzmann distribution. `manual` loads velocities from a provided file. (Default: `random`) |
+|`temperature`     |  Temperature of the system (units of temperature) |
+|`natoms`     |  Number of particles in the quantum system |
+|`size`     |  Linear size of the system (units of length) |
+|`mass`     |  Mass of the particles (units of mass) |
+|`positions`     | Set to `true` to output the trajectories (Default: `false`) |
+|`velocities`     | Set to `true` to output the velocities (Default: `false`) |
+|`forces`     | Set to `true` to output the forces (Default: `false`) |
 
 On Windows, run the program using:
 
@@ -166,6 +191,12 @@ where `P` is the number of beads.
 On power, run using:
 ```bash
 mpirun -np P pimdb -partition Px1
+```
+
+If the configuration file for the simulation is not located in the same directory as the executable, you can specify the path to the configuration file using the `-in` flag, e.g.,
+
+```bash
+mpirun -np P pimdb -partition Px1 -in /path/to/config.ini
 ```
 
 For convenience, you may use the following bash script:

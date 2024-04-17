@@ -3,31 +3,31 @@
 #include "common.h"
 #include "bosonic_exchange_base.h"
 
-class BosonicExchange : public BosonicExchangeBase {
+class BosonicExchange final : public BosonicExchangeBase {
 public:
-    BosonicExchange(int nbosons, int np, int bead_num, double beta, double spring_constant,
-        const dVec x, const dVec x_prev, const dVec x_next, bool pbc, double L);
-    ~BosonicExchange();
+    BosonicExchange(int nbosons_, int np_, int bead_num_, double beta_, double spring_constant_,
+                    const dVec& x_, const dVec& x_prev_, const dVec& x_next_, bool pbc_, double size_);
+    ~BosonicExchange() override = default;
 
     double effectivePotential() override;
     double get_Vn(int n) const;
     double get_E_kn_serial_order(int i) const;
 
-    void updateCoordinates(const dVec new_x, const dVec new_x_prev, const dVec new_x_next) override;
+    void prepare() override;
 
-    double primEstimator();
+    double primEstimator() override;
 
 protected:
     void springForceFirstBead(dVec& f) override;
     void springForceLastBead(dVec& f) override;
 
 private:
-    void prepare_with_coordinates();
-    void evaluate_cycle_energies();
+    void evaluateBosonicEnergies();
+    void evaluateCycleEnergies();
     
-    double get_Enk(int m, int k);
+    double get_Enk(int m, int k) const;
     void set_Enk(int m, int k, double val);
-    void evaluate_connection_probabilities();
+    void evaluateConnectionProbabilities();
     void Evaluate_VBn();
     void Evaluate_V_backwards();
 

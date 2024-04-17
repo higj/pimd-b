@@ -1,3 +1,7 @@
+#include <ranges>
+#include <fstream>
+#include <filesystem>
+
 #include "observable.h"
 #include "simulation.h"
 
@@ -7,37 +11,37 @@
 #include "bosonic_exchange.h"
 #endif
 
-Simulation::Simulation(int& rank, int& nproc, Params& paramObj, unsigned int seed) :
-    this_bead(rank),
-    nproc(nproc),
+Simulation::Simulation(int& rank, int& nproc, Params& param_obj, unsigned int seed) :
+    bosonic_exchange(nullptr),
     rand_gen(seed + rank),
-    bosonic_exchange(nullptr)
+    this_bead(rank),
+    nproc(nproc)
 {
-    getVariant(paramObj.sim["nbeads"], nbeads);
-    getVariant(paramObj.sim["dt"], dt);
-    getVariant(paramObj.sim["sfreq"], sfreq);
-    getVariant(paramObj.sim["steps"], steps);
-    getVariant(paramObj.sim["enable_t"], enable_t);
+    getVariant(param_obj.sim["nbeads"], nbeads);
+    getVariant(param_obj.sim["dt"], dt);
+    getVariant(param_obj.sim["sfreq"], sfreq);
+    getVariant(param_obj.sim["steps"], steps);
+    getVariant(param_obj.sim["enable_t"], enable_t);
 
-    getVariant(paramObj.sim["threshold"], threshold);
+    getVariant(param_obj.sim["threshold"], threshold);
     threshold *= steps;  // Threshold in terms of steps
 
-    getVariant(paramObj.sim["gamma"], gamma);
-    getVariant(paramObj.sim["bosonic"], bosonic);
-    getVariant(paramObj.sim["fixcom"], fixcom);
-    getVariant(paramObj.sim["pbc"], pbc);
+    getVariant(param_obj.sim["gamma"], gamma);
+    getVariant(param_obj.sim["bosonic"], bosonic);
+    getVariant(param_obj.sim["fixcom"], fixcom);
+    getVariant(param_obj.sim["pbc"], pbc);
 
-    getVariant(paramObj.out["positions"], out_pos);
-    getVariant(paramObj.out["velocities"], out_vel);
-    getVariant(paramObj.out["forces"], out_force);
+    getVariant(param_obj.out["positions"], out_pos);
+    getVariant(param_obj.out["velocities"], out_vel);
+    getVariant(param_obj.out["forces"], out_force);
 
-    getVariant(paramObj.sys["temperature"], temperature);
-    getVariant(paramObj.sys["natoms"], natoms);
-    getVariant(paramObj.sys["size"], size);
+    getVariant(param_obj.sys["temperature"], temperature);
+    getVariant(param_obj.sys["natoms"], natoms);
+    getVariant(param_obj.sys["size"], size);
 
     beta = 1.0 / (Constants::kB * temperature);
 
-    getVariant(paramObj.sys["mass"], mass);
+    getVariant(param_obj.sys["mass"], mass);
 
 #if IPI_CONVENTION
     // i-Pi convention [J. Chem. Phys. 133, 124104 (2010)]
@@ -50,97 +54,40 @@ Simulation::Simulation(int& rank, int& nproc, Params& paramObj, unsigned int see
     spring_constant = mass * omega_p * omega_p;
 
     // Get the seed from the config file
-    getVariant(paramObj.sim["seed"], params_seed);
+    getVariant(param_obj.sim["seed"], params_seed);
 
     // Based on the provided seed, make sure each process has a unique seed
     rand_gen.seed(params_seed + rank);
     mars_gen = std::make_unique<RanMars>(params_seed + rank);
 
-    init_pos_type = std::get<std::string>(paramObj.sim["init_pos_type"]);
-    init_vel_type = std::get<std::string>(paramObj.sim["init_vel_type"]);
+    init_pos_type = std::get<std::string>(param_obj.sim["init_pos_type"]);
+    init_vel_type = std::get<std::string>(param_obj.sim["init_vel_type"]);
 
-    // Generate initial conditions
+    // Initialize the coordinate, momenta, and force arrays
     coord = dVec(natoms);
     prev_coord = dVec(natoms);
     next_coord = dVec(natoms);
     momenta = dVec(natoms);
-
-    if (init_pos_type == "xyz") {
-        // Load initial Cartesian coordinates from the provided .xyz file
-        std::string xyz_filename = std::get<std::string>(paramObj.sim["init_pos_xyz_filename"]);
-
-        /// @todo Remove the bead_num==0 condition later.
-        /// This is placed for testing purposes, to compare the
-        /// simulation results against i-Pi.
-        if (this_bead == 0)
-            loadXYZ(xyz_filename, coord);
-    } else {
-        // Generate random positions (sample from a uniform distribution)
-        genRandomPositions(coord);
-    }
-
-    if (init_vel_type == "manual") {
-        // If loading momenta from elsewhere, do not zero momentum after that
-        loadMomenta(std::format("init/vel_{:02}.dat", this_bead + 1), mass, momenta); // LAMMPS convention
-        //loadMomenta(std::format("init/vel_{:02}.dat", this_bead), mass, momenta); // i-Pi convention
-
-        // TODO: Throw error if the file doesn't exist or has a wrong format
-    } else {
-        // If generating momenta from the Maxwell-Boltzmann distribution, zero the total momentum
-        genMomentum(momenta);
-        zeroMomentum();
-    }
-
-    // Initialize forces to zeros
     forces = dVec(natoms);
 
+    initializePositions(coord, param_obj.sim);
+    initializeMomenta(momenta);
+
     // Initialize the potential based on the input
-    // TODO: Make it customizable from config
-    external_potential_name = std::get<std::string>(paramObj.external_pot["name"]);
-    interaction_potential_name = std::get<std::string>(paramObj.interaction_pot["name"]);
-
-    if (external_potential_name == "free") {
-        ext_potential = std::make_unique<Potential>();
-    } else if (external_potential_name == "harmonic") {
-        double omega = std::get<double>(paramObj.external_pot["omega"]);
-        ext_potential = std::make_unique<HarmonicPotential>(mass, omega);
-    } else if (external_potential_name == "double_well") {
-        double strength = std::get<double>(paramObj.external_pot["strength"]);
-        double loc = std::get<double>(paramObj.external_pot["location"]);
-        ext_potential = std::make_unique<DoubleWellPotential>(mass, strength, loc);
-    } else {
-        ext_potential = std::make_unique<Potential>();
-    }
-
-    int_pot_cutoff = std::get<double>(paramObj.interaction_pot["cutoff"]);
+    external_potential_name = std::get<std::string>(param_obj.external_pot["name"]);
+    interaction_potential_name = std::get<std::string>(param_obj.interaction_pot["name"]);
+    int_pot_cutoff = std::get<double>(param_obj.interaction_pot["cutoff"]);
 
     // For cubic cells with PBC, the cutoff distance must be no greater than L/2 for consistency with
     // the minimum image convention (see 1.6.3 in Allen & Tildesley).
     if (pbc)
         int_pot_cutoff = std::min(int_pot_cutoff, 0.5 * size);
 
-    if (interaction_potential_name == "free") {
-        int_potential = std::make_unique<Potential>();
-        int_pot_cutoff = 0.0;
-    }
-    else if (interaction_potential_name == "harmonic") {
-        double omega = std::get<double>(paramObj.interaction_pot["omega"]);
-        int_potential = std::make_unique<HarmonicPotential>(mass, omega);
-    }
-    else if (interaction_potential_name == "double_well") {
-        double strength = std::get<double>(paramObj.interaction_pot["strength"]); // TODO: Check the units of "strength"
-        double loc = std::get<double>(paramObj.interaction_pot["location"]);
-        int_potential = std::make_unique<DoubleWellPotential>(mass, strength, loc);
-    }
-    else if (interaction_potential_name == "dipole") {
-        double strength = std::get<double>(paramObj.interaction_pot["strength"]); // TODO: Check the units of "strength"
-        int_potential = std::make_unique<DipolePotential>(strength);
-    }
-    else {
-        int_potential = std::make_unique<Potential>();
-    }
+    ext_potential = initializePotential(external_potential_name, param_obj.external_pot);
+    int_potential = initializePotential(interaction_potential_name, param_obj.interaction_pot);
 
-    /***** Observables *****/
+    // Observables
+    /// @todo Add the ability to specify the observables in the input file
     ObservableFactory obs_factory;
     observables.push_back(obs_factory.createQuantity("energy", *this, sfreq, "kelvin"));
     observables.push_back(obs_factory.createQuantity("classical", *this, sfreq, "kelvin"));
@@ -207,7 +154,7 @@ double Simulation::sampleMaxwellBoltzmann() {
  * @brief Perform a single Langevin step for the molecular dynamics simulation.
  */
 void Simulation::langevinStep() {
-    std::normal_distribution<double> normal;
+    //std::normal_distribution<double> normal; // At the moment we use the Marsaglia generator
 
     double a = exp(-0.5 * gamma * dt);
 
@@ -259,7 +206,7 @@ void Simulation::velocityVerletStep() {
     // Recentering should be attempted only in the case of periodic boundary conditions.
     // Also, with the current implementation, it can only work for distinguishable particles.
     if (pbc && !bosonic) {
-        // If the initial bead has moved outside of the fundamental cell,
+        // If the initial bead has moved outside the fundamental cell,
         // then rigidly translate the whole polymer such that
         // the polymer will start in the fundamental cell.
 
@@ -311,18 +258,18 @@ void Simulation::velocityVerletStep() {
  * @brief Perform a molecular dynamics run using the OBABO scheme.
  */
 void Simulation::run() {
-    std::filesystem::create_directory(OUTPUT_FOLDER_NAME);
+    std::filesystem::create_directory(Output::FOLDER_NAME);
     std::ofstream out_file;
 
     if (this_bead == 0) {
-        out_file.open(std::format("{}/simulation.out", OUTPUT_FOLDER_NAME, this_bead), std::ios::out | std::ios::app);
+        out_file.open(std::format("{}/{}", Output::FOLDER_NAME, Output::MAIN_FILENAME), std::ios::out | std::ios::app);
 
         // Header of the output file
         out_file << std::format("{:^16s}", "step");
 
         for (const auto& observable : observables) {
-            for (const auto& elem : observable->quantities) {
-                out_file << std::vformat(" {:^16s}", std::make_format_args(elem.first));
+            for (const auto& key : observable->quantities | std::views::keys) {
+                out_file << std::vformat(" {:^16s}", std::make_format_args(key));
             }
         }
 
@@ -358,7 +305,7 @@ void Simulation::run() {
         if (enable_t)
             langevinStep();
 
-        // If fixcom=true, the center of mass of the ring polymers is fixed during the simulation
+        // Zero momentum after every Langevin step (if needed)
         if (fixcom)
             zeroMomentum();
 
@@ -366,11 +313,11 @@ void Simulation::run() {
             printProgress(step, steps, this_bead);
 #endif
 
-        // If we have not reached the thermalization threshold, skip to the next step
+        // If we have not reached the thermalization threshold, skip to the next step (thermalization stage)
         if (step < threshold)
             continue;
 
-        // Calculate and print the observables
+        // Calculate and print the observables (production stage)
         for (const auto& observable : observables) {
             observable->calculate();
         }
@@ -382,9 +329,9 @@ void Simulation::run() {
             for (const auto& observable : observables) {
                 // The inner loop is necessary because some observable classes can calculate
                 // more than one observable (e.g., "energy" calculates both the kinetic and potential energies).
-                for (const auto& elem : observable->quantities) {
+                for (const double& val : observable->quantities | std::views::values) {
                     double quantity_value = 0.0;
-                    double local_quantity_value = elem.second;
+                    double local_quantity_value = val;
 
                     // Sum the results from all processes (beads)
                     MPI_Allreduce(&local_quantity_value, &quantity_value, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -403,18 +350,10 @@ void Simulation::run() {
         out_file.close();
 
         std::ofstream report_file;
-        report_file.open(std::format("{}/report.txt", OUTPUT_FOLDER_NAME), std::ios::out | std::ios::app);
+        report_file.open(std::format("{}/report.txt", Output::FOLDER_NAME), std::ios::out | std::ios::app);
         printReport(report_file);
         report_file.close();
     }
-}
-
-/**
- * @brief Impose the initial conditions for the simulation.
- */
-void Simulation::forceIniCond(dVec pos_arr, dVec momentum_arr) {
-    coord = pos_arr;
-    momenta = momentum_arr;
 }
 
 /**
@@ -479,7 +418,8 @@ void Simulation::updateForces() {
     // We distinguish between two types of forces: spring forces between the beads (due to the 
     // classical isomorphism) and the non-spring forces (due to either an external potential 
     // or interactions).
-    dVec spring_forces(natoms), physical_forces(natoms);
+    dVec spring_forces(natoms);
+    dVec physical_forces(natoms);
 
     updateSpringForces(spring_forces);
     updatePhysicalForces(physical_forces);
@@ -517,7 +457,7 @@ void Simulation::updateNeighboringCoordinates() {
  */
 void Simulation::updateSpringForces(dVec& spring_force_arr) const {
     if (bosonic) {
-        bosonic_exchange->updateCoordinates(coord, prev_coord, next_coord);
+        bosonic_exchange->prepare();
         bosonic_exchange->springForce(spring_force_arr);
     } else {
         for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
@@ -552,15 +492,14 @@ void Simulation::updatePhysicalForces(dVec& physical_force_arr) const {
         for (int ptcl_one = 0; ptcl_one < natoms; ++ptcl_one) {
             for (int ptcl_two = ptcl_one + 1; ptcl_two < natoms; ++ptcl_two) {
                 dVec diff = getSeparation(ptcl_one, ptcl_two);  // Vectorial distance
-                double distance = diff.norm(0);                 // Scalar distance
 
                 // If the distance between the particles exceeds the cutoff length
                 // then we assume the interaction is negligible and do not bother
                 // calculating the force.
                 // We use the convention that when cutoff < 0 then the interaction is
                 // calculated for all distances.
-                if (distance < int_pot_cutoff || int_pot_cutoff < 0.0) {
-                    dVec force_on_one(1);
+                if (const double distance = diff.norm(); distance < int_pot_cutoff || int_pot_cutoff < 0.0) {
+                    dVec force_on_one;
                     force_on_one = (-1.0) * int_potential->gradV(diff);
 
                     for (int axis = 0; axis < NDIM; ++axis) {
@@ -583,7 +522,8 @@ void Simulation::updatePhysicalForces(dVec& physical_force_arr) const {
  * @return Vectorial distance between the two particles.
  */
 dVec Simulation::getSeparation(int first_ptcl, int second_ptcl) const {
-    dVec sep(1);
+    dVec sep;
+
     for (int axis = 0; axis < NDIM; ++axis) {
         double diff = coord(first_ptcl, axis) - coord(second_ptcl, axis);
 #if MINIM
@@ -623,20 +563,18 @@ void Simulation::printReport(std::ofstream& out_file) const {
     out_file << formattedReportLine("Number of atoms", natoms);
     out_file << formattedReportLine("Number of beads", nbeads);
 
-    double out_temperature = Units::unit_to_user("temperature", "kelvin", temperature);
+    double out_temperature = Units::convertToUser("temperature", "kelvin", temperature);
     out_file << formattedReportLine("Temperature", std::format("{} kelvin", out_temperature));
 
-    double out_sys_size = Units::unit_to_user("length", "angstrom", size);
+    double out_sys_size = Units::convertToUser("length", "angstrom", size);
     out_file << formattedReportLine("Linear size of the system", std::format("{} angstroms", out_sys_size));
 
-    double out_mass = Units::unit_to_user("mass", "dalton", mass);
+    double out_mass = Units::convertToUser("mass", "dalton", mass);
     out_file << formattedReportLine("Mass", std::format("{} amu", out_mass));
 
     out_file << formattedReportLine("Total number of MD steps", steps);
     out_file << formattedReportLine("Interaction potential name", interaction_potential_name);
     out_file << formattedReportLine("External potential name", external_potential_name);
-    //out_file << "---------\n";
-    //out_file << "Note: All dimensional quantites are printed in atomic units.";
 
     out_file << "---------\nFeatures\n---------\n";
     out_file << formattedReportLine("Minimum image convention", MINIM);
@@ -646,13 +584,13 @@ void Simulation::printReport(std::ofstream& out_file) const {
 }
 
 /**
- * Outputs the trajectories of the particles to an xyz file.
+ * Outputs the trajectories of the particles to a xyz file.
  * 
  * @param step Current step of the simulation.
  */
 void Simulation::outputTrajectories(int step) {
     std::ofstream xyz_file;
-    xyz_file.open(std::format("{}/position_{}.xyz", OUTPUT_FOLDER_NAME, this_bead), std::ios::out | std::ios::app);
+    xyz_file.open(std::format("{}/position_{}.xyz", Output::FOLDER_NAME, this_bead), std::ios::out | std::ios::app);
 
     xyz_file << std::format("{}\n", natoms);
     xyz_file << std::format(" Atoms. MD step: {}\n", step);
@@ -661,8 +599,8 @@ void Simulation::outputTrajectories(int step) {
         xyz_file << "1";
 
         for (int axis = 0; axis < NDIM; ++axis)
-            // TODO: Make the units configurable
-            xyz_file << std::format(" {:^20.12e}", Units::unit_to_user("length", "angstrom", coord(ptcl_idx, axis)));
+            /// @todo Make the units configurable
+            xyz_file << std::format(" {:^20.12e}", Units::convertToUser("length", "angstrom", coord(ptcl_idx, axis)));
 #if NDIM == 1
         xyz_file << " 0.0 0.0";
 #elif NDIM == 2
@@ -681,7 +619,7 @@ void Simulation::outputTrajectories(int step) {
  */
 void Simulation::outputVelocities(int step) {
     std::ofstream vel_file;
-    vel_file.open(std::format("{}/velocity_{}.dat", OUTPUT_FOLDER_NAME, this_bead), std::ios::out | std::ios::app);
+    vel_file.open(std::format("{}/velocity_{}.dat", Output::FOLDER_NAME, this_bead), std::ios::out | std::ios::app);
 
     vel_file << std::format("{}\n", natoms);
     vel_file << std::format(" Atoms. Timestep: {}\n", step);
@@ -690,8 +628,8 @@ void Simulation::outputVelocities(int step) {
         vel_file << (ptcl_idx + 1) << " 1";
 
         for (int axis = 0; axis < NDIM; ++axis)
-            // TODO: Make the units configurable
-            vel_file << std::format(" {:^20.12e}", Units::unit_to_user("velocity", "angstrom/ps", momenta(ptcl_idx, axis) / mass));
+            /// @todo Make the units configurable
+            vel_file << std::format(" {:^20.12e}", Units::convertToUser("velocity", "angstrom/ps", momenta(ptcl_idx, axis) / mass));
 #if NDIM == 1
         vel_file << " 0.0 0.0";
 #elif NDIM == 2
@@ -710,7 +648,7 @@ void Simulation::outputVelocities(int step) {
  */
 void Simulation::outputForces(int step) {
     std::ofstream force_file;
-    force_file.open(std::format("{}/force_{}.dat", OUTPUT_FOLDER_NAME, this_bead), std::ios::out | std::ios::app);
+    force_file.open(std::format("{}/force_{}.dat", Output::FOLDER_NAME, this_bead), std::ios::out | std::ios::app);
 
     force_file << std::format("{}\n", natoms);
     force_file << std::format(" Atoms. Timestep: {}\n", step);
@@ -719,7 +657,7 @@ void Simulation::outputForces(int step) {
         force_file << (ptcl_idx + 1) << " 1";
 
         for (int axis = 0; axis < NDIM; ++axis)
-            force_file << std::format(" {:^20.12e}", Units::unit_to_user("force", "ev/ang", forces(ptcl_idx, axis)));
+            force_file << std::format(" {:^20.12e}", Units::convertToUser("force", "ev/ang", forces(ptcl_idx, axis)));
 #if NDIM == 1
         force_file << " 0.0 0.0";
 #elif NDIM == 2
@@ -738,9 +676,10 @@ void Simulation::outputForces(int step) {
  * center of mass momentum is given by p_c=m*v_c=(p_1+..+p_n)/n, where n=N*P
  * is the total number of beads in the system.
  */
-void Simulation::zeroMomentum() {
-    dVec momentum_cm(1);           // Resulting center of mass momentum vector
-    dVec momentum_cm_per_bead(1);  // Contribution of the current time-slice to the center of mass momentum vector
+void Simulation::zeroMomentum()
+{
+    dVec momentum_cm;           // Resulting center of mass momentum vector
+    dVec momentum_cm_per_bead;  // Contribution of the current time-slice to the center of mass momentum vector
 
     for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
@@ -762,14 +701,92 @@ void Simulation::zeroMomentum() {
 }
 
 /**
+ * Initializes the potential based on the input parameters.
+ *
+ * @param potential_name Name of the potential.
+ * @param potential_options Physical parameters of the potential. 
+ * @return Pointer to the initialized potential.
+ */
+std::unique_ptr<Potential> Simulation::initializePotential(const std::string& potential_name, const VariantMap& potential_options)
+{
+    if (potential_name == "free") {
+        return std::make_unique<Potential>();
+    }
+
+    if (potential_name == "harmonic") {
+        double omega = std::get<double>(potential_options.at("omega"));
+        return std::make_unique<HarmonicPotential>(mass, omega);
+    }
+    
+    if (potential_name == "double_well") {
+        double strength = std::get<double>(potential_options.at("strength"));
+        double loc = std::get<double>(potential_options.at("location"));
+        return std::make_unique<DoubleWellPotential>(mass, strength, loc);
+    }
+
+    if (potential_name == "dipole") {
+        double strength = std::get<double>(potential_options.at("strength"));
+        return std::make_unique<DipolePotential>(strength);
+    }
+
+    if (potential_name == "aziz") {
+        return std::make_unique<AzizPotential>();
+    }
+    
+    return std::make_unique<Potential>();
+}
+
+/**
+ * Initializes the positions of the particles based on the input parameters.
+ *
+ * @param[out] coord_arr Array to store the generated positions.
+ * @param sim_params Simulation parameters object containing information about the init trajectories file. 
+ */
+void Simulation::initializePositions(dVec& coord_arr, const VariantMap& sim_params) {
+    if (init_pos_type == "xyz") {
+        // Load initial Cartesian coordinates from the provided .xyz file
+        const std::string xyz_filename = std::get<std::string>(sim_params.at("init_pos_xyz_filename"));
+
+        /// @todo Remove the bead_num==0 condition later.
+        /// This is placed for testing purposes, to compare the
+        /// simulation results against i-Pi.
+        if (this_bead == 0)
+            loadTrajectories(xyz_filename, coord_arr);
+    } else {
+        // Sample positions from a uniform distribution
+        genRandomPositions(coord_arr);
+    }
+}
+
+/**
+ * Initializes the momenta of the particles based on the input parameters.
+ *
+ * @param[out] momentum_arr Array to store the generated momenta.
+ */
+void Simulation::initializeMomenta(dVec& momentum_arr) {
+    if (init_vel_type == "manual") {
+        // If loading momenta from elsewhere, do not zero momentum after that
+        loadMomenta(std::format("init/vel_{:02}.dat", this_bead + 1), mass, momentum_arr); // LAMMPS convention
+        //loadMomenta(std::format("init/vel_{:02}.dat", this_bead), mass, momenta); // i-Pi convention
+
+        /// @todo Handle the cases when the file does not exist or has a wrong format
+    } else {
+        // If generating momenta from the Maxwell-Boltzmann distribution, zero the total momentum
+        genMomentum(momentum_arr);
+        zeroMomentum();
+    }
+}
+
+/**
  * Prints information for debugging purposes.
  * 
  * @param text Text to print.
  */
-void Simulation::printDebug(const std::string& text) {
+void Simulation::printDebug(const std::string& text) const
+{
     if (this_bead == 0) {
         std::ofstream debug;
-        debug.open(std::format("{}/debug.log", OUTPUT_FOLDER_NAME), std::ios::out | std::ios::app);
+        debug.open(std::format("{}/debug.log", Output::FOLDER_NAME), std::ios::out | std::ios::app);
         debug << text;
         debug.close();
     }

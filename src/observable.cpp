@@ -2,7 +2,6 @@
 #include "simulation.h"
 #include "units.h"
 
-
 /**
  * @brief Generic observable class constructor
  */
@@ -15,7 +14,7 @@ Observable::Observable(const Simulation& _sim, int _freq, const std::string& _ou
  * 
  * @param _labels Labels of the quantities to be calculated
  */
-void Observable::initialize(std::vector<std::string> _labels) {
+void Observable::initialize(const std::vector<std::string>& _labels) {
     for (const std::string& _label : _labels) {
         quantities.insert({ _label, 0.0 });
     }
@@ -30,8 +29,6 @@ void Observable::resetValues() {
         it.value() = 0.0;
     }
 }
-
-Observable::~Observable() = default;
 
 /**
  * @brief Creates an observable object based on the observable type.
@@ -65,12 +62,12 @@ void EnergyObservable::calculate() {
     calculatePotential();
 }
 
-
 /** 
  * @brief Calculates the contribution of the current imaginary time-slice to
  * the primitive kinetic energy estimator of distinguishable particles.
  */
-double EnergyObservable::primitiveKineticDistinguishable() {
+double EnergyObservable::primitiveKineticDistinguishable() const
+{
     double spring_energy = 0.0;
 
     for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
@@ -116,7 +113,7 @@ void EnergyObservable::calculateKinetic() {
         quantities["kinetic"] = prefactor - primitiveKineticDistinguishable();
     }
 
-    quantities["kinetic"] = Units::unit_to_user("energy", out_unit, quantities["kinetic"]);
+    quantities["kinetic"] = Units::convertToUser("energy", out_unit, quantities["kinetic"]);
 }
 
 /**
@@ -148,10 +145,9 @@ void EnergyObservable::calculatePotential() {
         for (int ptcl_one = 0; ptcl_one < sim.natoms; ++ptcl_one) {
             for (int ptcl_two = ptcl_one + 1; ptcl_two < sim.natoms; ++ptcl_two) {
                 dVec diff = sim.getSeparation(ptcl_one, ptcl_two);  // Vectorial distance
-                double distance = diff.norm(0);                     // Scalar distance
 
-                if (distance < sim.int_pot_cutoff || sim.int_pot_cutoff < 0.0) {
-                    dVec force_on_one(1);
+                if (const double distance = diff.norm(); distance < sim.int_pot_cutoff || sim.int_pot_cutoff < 0.0) {
+                    dVec force_on_one;
                     force_on_one = (-1.0) * sim.int_potential->gradV(diff);
 
                     double int_pot_val = sim.int_potential->V(diff);
@@ -171,10 +167,10 @@ void EnergyObservable::calculatePotential() {
     ext_pot /= sim.nbeads;
     virial *= 0.5 / sim.nbeads;
 
-    quantities["potential"] = Units::unit_to_user("energy", out_unit, potential);
-    quantities["ext_pot"] = Units::unit_to_user("energy", out_unit, ext_pot);
-    quantities["int_pot"] = Units::unit_to_user("energy", out_unit, int_pot);
-    quantities["virial"] = Units::unit_to_user("energy", out_unit, virial);
+    quantities["potential"] = Units::convertToUser("energy", out_unit, potential);
+    quantities["ext_pot"] = Units::convertToUser("energy", out_unit, ext_pot);
+    quantities["int_pot"] = Units::convertToUser("energy", out_unit, int_pot);
+    quantities["virial"] = Units::convertToUser("energy", out_unit, virial);
 }
 
 /**
@@ -203,11 +199,11 @@ void ClassicalObservable::calculateKineticEnergy() {
     }
 
     kinetic_energy *= 0.5 / sim.mass;
-    quantities["cl_kinetic"] = Units::unit_to_user("energy", out_unit, kinetic_energy);
+    quantities["cl_kinetic"] = Units::convertToUser("energy", out_unit, kinetic_energy);
 
-    // Temperature is calculated according to Tolman’s equipartition theorem as the average kinetic 
+    // Temperature is calculated according to Tolman's equipartition theorem as the average kinetic 
     // energy per degree of freedom. This might not be accurate for systems with constraints.
-    // See [J. Chem. Theory Comput. 2019, 15, 1, 84–94.] for a discussion on the topic.
+    // See [J. Chem. Theory Comput. 2019, 15, 1, 84-94.] for a discussion on the topic.
 
     /// @todo When zeroing the center of mass motion, the number of degrees of freedom must be reduced by NDIM.
     double dof = NDIM * sim.natoms * sim.nbeads;
@@ -218,7 +214,7 @@ void ClassicalObservable::calculateKineticEnergy() {
 #endif
 
     /// @todo Allow conversion to different temperature units
-    quantities["temperature"] = Units::unit_to_user("temperature", "kelvin", temperature);
+    quantities["temperature"] = Units::convertToUser("temperature", "kelvin", temperature);
 }
 
 /**
@@ -247,5 +243,5 @@ void ClassicalObservable::calculateSpringEnergy() {
         spring_energy = 0.5 * sim.mass * sim.omega_p * sim.omega_p * spring_energy;
     }
 
-    quantities["cl_spring"] = Units::unit_to_user("energy", out_unit, spring_energy);
+    quantities["cl_spring"] = Units::convertToUser("energy", out_unit, spring_energy);
 }
