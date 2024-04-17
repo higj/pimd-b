@@ -155,7 +155,7 @@ The `size` option defines the linear size of the system. Currently, only cube ge
 
 Internally, the simulation uses atomic units. However, the input parameters may be provided in the units of your choosing (e.g., electron-volts for energy).
 
-The following options are available in the `[simulation]` and `[system]` sections of the configuration file:
+The following options are available in the `[simulation]`, `[system]` and `[output]` sections of the configuration file:
 
 | Option | Description |
 | :-----------: | ----------- |
