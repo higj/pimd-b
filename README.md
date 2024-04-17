@@ -135,6 +135,8 @@ name = harmonic
 omega = 3.0 millielectronvolt
 ```
 
+The seed for the random number generator should be a positive integer below 900,000,000.
+
 Currently, the following potentials are available:
 
 * **External potentials**: `free`, `harmonic` and `double_well` 
