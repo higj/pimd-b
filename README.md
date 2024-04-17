@@ -1,7 +1,5 @@
-
-
 # PIMD-B++	
-
+![Ubuntu compilation check](https://github.com/higj/pimd-b/actions/workflows/cmake-ubuntu.yml/badge.svg)
 
 ## Introduction 
 
