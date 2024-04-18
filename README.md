@@ -169,7 +169,7 @@ The following options are available in the `[simulation]`, `[system]` and `[outp
 |`bosonic`     |  Set to `true`/`false` for bosonic/distinguishable PIMD (Default: `false`) |
 |`pbc`     |  Set to `true` to enable periodic boundary conditions (Default: `false`) |
 |`fixcom`     |  Set to `true` to remove the center of mass motion (Default: `true`) |
-|`seed`     | Random number generator seed (a positive integer below $9 \cdot 10^8^$) |
+|`seed`     | Random number generator seed (a positive integer below $9 \times 10^8$) |
 |`initial_position`     | Method for generating the initial positions of the beads |
 |`initial_velocity`     | Method for generating the initial velocities of the beads. `random` samples from the Maxwell-Boltzmann distribution. `manual` loads velocities from a provided file. (Default: `random`) |
 |`temperature`     |  Temperature of the quantum system (units of temperature) |
