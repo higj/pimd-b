@@ -18,90 +18,91 @@ class Observable;
 class Simulation
 {
 public:
-	double temperature;
-	double beta;        // Thermodynamic beta 1/(kB*T)
-	double dt;          // Timestep
-	double size;        // Linear system size (TODO: Add support for Ly, Lz,...)
-	double gamma;       // Friction constant of the Langevin thermostat
-	double threshold;   // Percentage of steps to throw away (thermalization)
-	
-	int natoms;         // Number of atoms in the system
-	int nbeads;         // Number of beads
+    double temperature;
+    double beta;        // Thermodynamic beta 1/(kB*T)
+    double dt;          // Timestep
+    double size;        // Linear system size (TODO: Add support for Ly, Lz,...)
+    double gamma;       // Friction constant of the Langevin thermostat
+    double threshold;   // Percentage of steps to throw away (thermalization)
 
-	long sfreq;         // Save frequency (how often the observables are recorded)
-	long steps;         // Total number of MD steps
+    int natoms;         // Number of atoms in the system
+    int nbeads;         // Number of beads
 
-	bool enable_t;      // Enable the thermostat?
-	bool bosonic;       // Is the simulation bosonic?
-	bool fixcom;        // Fix the center of mass?
-	bool pbc;           // Enable periodic boundary conditions?
+    long sfreq;         // Save frequency (how often the observables are recorded)
+    long steps;         // Total number of MD steps
 
-	bool out_pos;       // Output trajectories?
-	bool out_vel;       // Output velocities?
-	bool out_force;     // Output forces?
+    bool enable_t;      // Enable the thermostat?
+    bool bosonic;       // Is the simulation bosonic?
+    bool fixcom;        // Fix the center of mass?
+    bool pbc;           // Enable periodic boundary conditions?
 
-	std::unique_ptr<BosonicExchangeBase> bosonic_exchange;
+    bool out_pos;       // Output trajectories?
+    bool out_vel;       // Output velocities?
+    bool out_force;     // Output forces?
 
-	std::vector<std::unique_ptr<Observable>> observables;
+    std::unique_ptr<BosonicExchangeBase> bosonic_exchange;
 
-	std::mt19937 rand_gen;
-	std::unique_ptr<RanMars> mars_gen;
+    std::vector<std::unique_ptr<Observable>> observables;
 
-	Simulation(int &rank, int &nproc, Params &param_obj, unsigned int seed = static_cast<unsigned int>(time(nullptr)));
-	~Simulation();
+    std::mt19937 rand_gen;
+    std::unique_ptr<RanMars> mars_gen;
 
-	dVec coord, momenta, forces;
-	dVec prev_coord, next_coord;
+    Simulation(int& rank, int& nproc, Params& param_obj, unsigned int seed = static_cast<unsigned int>(time(nullptr)));
+    ~Simulation();
 
-	double mass;
-	double spring_constant;  // k=m*omega_p^2 (where omega_p depends on the convention)
-	double omega_p;          // Angular frequency of the ring polymer
+    dVec coord, momenta, forces;
+    dVec prev_coord, next_coord;
 
-	void genRandomPositions(dVec& pos_arr);
-	void genMomentum(dVec &momenta_arr);
+    double mass;
+    double spring_constant;  // k=m*omega_p^2 (where omega_p depends on the convention)
+    double omega_p;          // Angular frequency of the ring polymer
 
-	void zeroMomentum();
+    void genRandomPositions(dVec& pos_arr);
+    void genMomentum(dVec& momenta_arr);
 
-	void initializePositions(dVec& coord_arr, const VariantMap& sim_params);
-	void initializeMomenta(dVec& momentum_arr);
-    std::unique_ptr<Potential> initializePotential(const std::string& potential_name, const VariantMap& potential_options);
+    void zeroMomentum();
+
+    void initializePositions(dVec& coord_arr, const VariantMap& sim_params);
+    void initializeMomenta(dVec& momentum_arr);
+    std::unique_ptr<Potential> initializePotential(const std::string& potential_name,
+                                                   const VariantMap& potential_options);
 
     double sampleMaxwellBoltzmann();
 
-	void langevinStep();
-	void velocityVerletStep();
-	void run();
+    void langevinStep();
+    void velocityVerletStep();
+    void run();
 
-	std::unique_ptr<Potential> ext_potential;
-	std::unique_ptr<Potential> int_potential;
-	double int_pot_cutoff;
+    std::unique_ptr<Potential> ext_potential;
+    std::unique_ptr<Potential> int_potential;
+    double int_pot_cutoff;
 
-	void updateForces();
-	void updateSpringForces(dVec &spring_force_arr) const;
-	void updatePhysicalForces(dVec& physical_force_arr) const;
-	
-	void getNextCoords(dVec& next);
-	void getPrevCoords(dVec& prev);
-	void updateNeighboringCoordinates();
+    void updateForces();
+    void updateSpringForces(dVec& spring_force_arr) const;
+    void updatePhysicalForces(dVec& physical_force_arr) const;
 
-	void outputTrajectories(int step);
-	void outputVelocities(int step);
-	void outputForces(int step);
+    void getNextCoords(dVec& next);
+    void getPrevCoords(dVec& prev);
+    void updateNeighboringCoordinates();
 
-	dVec getSeparation(int first_ptcl, int second_ptcl) const;
+    void outputTrajectories(int step);
+    void outputVelocities(int step);
+    void outputForces(int step);
 
-	int this_bead;  // Current process id ("rank" of MPI_Comm_rank)
-	int nproc;      // Number of processes ("size" of MPI_Comm_size)
-	unsigned int params_seed;
+    dVec getSeparation(int first_ptcl, int second_ptcl) const;
 
-private:		
-	void printReport(std::ofstream& out_file) const;
+    int this_bead;   // Current process id ("rank" of MPI_Comm_rank)
+    int nproc;       // Number of processes ("size" of MPI_Comm_size)
+    unsigned int params_seed;
 
-	std::string init_pos_type;
-	std::string init_vel_type;
+private:
+    void printReport(std::ofstream& out_file) const;
 
-	std::string external_potential_name;
-	std::string interaction_potential_name;
+    std::string init_pos_type;
+    std::string init_vel_type;
 
-	void printDebug(const std::string& text) const;
+    std::string external_potential_name;
+    std::string interaction_potential_name;
+
+    void printDebug(const std::string& text) const;
 };

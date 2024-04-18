@@ -9,7 +9,9 @@ public:
     virtual ~Potential() = default;
 
     // Potential
-    virtual double V(const dVec& x) { return 0.0; }
+    virtual double V(const dVec& x) {
+        return 0.0;
+    }
 
     // Potential gradient
     virtual dVec gradV(const dVec& x) {
@@ -18,7 +20,9 @@ public:
     }
 
     // Potential laplacian
-    virtual double laplacianV(const dVec& x) { return 0.0; }
+    virtual double laplacianV(const dVec& x) {
+        return 0.0;
+    }
 
     // Tail correction
     double tailV;

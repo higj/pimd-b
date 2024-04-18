@@ -1,24 +1,22 @@
 #include "bosonic_exchange.h"
 #include "mpi.h"
 
-BosonicExchange::BosonicExchange(int nbosons_, int np_, int bead_num_, double beta_, double spring_constant_, 
-                                 const dVec& x_, const dVec& x_prev_, const dVec& x_next_, bool pbc_, double size_) 
+BosonicExchange::BosonicExchange(int nbosons_, int np_, int bead_num_, double beta_, double spring_constant_,
+                                 const dVec& x_, const dVec& x_prev_, const dVec& x_next_, bool pbc_, double size_)
     : BosonicExchangeBase(nbosons_, np_, bead_num_, beta_, spring_constant_, x_, x_prev_, x_next_, pbc_, size_),
-    E_kn(nbosons_ * (nbosons_ + 1) / 2),
-    V(nbosons_ + 1),
-    V_backwards(nbosons_ + 1),
-    connection_probabilities(nbosons_ * nbosons_),
-    temp_nbosons_array(nbosons_),
-    separate_atom_spring(nbosons_),
-    prim_est(nbosons_ + 1)
-{
+      E_kn(nbosons_ * (nbosons_ + 1) / 2),
+      V(nbosons_ + 1),
+      V_backwards(nbosons_ + 1),
+      connection_probabilities(nbosons_ * nbosons_),
+      temp_nbosons_array(nbosons_),
+      separate_atom_spring(nbosons_),
+      prim_est(nbosons_ + 1) {
     evaluateBosonicEnergies();
 }
 
 /* ---------------------------------------------------------------------- */
 
-void BosonicExchange::evaluateBosonicEnergies()
-{
+void BosonicExchange::evaluateBosonicEnergies() {
     evaluateCycleEnergies();
     if (bead_num == 0 || bead_num == nbeads - 1) {
         // Exterior beads
@@ -33,27 +31,25 @@ void BosonicExchange::evaluateBosonicEnergies()
  * @brief Re-evaluate the bosonic energies and connection probabilities.
  * Typically used after coordinate updates.
  */
-void BosonicExchange::prepare()
-{
+void BosonicExchange::prepare() {
     evaluateBosonicEnergies();
 }
 
 /* ---------------------------------------------------------------------- */
 
-void BosonicExchange::evaluateCycleEnergies()
-{
+void BosonicExchange::evaluateCycleEnergies() {
     for (int i = 0; i < nbosons; i++) {
         temp_nbosons_array[i] = getBeadsSeparationSquared(x, i, x_next, i);
     }
-    
+
     // Reduce the result and send to bead_num=0
     MPI_Reduce(temp_nbosons_array.data(),
-        separate_atom_spring.data(),
-        nbosons,
-        MPI_DOUBLE,
-        MPI_SUM,
-        0,
-        MPI_COMM_WORLD
+               separate_atom_spring.data(),
+               nbosons,
+               MPI_DOUBLE,
+               MPI_SUM,
+               0,
+               MPI_COMM_WORLD
     );
 
     if (bead_num == 0 || bead_num == nbeads - 1) {
@@ -66,8 +62,7 @@ void BosonicExchange::evaluateCycleEnergies()
 
             x_first_bead = x;
             x_last_bead = x_prev;
-        }
-        else {
+        } else {
             // Receive at bead_num=nbeads-1 from bead_num=0
             MPI_Recv(separate_atom_spring.data(), nbosons, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
@@ -77,7 +72,7 @@ void BosonicExchange::evaluateCycleEnergies()
 
         for (int v = 0; v < nbosons; v++) {
             set_Enk(v + 1, 1,
-                0.5 * spring_constant * separate_atom_spring[v]);
+                    0.5 * spring_constant * separate_atom_spring[v]);
 
             for (int u = v - 1; u >= 0; u--) {
                 double val = get_Enk(v + 1, v - u) +
@@ -99,24 +94,21 @@ void BosonicExchange::evaluateCycleEnergies()
 
 /* ---------------------------------------------------------------------- */
 
-double BosonicExchange::get_Enk(int m, int k) const
-{
+double BosonicExchange::get_Enk(int m, int k) const {
     int end_of_m = m * (m + 1) / 2;
     return E_kn[end_of_m - k];
 }
 
 /* ---------------------------------------------------------------------- */
 
-void BosonicExchange::set_Enk(int m, int k, double val)
-{
+void BosonicExchange::set_Enk(int m, int k, double val) {
     int end_of_m = m * (m + 1) / 2;
     E_kn[end_of_m - k] = val;
 }
 
 /* ---------------------------------------------------------------------- */
 
-void BosonicExchange::Evaluate_VBn()
-{
+void BosonicExchange::Evaluate_VBn() {
     V[0] = 0.0;
 
     for (int m = 1; m < nbosons + 1; m++) {
@@ -137,7 +129,8 @@ void BosonicExchange::Evaluate_VBn()
 
         if (!std::isfinite(V[m])) {
             throw std::overflow_error(
-                std::format("Invalid sig_denom {:4.2f} with e_shift {:4.2f} in bosonic exchange potential", sig_denom, e_shift)
+                std::format("Invalid sig_denom {:4.2f} with e_shift {:4.2f} in bosonic exchange potential", sig_denom,
+                            e_shift)
             );
         }
     }
@@ -145,8 +138,7 @@ void BosonicExchange::Evaluate_VBn()
 
 /* ---------------------------------------------------------------------- */
 
-void BosonicExchange::Evaluate_V_backwards()
-{
+void BosonicExchange::Evaluate_V_backwards() {
     V_backwards[nbosons] = 0.0;
 
     for (int l = nbosons - 1; l > 0; l--) {
@@ -166,7 +158,8 @@ void BosonicExchange::Evaluate_V_backwards()
 
         if (!std::isfinite(V_backwards[l])) {
             throw std::overflow_error(
-                std::format("Invalid sig_denom {:4.2f} with e_shift {:4.2f} in bosonic exchange potential", sig_denom, e_shift)
+                std::format("Invalid sig_denom {:4.2f} with e_shift {:4.2f} in bosonic exchange potential", sig_denom,
+                            e_shift)
             );
         }
     }
@@ -176,29 +169,25 @@ void BosonicExchange::Evaluate_V_backwards()
 
 /* ---------------------------------------------------------------------- */
 
-double BosonicExchange::effectivePotential()
-{
+double BosonicExchange::effectivePotential() {
     return V[nbosons];
 }
 
 /* ---------------------------------------------------------------------- */
 
-double BosonicExchange::get_Vn(int n) const
-{
+double BosonicExchange::get_Vn(int n) const {
     return V[n];
 }
 
 /* ---------------------------------------------------------------------- */
 
-double BosonicExchange::get_E_kn_serial_order(int i) const
-{
+double BosonicExchange::get_E_kn_serial_order(int i) const {
     return E_kn[i];
 }
 
 /* ---------------------------------------------------------------------- */
 
-void BosonicExchange::evaluateConnectionProbabilities()
-{
+void BosonicExchange::evaluateConnectionProbabilities() {
     for (int l = 0; l < nbosons - 1; l++) {
         double direct_link_probability = 1.0 - (exp(-beta *
             (V[l + 1] + V_backwards[l + 1] -
@@ -217,8 +206,7 @@ void BosonicExchange::evaluateConnectionProbabilities()
 
 /* ---------------------------------------------------------------------- */
 
-void BosonicExchange::springForceLastBead(dVec& f)
-{
+void BosonicExchange::springForceLastBead(dVec& f) {
     for (int l = 0; l < nbosons; l++) {
         std::vector<double> sums(NDIM, 0.0);
 
@@ -249,8 +237,7 @@ void BosonicExchange::springForceLastBead(dVec& f)
 
 /* ---------------------------------------------------------------------- */
 
-void BosonicExchange::springForceFirstBead(dVec& f)
-{
+void BosonicExchange::springForceFirstBead(dVec& f) {
     for (int l = 0; l < nbosons; l++) {
         std::vector<double> sums(NDIM, 0.0);
 
@@ -286,10 +273,10 @@ void BosonicExchange::springForceFirstBead(dVec& f)
  * 
  * @return The spring contribution to the overall kinetic energy.
  */
-double BosonicExchange::primEstimator()
-{
+double BosonicExchange::primEstimator() {
     // It is sufficient to evaluate the primitive kinetic estimator at a single imaginary time slice
-    if (bead_num != 0) return 0.0;
+    if (bead_num != 0)
+        return 0.0;
 
     prim_est[0] = 0.0;
 

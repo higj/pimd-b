@@ -15,8 +15,7 @@ Simulation::Simulation(int& rank, int& nproc, Params& param_obj, unsigned int se
     bosonic_exchange(nullptr),
     rand_gen(seed + rank),
     this_bead(rank),
-    nproc(nproc)
-{
+    nproc(nproc) {
     getVariant(param_obj.sim["nbeads"], nbeads);
     getVariant(param_obj.sim["dt"], dt);
     getVariant(param_obj.sim["sfreq"], sfreq);
@@ -99,7 +98,8 @@ Simulation::Simulation(int& rank, int& nproc, Params& param_obj, unsigned int se
 #if OLD_BOSONIC_ALGORITHM
         bosonic_exchange = std::make_unique<OldBosonicExchange>(natoms, nbeads, this_bead, beta, spring_constant, coord, prev_coord, next_coord, pbc, size);
 #else
-        bosonic_exchange = std::make_unique<BosonicExchange>(natoms, nbeads, this_bead, beta, spring_constant, coord, prev_coord, next_coord, pbc, size);
+        bosonic_exchange = std::make_unique<BosonicExchange>(natoms, nbeads, this_bead, beta, spring_constant, coord,
+                                                             prev_coord, next_coord, pbc, size);
 #endif
     }
 }
@@ -111,7 +111,7 @@ Simulation::~Simulation() = default;
  * 
  * @param pos_arr Array to store the generated positions.
  */
-void Simulation::genRandomPositions(dVec &pos_arr) {
+void Simulation::genRandomPositions(dVec& pos_arr) {
     /// @todo Add ability to generate non-random positions (e.g., lattice)
     std::uniform_real_distribution<double> u_dist(-0.5 * size, 0.5 * size);
 
@@ -127,7 +127,7 @@ void Simulation::genRandomPositions(dVec &pos_arr) {
  * 
  * @param momenta_arr Array to store the generated momenta.
  */
-void Simulation::genMomentum(dVec &momenta_arr) {
+void Simulation::genMomentum(dVec& momenta_arr) {
     for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
             momenta_arr(ptcl_idx, axis) = mass * sampleMaxwellBoltzmann();
@@ -142,12 +142,12 @@ void Simulation::genMomentum(dVec &momenta_arr) {
  */
 double Simulation::sampleMaxwellBoltzmann() {
 #if IPI_CONVENTION
-    std::normal_distribution<double> normal(0.0, 1/sqrt(beta * mass / nbeads));
+    std::normal_distribution<double> normal(0.0, 1 / sqrt(beta * mass / nbeads));
 #else
     std::normal_distribution<double> normal(0.0, 1 / sqrt(beta * mass));
 #endif
 
-    return normal(rand_gen);    
+    return normal(rand_gen);
 }
 
 /**
@@ -275,7 +275,7 @@ void Simulation::run() {
 
         out_file << "\n";
     }
-    
+
     // Main loop performing molecular dynamics steps
     for (int step = 0; step <= steps; ++step) {
         for (const auto& observable : observables) {
@@ -292,7 +292,7 @@ void Simulation::run() {
         }
 
         // "O" step
-        if (enable_t) 
+        if (enable_t)
             langevinStep();
 
         // If fixcom=true, the center of mass of the ring polymers is fixed during the simulation
@@ -340,7 +340,7 @@ void Simulation::run() {
                         out_file << std::format(" {:^16.8e}", quantity_value);
                 }
             }
-            
+
             if (this_bead == 0)
                 out_file << "\n";
         }
@@ -361,7 +361,7 @@ void Simulation::run() {
  * 
  * @param prev Vector to store the previous coordinates.
  */
-void Simulation::getPrevCoords(dVec &prev) {
+void Simulation::getPrevCoords(dVec& prev) {
     const int coord_size = coord.size();
 
     MPI_Sendrecv(
@@ -532,7 +532,7 @@ dVec Simulation::getSeparation(int first_ptcl, int second_ptcl) const {
 #endif
         sep(0, axis) = diff;
     }
-    
+
     return sep;
 }
 
@@ -551,8 +551,7 @@ void Simulation::printReport(std::ofstream& out_file) const {
 #endif
 
         out_file << formattedReportLine("Bosonic algorithm", bosonic_alg_name);
-    }
-    else {
+    } else {
         out_file << formattedReportLine("Statistics", "Boltzmannonic");
     }
 
@@ -629,7 +628,8 @@ void Simulation::outputVelocities(int step) {
 
         for (int axis = 0; axis < NDIM; ++axis)
             /// @todo Make the units configurable
-            vel_file << std::format(" {:^20.12e}", Units::convertToUser("velocity", "angstrom/ps", momenta(ptcl_idx, axis) / mass));
+            vel_file << std::format(" {:^20.12e}",
+                                    Units::convertToUser("velocity", "angstrom/ps", momenta(ptcl_idx, axis) / mass));
 #if NDIM == 1
         vel_file << " 0.0 0.0";
 #elif NDIM == 2
@@ -676,8 +676,7 @@ void Simulation::outputForces(int step) {
  * center of mass momentum is given by p_c=m*v_c=(p_1+..+p_n)/n, where n=N*P
  * is the total number of beads in the system.
  */
-void Simulation::zeroMomentum()
-{
+void Simulation::zeroMomentum() {
     dVec momentum_cm;           // Resulting center of mass momentum vector
     dVec momentum_cm_per_bead;  // Contribution of the current time-slice to the center of mass momentum vector
 
@@ -691,7 +690,8 @@ void Simulation::zeroMomentum()
         momentum_cm_per_bead(0, axis) /= (natoms * nbeads);
     }
 
-    MPI_Allreduce(momentum_cm_per_bead.data(), momentum_cm.data(), momentum_cm.size(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(momentum_cm_per_bead.data(), momentum_cm.data(), momentum_cm.size(), MPI_DOUBLE, MPI_SUM,
+                  MPI_COMM_WORLD);
 
     for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
@@ -707,8 +707,8 @@ void Simulation::zeroMomentum()
  * @param potential_options Physical parameters of the potential. 
  * @return Pointer to the initialized potential.
  */
-std::unique_ptr<Potential> Simulation::initializePotential(const std::string& potential_name, const VariantMap& potential_options)
-{
+std::unique_ptr<Potential> Simulation::initializePotential(const std::string& potential_name,
+                                                           const VariantMap& potential_options) {
     if (potential_name == "free") {
         return std::make_unique<Potential>();
     }
@@ -717,7 +717,7 @@ std::unique_ptr<Potential> Simulation::initializePotential(const std::string& po
         double omega = std::get<double>(potential_options.at("omega"));
         return std::make_unique<HarmonicPotential>(mass, omega);
     }
-    
+
     if (potential_name == "double_well") {
         double strength = std::get<double>(potential_options.at("strength"));
         double loc = std::get<double>(potential_options.at("location"));
@@ -732,7 +732,7 @@ std::unique_ptr<Potential> Simulation::initializePotential(const std::string& po
     if (potential_name == "aziz") {
         return std::make_unique<AzizPotential>();
     }
-    
+
     return std::make_unique<Potential>();
 }
 
@@ -747,11 +747,9 @@ void Simulation::initializePositions(dVec& coord_arr, const VariantMap& sim_para
         // Load initial Cartesian coordinates from the provided .xyz file
         const std::string xyz_filename = std::get<std::string>(sim_params.at("init_pos_xyz_filename"));
 
-        /// @todo Remove the bead_num==0 condition later.
-        /// This is placed for testing purposes, to compare the
-        /// simulation results against i-Pi.
-        if (this_bead == 0)
-            loadTrajectories(xyz_filename, coord_arr);
+        // Uncomment the next line to restrict the coordinate initialization to the first time-slice
+        //if (this_bead == 0)
+        loadTrajectories(xyz_filename, coord_arr);
     } else {
         // Sample positions from a uniform distribution
         genRandomPositions(coord_arr);
@@ -782,8 +780,7 @@ void Simulation::initializeMomenta(dVec& momentum_arr) {
  * 
  * @param text Text to print.
  */
-void Simulation::printDebug(const std::string& text) const
-{
+void Simulation::printDebug(const std::string& text) const {
     if (this_bead == 0) {
         std::ofstream debug;
         debug.open(std::format("{}/debug.log", Output::FOLDER_NAME), std::ios::out | std::ios::app);

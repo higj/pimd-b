@@ -24,7 +24,7 @@ protected:
 private:
     void evaluateBosonicEnergies();
     void evaluateCycleEnergies();
-    
+
     double get_Enk(int m, int k) const;
     void set_Enk(int m, int k, double val);
     void evaluateConnectionProbabilities();

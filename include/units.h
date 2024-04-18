@@ -4,8 +4,6 @@
 #include <string>
 
 // Internally this simulation uses the atomic units.
-// All physical quantities passed to the simulation are
-// converted to atomic units.
 // https://en.wikipedia.org/wiki/Hartree_atomic_units
 
 namespace Constants {
@@ -14,7 +12,7 @@ namespace Constants {
     constexpr double amu = 1822.8885;  // Atomic mass unit (in terms of electron masses)
 }
 
-// TODO: Add the option to detect short prefixes and units (e.g., "fs" or "femtosec" in addition to "femtoseconds")
+/// @todo Add the option to detect short prefixes and units (e.g., "fs" or "femtosec" in addition to "femtoseconds")
 namespace Units {
     // Metric prefixes
     const std::unordered_map<std::string, double> UnitPrefix = {

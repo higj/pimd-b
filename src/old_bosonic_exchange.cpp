@@ -4,11 +4,11 @@
 
 #include "old_bosonic_exchange.h"
 
-OldBosonicExchange::OldBosonicExchange(int nbosons_, int np_, int bead_num_, double beta_, double spring_constant_, 
-    const dVec& x_, const dVec& x_prev_, const dVec& x_next_, bool pbc_, double size_) : 
+OldBosonicExchange::OldBosonicExchange(int nbosons_, int np_, int bead_num_, double beta_, double spring_constant_,
+                                       const dVec& x_, const dVec& x_prev_, const dVec& x_next_, bool pbc_,
+                                       double size_) :
     BosonicExchangeBase(nbosons_, np_, bead_num_, beta_, spring_constant_, x_, x_prev_, x_next_, pbc_, size_),
-    labels(nbosons_)
-{
+    labels(nbosons_) {
     // Fill the labels array with numbers from 0 to nbosons-1
     std::iota(labels.begin(), labels.end(), 0);
 
@@ -19,8 +19,7 @@ OldBosonicExchange::OldBosonicExchange(int nbosons_, int np_, int bead_num_, dou
 /**
  * @brief Recalculates the longest exterior spring energy after each coordinate update.
  */
-void OldBosonicExchange::prepare()
-{
+void OldBosonicExchange::prepare() {
     e_shift = getMaxExteriorSpringEnergy();
 }
 
@@ -34,8 +33,7 @@ void OldBosonicExchange::prepare()
  * @param ptcl_idx Index of the particle associated with the first bead.
  * @return Index of the particle associated with the neighboring P bead.
  */
-int OldBosonicExchange::firstBeadNeighbor(int ptcl_idx) const
-{
+int OldBosonicExchange::firstBeadNeighbor(int ptcl_idx) const {
     return std::distance(labels.begin(), std::ranges::find(labels, ptcl_idx));
 }
 
@@ -49,8 +47,7 @@ int OldBosonicExchange::firstBeadNeighbor(int ptcl_idx) const
  * @param ptcl_idx Index of the particle associated with the last bead.
  * @return Index of the particle associated with the neighboring 1 bead.
  */
-int OldBosonicExchange::lastBeadNeighbor(int ptcl_idx) const
-{
+int OldBosonicExchange::lastBeadNeighbor(int ptcl_idx) const {
     return labels[ptcl_idx];
 }
 
@@ -61,8 +58,7 @@ int OldBosonicExchange::lastBeadNeighbor(int ptcl_idx) const
  *
  * @return The largest exterior spring energy contribution due to a permutation.
  */
-double OldBosonicExchange::getMaxExteriorSpringEnergy()
-{
+double OldBosonicExchange::getMaxExteriorSpringEnergy() {
     // Given the fact that the exterior spring energy is symmetric with respect to the first and the last time-slice,
     // we can calculate the exterior spring energy at the last time-slice and then communicate it to the first time-slice.
     if (bead_num == nbeads - 1) {
@@ -95,7 +91,6 @@ double OldBosonicExchange::getMaxExteriorSpringEnergy()
         MPI_Send(&max_delta, 1, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
 
         return max_delta;
-
     }
 
     if (bead_num == 0) {
@@ -143,7 +138,6 @@ double OldBosonicExchange::effectivePotential() {
         }
 
         weights_sum += exp(-beta * 0.5 * spring_constant * diff2);
-
     } while (std::ranges::next_permutation(labels).found);
 
     /// @todo Think about how the i-Pi convention might affect the calculation
@@ -155,8 +149,7 @@ double OldBosonicExchange::effectivePotential() {
  *
  * @param[out] f Spring forces acting on the particles at time-slice P.
  */
-void OldBosonicExchange::springForceLastBead(dVec& f)
-{
+void OldBosonicExchange::springForceLastBead(dVec& f) {
     const dVec x_first_bead = x_next;
     const dVec x_last_bead = x;
 
@@ -199,7 +192,6 @@ void OldBosonicExchange::springForceLastBead(dVec& f)
         }
 
         denom_weight += weight;
-
     } while (std::ranges::next_permutation(labels).found);
 
     // Normalize the forces by the sum of Boltzmann contributions due to all the permutations
@@ -215,8 +207,7 @@ void OldBosonicExchange::springForceLastBead(dVec& f)
  *
  * @param[out] f Spring forces acting on the particles at time-slice 1.
  */
-void OldBosonicExchange::springForceFirstBead(dVec& f)
-{
+void OldBosonicExchange::springForceFirstBead(dVec& f) {
     const dVec x_first_bead = x;
     const dVec x_last_bead = x_prev;
 
@@ -259,7 +250,6 @@ void OldBosonicExchange::springForceFirstBead(dVec& f)
         }
 
         denom_weight += weight;
-
     } while (std::ranges::next_permutation(labels).found);
 
     // Normalize the forces by the sum of Boltzmann contributions due to all the permutations
@@ -305,7 +295,6 @@ double OldBosonicExchange::primEstimator() {
         // weight of the current permutation).
         numerator += delta_spring_energy * weight;
         denom_weight += weight;
-
     } while (std::ranges::next_permutation(labels).found);
 
     double bosonic_spring_energy = numerator / denom_weight;

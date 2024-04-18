@@ -31,7 +31,8 @@ protected:
 
 class ObservableFactory {
 public:
-    std::unique_ptr<Observable> createQuantity(const std::string& observable_type, const Simulation& _sim, int _freq, const std::string& _out_unit);
+    std::unique_ptr<Observable> createQuantity(const std::string& observable_type, const Simulation& _sim, int _freq,
+                                               const std::string& _out_unit);
 };
 
 /* -------------------------------- */
@@ -41,6 +42,7 @@ public:
     EnergyObservable(const Simulation& _sim, int _freq, const std::string& _out_unit);
 
     void calculate() override;
+
 private:
     double primitiveKineticDistinguishable() const;
     void calculateKinetic();
@@ -54,6 +56,7 @@ public:
     ClassicalObservable(const Simulation& _sim, int _freq, const std::string& _out_unit);
 
     void calculate() override;
+
 private:
     void calculateKineticEnergy();
     void calculateSpringEnergy();

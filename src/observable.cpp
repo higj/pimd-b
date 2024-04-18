@@ -5,9 +5,8 @@
 /**
  * @brief Generic observable class constructor
  */
-Observable::Observable(const Simulation& _sim, int _freq, const std::string& _out_unit) : 
-    sim(_sim), freq(_freq), out_unit(_out_unit) {
-}
+Observable::Observable(const Simulation& _sim, int _freq, const std::string& _out_unit) :
+    sim(_sim), freq(_freq), out_unit(_out_unit) {}
 
 /**
  * Initializes observables with the given labels.
@@ -40,7 +39,9 @@ void Observable::resetValues() {
  * @return std::unique_ptr<Observable> Pointer to the created observable object
  * @throw std::invalid_argument If the observable type is unknown
  */
-std::unique_ptr<Observable> ObservableFactory::createQuantity(const std::string& observable_type, const Simulation& _sim, int _freq, const std::string& _out_unit) {
+std::unique_ptr<Observable> ObservableFactory::createQuantity(const std::string& observable_type,
+                                                              const Simulation& _sim, int _freq,
+                                                              const std::string& _out_unit) {
     if (observable_type == "energy") {
         return std::make_unique<EnergyObservable>(_sim, _freq, _out_unit);
     } else if (observable_type == "classical") {
@@ -53,7 +54,8 @@ std::unique_ptr<Observable> ObservableFactory::createQuantity(const std::string&
 /**
  * @brief Energy observable class constructor.
  */
-EnergyObservable::EnergyObservable(const Simulation& _sim, int _freq, const std::string& _out_unit) : Observable(_sim, _freq, _out_unit) {
+EnergyObservable::EnergyObservable(const Simulation& _sim, int _freq, const std::string& _out_unit) :
+    Observable(_sim, _freq, _out_unit) {
     initialize({ "kinetic", "potential", "ext_pot", "int_pot", "virial" });
 }
 
@@ -66,8 +68,7 @@ void EnergyObservable::calculate() {
  * @brief Calculates the contribution of the current imaginary time-slice to
  * the primitive kinetic energy estimator of distinguishable particles.
  */
-double EnergyObservable::primitiveKineticDistinguishable() const
-{
+double EnergyObservable::primitiveKineticDistinguishable() const {
     double spring_energy = 0.0;
 
     for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
@@ -127,7 +128,7 @@ void EnergyObservable::calculatePotential() {
     double ext_pot = 0.0;   // Potential energy due to external field
     double int_pot = 0.0;   // Potential energy due to interactions
     double virial = 0.0;    // Virial kinetic energy
-    
+
     dVec physical_forces(sim.natoms);
     physical_forces = (-1.0) * sim.ext_potential->gradV(sim.coord);
 
@@ -176,7 +177,8 @@ void EnergyObservable::calculatePotential() {
 /**
  * @brief Classical observable class constructor.
  */
-ClassicalObservable::ClassicalObservable(const Simulation& _sim, int _freq, const std::string& _out_unit) : Observable(_sim, _freq, _out_unit) {
+ClassicalObservable::ClassicalObservable(const Simulation& _sim, int _freq, const std::string& _out_unit) :
+    Observable(_sim, _freq, _out_unit) {
     initialize({ "temperature", "cl_kinetic", "cl_spring" });
 }
 

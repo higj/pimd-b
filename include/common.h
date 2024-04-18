@@ -69,9 +69,8 @@ namespace Output {
     const std::string MAIN_FILENAME = "simulation.out";
 }
 
-template<typename T, typename...VariantParams>
-void getVariant(const std::variant<VariantParams...>& v, T& value)
-{
+template <typename T, typename... VariantParams>
+void getVariant(const std::variant<VariantParams...>& v, T& value) {
     value = std::get<T>(v);
 }
 
@@ -94,21 +93,27 @@ public:
      * @param axis Axis index.
      * @return Index of the element in the underlying one-dimensional array.
      */
-    [[nodiscard]] int index(int i, int axis) const { return i * dim + axis; }
+    [[nodiscard]] int index(int i, int axis) const {
+        return i * dim + axis;
+    }
 
     /**
      * Number of vectors in the array.
      *
      * @return Number of vectors in the array.
      */
-    int len() const { return m_rows; }
+    [[nodiscard]] int len() const {
+        return m_rows;
+    }
 
     /**
      * Total number of elements in the underlying one-dimensional array.
      *
      * @return Total number of elements in the underlying array.
      */
-    [[nodiscard]] int size() const { return m_rows * dim; }
+    [[nodiscard]] int size() const {
+        return m_rows * dim;
+    }
 
     /**
      * Calculates the Euclidean norm of the vector at the given index.
@@ -117,7 +122,7 @@ public:
      * @param vector_idx Location of the vector in the array.
      * @return Norm of the vector.
      */
-    [[nodiscard]] double norm(int vector_idx = 0) const { 
+    [[nodiscard]] double norm(int vector_idx = 0) const {
         double vector_norm = 0.0;
 
         for (int axis_idx = 0; axis_idx < dim; axis_idx++)
@@ -130,14 +135,18 @@ public:
      *
      * @return Reference to the underlying array.
      */
-    std::vector<T>& raw() { return m_arr; }
+    std::vector<T>& raw() {
+        return m_arr;
+    }
 
     /**
      * A pointer to the first element in the internal one-dimensional array.
      *
      * @return A pointer to the first element in the underlying array.
      */
-    T* data() { return m_arr.data(); }
+    T* data() {
+        return m_arr.data();
+    }
 
     /**
      * Access the "axis" component of the ith vector (modifiable).
@@ -146,7 +155,9 @@ public:
      * @param axis Axis index.
      * @return Reference to the element at the specified location.
      */
-    T& operator()(int i, int axis) { return m_arr[index(i, axis)]; }
+    T& operator()(int i, int axis) {
+        return m_arr[index(i, axis)];
+    }
 
     /**
      * Access the "axis" component of the ith vector (const version).
@@ -155,7 +166,9 @@ public:
      * @param axis Axis index.
      * @return Reference to the element at the specified location.
      */
-    const T& operator()(int i, int axis) const { return m_arr[index(i, axis)]; }
+    const T& operator()(int i, int axis) const {
+        return m_arr[index(i, axis)];
+    }
 
     /**
      * Retrieve value based on the flattened index (modifiable).
@@ -163,7 +176,9 @@ public:
      * @param idx Index in the flattened array.
      * @return Value at the specified index.
      */
-    T& operator[](size_t idx) { return m_arr[idx]; }
+    T& operator[](size_t idx) {
+        return m_arr[idx];
+    }
 
     /**
      * Retrieve value based on the flattened index (const version).
@@ -171,7 +186,9 @@ public:
      * @param idx Index in the flattened array.
      * @return Vale at the specified index.
      */
-    const T& operator[](size_t idx) const { return m_arr[idx]; }
+    const T& operator[](size_t idx) const {
+        return m_arr[idx];
+    }
 
     /**
      * Overload the multiplication operator for scalar multiplication (from the right-hand side).
@@ -209,7 +226,7 @@ private:
 };
 
 // Use a non-member operator overload for the right-hand side case
-template<typename T, int dim>
+template <typename T, int dim>
 VectorArray<T, dim> operator*(const T& lhs_scalar, VectorArray<T, dim> rhs_vec) {
     return rhs_vec * lhs_scalar;
 }

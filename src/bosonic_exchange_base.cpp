@@ -1,7 +1,8 @@
 #include "bosonic_exchange_base.h"
 
 BosonicExchangeBase::BosonicExchangeBase(int nbosons_, int np_, int bead_num_, double beta_, double spring_constant_,
-    const dVec& x_, const dVec& x_prev_, const dVec& x_next_, bool pbc_, double size_) : 
+                                         const dVec& x_, const dVec& x_prev_, const dVec& x_next_, bool pbc_,
+                                         double size_) :
     nbosons(nbosons_),
     nbeads(np_),
     bead_num(bead_num_),
@@ -19,8 +20,7 @@ BosonicExchangeBase::BosonicExchangeBase(int nbosons_, int np_, int bead_num_, d
 
 /* ---------------------------------------------------------------------- */
 
-void BosonicExchangeBase::getBeadsSeparation(const dVec x1, int l1, const dVec x2, int l2, double diff[NDIM]) const
-{
+void BosonicExchangeBase::getBeadsSeparation(const dVec x1, int l1, const dVec x2, int l2, double diff[NDIM]) const {
     l1 = l1 % nbosons;
     l2 = l2 % nbosons;
 
@@ -43,8 +43,7 @@ void BosonicExchangeBase::getBeadsSeparation(const dVec x1, int l1, const dVec x
  * @param l2 Particle index of the second bead
  * @return Distance squared between the two beads
  */
-double BosonicExchangeBase::getBeadsSeparationSquared(const dVec x1, int l1, const dVec x2, int l2) const
-{
+double BosonicExchangeBase::getBeadsSeparationSquared(const dVec x1, int l1, const dVec x2, int l2) const {
     double diff[NDIM];
     getBeadsSeparation(x1, l1, x2, l2, diff);
 
@@ -62,11 +61,9 @@ double BosonicExchangeBase::getBeadsSeparationSquared(const dVec x1, int l1, con
 void BosonicExchangeBase::springForce(dVec& f) {
     if (bead_num == nbeads - 1) {
         springForceLastBead(f);
-    }
-    else if (bead_num == 0) {
+    } else if (bead_num == 0) {
         springForceFirstBead(f);
-    }
-    else {
+    } else {
         springForceInteriorBead(f);
     }
 }
@@ -78,8 +75,7 @@ void BosonicExchangeBase::springForce(dVec& f) {
  * 
  * @return Spring energy contribution of the current and the next time-slice
  */
-double BosonicExchangeBase::interiorSpringEnergy() const
-{
+double BosonicExchangeBase::interiorSpringEnergy() const {
     if (bead_num == nbeads - 1)
         throw std::runtime_error("interiorSpringEnergy() called for the last time-slice");
 
@@ -100,8 +96,7 @@ double BosonicExchangeBase::interiorSpringEnergy() const
 
 /* ---------------------------------------------------------------------- */
 
-void BosonicExchangeBase::springForceInteriorBead(dVec& f) const
-{
+void BosonicExchangeBase::springForceInteriorBead(dVec& f) const {
     for (int l = 0; l < nbosons; l++) {
         std::vector<double> sums(NDIM, 0.0);
 

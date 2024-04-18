@@ -21,15 +21,13 @@ int main(int argc, char** argv) {
         for (int i = 1; i < argc; ++i) {
             if (std::strcmp(argv[i], "--dim") == 0) {
                 printInfo(std::format("Program was compiled for {}-dimensional systems", NDIM), info_flag, rank);
-            }
-            else if (std::strcmp(argv[i], "-in") == 0) {
+            } else if (std::strcmp(argv[i], "-in") == 0) {
                 // Check if there is another argument after "-in"
                 if (i + 1 < argc) {
                     config_filename = argv[i + 1];
                     // Increment i to skip the next argument as it has been consumed as the filename
                     ++i;
-                }
-                else {
+                } else {
                     throw std::invalid_argument("-in option requires a filename argument");
                 }
             }
@@ -58,8 +56,8 @@ int main(int argc, char** argv) {
             MPI_Barrier(MPI_COMM_WORLD);
             const double sim_exec_time_end = MPI_Wtime();
 
-            printStatus(std::format("Simulation finished running successfully (Runtime = {:.3} sec)", 
-                sim_exec_time_end - sim_exec_time_start), rank);
+            printStatus(std::format("Simulation finished running successfully (Runtime = {:.3} sec)",
+                                    sim_exec_time_end - sim_exec_time_start), rank);
         }
     }
     catch (const std::invalid_argument& ex) {

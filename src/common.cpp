@@ -24,7 +24,6 @@ void printError(const std::string& msg, int this_rank, const std::string& err_ty
 
 void printProgress(int this_step, int total_steps, int this_rank, int out_rank) {
     if (this_rank == out_rank) {
-        
         double percentage = (double)this_step / (total_steps - 1);
         int val = (int)(percentage * 100);
         int lpad = (int)(percentage * PBWIDTH);
@@ -58,7 +57,8 @@ void loadTrajectories(const std::string& xyz_filename, dVec& destination) {
 
     if (destination.len() != numAtoms)
         throw std::runtime_error(
-            std::format("The number of atoms in the xyz file ({}) does not match the requested number of atoms.", xyz_filename)
+            std::format("The number of atoms in the xyz file ({}) does not match the requested number of atoms.",
+                        xyz_filename)
         );
 
     // The command "inputFile >> numAtoms" read the number, but the newline character that follows that number was not consumed. 
@@ -86,7 +86,7 @@ void loadTrajectories(const std::string& xyz_filename, dVec& destination) {
         for (int j = 0; j < NDIM; ++j) {
             inputFile >> destination(i, j);
             destination(i, j) = Units::convertToInternal("length", "angstrom", destination(i, j));
-        }   
+        }
     }
 
     inputFile.close();
@@ -103,7 +103,8 @@ void loadMomenta(const std::string& vel_filename, double mass, dVec& destination
 
     if (destination.len() != numAtoms)
         throw std::runtime_error(
-            std::format("The number of atoms in the velocity file ({}) does not match the requested number of atoms.", vel_filename)
+            std::format("The number of atoms in the velocity file ({}) does not match the requested number of atoms.",
+                        vel_filename)
         );
 
     inputFile.ignore(std::numeric_limits<std::streamsize>::max(), '\n');

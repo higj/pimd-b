@@ -1,7 +1,6 @@
 #include "potential.h"
 
-Potential::Potential() : tailV(0.0) {
-}
+Potential::Potential() : tailV(0.0) {}
 
 // Isotropic harmonic potential
 HarmonicPotential::HarmonicPotential(double mass, double omega) : mass(mass), omega(omega) {
@@ -31,8 +30,8 @@ double HarmonicPotential::laplacianV(const dVec& x) {
 }
 
 // Double-well potential
-DoubleWellPotential::DoubleWellPotential(double mass, double strength, double loc) : mass(mass), strength(strength), loc(loc) {
-}
+DoubleWellPotential::DoubleWellPotential(double mass, double strength, double loc)
+    : mass(mass), strength(strength), loc(loc) {}
 
 double DoubleWellPotential::V(const dVec& x) {
     double potential = 0.0;
@@ -40,7 +39,8 @@ double DoubleWellPotential::V(const dVec& x) {
 
     for (int ptcl_idx = 0; ptcl_idx < x.len(); ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
-            potential += (x(ptcl_idx, axis) * x(ptcl_idx, axis) - loc2) * (x(ptcl_idx, axis) * x(ptcl_idx, axis) - loc2);
+            potential += (x(ptcl_idx, axis) * x(ptcl_idx, axis) - loc2) *
+                (x(ptcl_idx, axis) * x(ptcl_idx, axis) - loc2);
         }
     }
 
@@ -76,8 +76,7 @@ double DoubleWellPotential::laplacianV(const dVec& x) {
 
 
 // Dipole potential
-DipolePotential::DipolePotential(double strength) : strength(strength) {
-}
+DipolePotential::DipolePotential(double strength) : strength(strength) {}
 
 double DipolePotential::V(const dVec& x) {
     double potential = 0.0;

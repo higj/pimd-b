@@ -135,8 +135,6 @@ name = harmonic
 omega = 3.0 millielectronvolt
 ```
 
-The seed for the random number generator should be a positive integer below 900,000,000.
-
 Currently, the following potentials are available:
 
 * **External potentials**: `free`, `harmonic` and `double_well` 
@@ -150,7 +148,7 @@ A positive cutoff aborts the calculation of the interaction force if the inter-p
 
 The `initial_position` option allows to specify the method of initialization for the bead coordinates. Currently, two options are available:
 
-* `random` (default): samples random positions in each Cartesian direction from a uniform distribution on the interval $[-L/2, L/2]$, where $L$ is the linear size of the system
+* `random` (default): samples random positions in each Cartesian direction from a uniform distribution on the interval $[-L/2, L/2]$, where $L$ is the linear size of the system.
 * `xyz(<filename>.xyz)`: initializes the coordinates based on the provided `.xyz` file. A given particle is initialized at the same location across all imaginary time-slices (beads).
 
 The `size` option defines the linear size of the system. Currently, only cube geometry is supported. In the absence of periodic boundary conditions, `size` only affects the way initial positions are generated. However, if periodic boundary conditions are enabled, the system size also affects the cutoff distance for interactions, as well as the estimators. Also, the coordinates may be wrapped in this case, and minimum image convention can potentially be employed, if such functionality is desired.
@@ -171,10 +169,10 @@ The following options are available in the `[simulation]`, `[system]` and `[outp
 |`bosonic`     |  Set to `true`/`false` for bosonic/distinguishable PIMD (Default: `false`) |
 |`pbc`     |  Set to `true` to enable periodic boundary conditions (Default: `false`) |
 |`fixcom`     |  Set to `true` to remove the center of mass motion (Default: `true`) |
-|`seed`     | Random number generator seed |
+|`seed`     | Random number generator seed (a positive integer below $9 \cdot 10^8^$) |
 |`initial_position`     | Method for generating the initial positions of the beads |
 |`initial_velocity`     | Method for generating the initial velocities of the beads. `random` samples from the Maxwell-Boltzmann distribution. `manual` loads velocities from a provided file. (Default: `random`) |
-|`temperature`     |  Temperature of the system (units of temperature) |
+|`temperature`     |  Temperature of the quantum system (units of temperature) |
 |`natoms`     |  Number of particles in the quantum system |
 |`size`     |  Linear size of the system (units of length) |
 |`mass`     |  Mass of the particles (units of mass) |
