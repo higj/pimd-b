@@ -10,8 +10,8 @@ public:
     ~BosonicExchange() override = default;
 
     double effectivePotential() override;
-    double get_Vn(int n) const;
-    double get_E_kn_serial_order(int i) const;
+    double getVn(int n) const;
+    double getEknSerialOrder(int i) const;
 
     void prepare() override;
 
@@ -25,11 +25,11 @@ private:
     void evaluateBosonicEnergies();
     void evaluateCycleEnergies();
 
-    double get_Enk(int m, int k) const;
-    void set_Enk(int m, int k, double val);
+    double getEnk(int m, int k) const;
+    void setEnk(int m, int k, double val);
     void evaluateConnectionProbabilities();
-    void Evaluate_VBn();
-    void Evaluate_V_backwards();
+    void evaluateVBn();
+    void evaluateVBackwards();
 
     std::vector<double> E_kn;
     std::vector<double> V;

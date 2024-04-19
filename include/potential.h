@@ -15,8 +15,7 @@ public:
 
     // Potential gradient
     virtual dVec gradV(const dVec& x) {
-        dVec temp(x.len());
-        return temp;
+        return dVec(x.len()); // Zero vector of the same length as x
     }
 
     // Potential laplacian
@@ -25,6 +24,7 @@ public:
     }
 
     // Tail correction
+    /// @todo Implement the tail correction
     double tailV;
 };
 

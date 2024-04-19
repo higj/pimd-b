@@ -1,7 +1,4 @@
-﻿# CMakeList.txt : CMake project for pimdb, include source and define
-# project specific logic here.
-#
-cmake_minimum_required(VERSION 3.18.1)
+﻿cmake_minimum_required(VERSION 3.18.1)
 
 # Enable Hot Reload for MSVC compilers if supported.
 if (POLICY CMP0141)

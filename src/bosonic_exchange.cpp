@@ -20,8 +20,8 @@ void BosonicExchange::evaluateBosonicEnergies() {
     evaluateCycleEnergies();
     if (bead_num == 0 || bead_num == nbeads - 1) {
         // Exterior beads
-        Evaluate_VBn();
-        Evaluate_V_backwards();
+        evaluateVBn();
+        evaluateVBackwards();
         evaluateConnectionProbabilities();
     }
 }
@@ -39,6 +39,8 @@ void BosonicExchange::prepare() {
 
 void BosonicExchange::evaluateCycleEnergies() {
     for (int i = 0; i < nbosons; i++) {
+        // After summing temp_nbosons_array across all time-slices,
+        // temp_nbosons_array[i] will be E^[i,i]
         temp_nbosons_array[i] = getBeadsSeparationSquared(x, i, x_next, i);
     }
 
@@ -71,11 +73,11 @@ void BosonicExchange::evaluateCycleEnergies() {
         }
 
         for (int v = 0; v < nbosons; v++) {
-            set_Enk(v + 1, 1,
+            setEnk(v + 1, 1,
                     0.5 * spring_constant * separate_atom_spring[v]);
 
             for (int u = v - 1; u >= 0; u--) {
-                double val = get_Enk(v + 1, v - u) +
+                double val = getEnk(v + 1, v - u) +
                     0.5 * spring_constant * (
                         // Eint(u)
                         separate_atom_spring[u] - getBeadsSeparationSquared(x_first_bead, u, x_last_bead, u)
@@ -86,7 +88,7 @@ void BosonicExchange::evaluateCycleEnergies() {
                         // close cycle from v to u
                         + getBeadsSeparationSquared(x_first_bead, u, x_last_bead, v));
 
-                set_Enk(v + 1, v - u + 1, val);
+                setEnk(v + 1, v - u + 1, val);
             }
         }
     }
@@ -94,28 +96,28 @@ void BosonicExchange::evaluateCycleEnergies() {
 
 /* ---------------------------------------------------------------------- */
 
-double BosonicExchange::get_Enk(int m, int k) const {
+double BosonicExchange::getEnk(int m, int k) const {
     int end_of_m = m * (m + 1) / 2;
     return E_kn[end_of_m - k];
 }
 
 /* ---------------------------------------------------------------------- */
 
-void BosonicExchange::set_Enk(int m, int k, double val) {
+void BosonicExchange::setEnk(int m, int k, double val) {
     int end_of_m = m * (m + 1) / 2;
     E_kn[end_of_m - k] = val;
 }
 
 /* ---------------------------------------------------------------------- */
 
-void BosonicExchange::Evaluate_VBn() {
+void BosonicExchange::evaluateVBn() {
     V[0] = 0.0;
 
     for (int m = 1; m < nbosons + 1; m++) {
         double e_shift = std::numeric_limits<double>::max();
 
         for (int k = m; k > 0; k--) {
-            double val = get_Enk(m, k) + V[m - k];
+            double val = getEnk(m, k) + V[m - k];
             e_shift = std::min(e_shift, val);
             temp_nbosons_array[k - 1] = val;
         }
@@ -138,13 +140,13 @@ void BosonicExchange::Evaluate_VBn() {
 
 /* ---------------------------------------------------------------------- */
 
-void BosonicExchange::Evaluate_V_backwards() {
+void BosonicExchange::evaluateVBackwards() {
     V_backwards[nbosons] = 0.0;
 
     for (int l = nbosons - 1; l > 0; l--) {
         double e_shift = std::numeric_limits<double>::max();
         for (int p = l; p < nbosons; p++) {
-            double val = get_Enk(p + 1, p - l + 1) + V_backwards[p + 1];
+            double val = getEnk(p + 1, p - l + 1) + V_backwards[p + 1];
             e_shift = std::min(e_shift, val);
             temp_nbosons_array[p] = val;
         }
@@ -175,13 +177,13 @@ double BosonicExchange::effectivePotential() {
 
 /* ---------------------------------------------------------------------- */
 
-double BosonicExchange::get_Vn(int n) const {
+double BosonicExchange::getVn(int n) const {
     return V[n];
 }
 
 /* ---------------------------------------------------------------------- */
 
-double BosonicExchange::get_E_kn_serial_order(int i) const {
+double BosonicExchange::getEknSerialOrder(int i) const {
     return E_kn[i];
 }
 
@@ -197,7 +199,7 @@ void BosonicExchange::evaluateConnectionProbabilities() {
     for (int u = 0; u < nbosons; u++) {
         for (int l = u; l < nbosons; l++) {
             double close_cycle_probability = 1.0 / (l + 1) *
-                exp(-beta * (V[u] + get_Enk(l + 1, l - u + 1) + V_backwards[l + 1]
+                exp(-beta * (V[u] + getEnk(l + 1, l - u + 1) + V_backwards[l + 1]
                     - V[nbosons]));
             connection_probabilities[nbosons * l + u] = close_cycle_probability;
         }
@@ -287,11 +289,11 @@ double BosonicExchange::primEstimator() {
         double e_shift = std::numeric_limits<double>::max();
 
         for (int k = m; k > 0; k--) {
-            e_shift = std::min(e_shift, get_Enk(m, k) + V[m - k]);
+            e_shift = std::min(e_shift, getEnk(m, k) + V[m - k]);
         }
 
         for (int k = m; k > 0; --k) {
-            double E_kn_val = get_Enk(m, k);
+            double E_kn_val = getEnk(m, k);
 
             sig += (prim_est[m - k] - E_kn_val) * exp(-beta * (E_kn_val + V[m - k] - e_shift));
         }

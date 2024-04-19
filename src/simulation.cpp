@@ -491,7 +491,9 @@ void Simulation::updatePhysicalForces(dVec& physical_force_arr) const {
     if (int_pot_cutoff != 0.0) {
         for (int ptcl_one = 0; ptcl_one < natoms; ++ptcl_one) {
             for (int ptcl_two = ptcl_one + 1; ptcl_two < natoms; ++ptcl_two) {
-                dVec diff = getSeparation(ptcl_one, ptcl_two);  // Vectorial distance
+                // Get the vector distance between the two particles.
+                // Here "diff" contains just one vector of dimension NDIM.
+                dVec diff = getSeparation(ptcl_one, ptcl_two);
 
                 // If the distance between the particles exceeds the cutoff length
                 // then we assume the interaction is negligible and do not bother
@@ -499,8 +501,7 @@ void Simulation::updatePhysicalForces(dVec& physical_force_arr) const {
                 // We use the convention that when cutoff < 0 then the interaction is
                 // calculated for all distances.
                 if (const double distance = diff.norm(); distance < int_pot_cutoff || int_pot_cutoff < 0.0) {
-                    dVec force_on_one;
-                    force_on_one = (-1.0) * int_potential->gradV(diff);
+                    dVec force_on_one = (-1.0) * int_potential->gradV(diff);
 
                     for (int axis = 0; axis < NDIM; ++axis) {
                         physical_force_arr(ptcl_one, axis) += force_on_one(0, axis);
