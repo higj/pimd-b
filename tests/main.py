@@ -171,17 +171,17 @@ def run_tests(executable_dir, tests_dir, is_old_bosonic):
             # Otherwise, skip this test.
             if test_xyz_files:
                 print("Comparing trajectories...")
-                xyz_file_names = [file.name for file in test_xyz_files]
+                xyz_file_names = [file.name for file in test_xyz_files]  # Expected xyz file names
 
                 # Check if the simulation output directory has the same number of xyz files and same filenames
                 out_xyz_files = list(out_folder.glob("*.xyz"))
-
-                print(out_xyz_files)
-                print(test_xyz_files)
                 
-                #if len(out_xyz_files) != len(test_xyz_files):
-                if sorted(out_xyz_files) != sorted(test_xyz_files):
-                    raise AssertionError(f"Test failed: xyz files found in {out_folder} differ in number and/or filename compared to the test files.")
+                if len(out_xyz_files) != len(test_xyz_files):
+                    raise AssertionError(f"Test failed: number of xyz files found in {out_folder} is incorrect.")
+                
+                for xyz_file in out_xyz_files:
+                    if xyz_file.name not in xyz_file_names:
+                        raise AssertionError(f"Test failed: the generated xyz files have incorrect names.")
                 
                 natoms = get_number_of_atoms(tests_dir / input_file)
                 
