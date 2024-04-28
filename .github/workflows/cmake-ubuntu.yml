@@ -25,16 +25,16 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    
-    - name: Cache dependencies
-      id: cache-dependencies
-      uses: actions/cache@v4
+
+    - name: Restore cached dependencies
+      id: cache-dependencies-restore
+      uses: actions/cache/restore@v4
       with:
         path: /home/runner/.openmpi
         key: ${{runner.os}}-openmpi-${{env.OPENMPI_VER}}
   
     - name: Install dependencies
-      if: steps.cache-dependencies.outputs.cache-hit != 'true'
+      if: steps.cache-dependencies-restore.outputs.cache-hit != 'true'
       run: |
         sudo add-apt-repository ppa:ubuntu-toolchain-r/test
         sudo apt-get install g++-13
@@ -44,6 +44,14 @@ jobs:
         cd openmpi-${{env.OPENMPI_VER}}
         ./configure --prefix="/home/${USER}/.openmpi"
         sudo make all install
+
+    - name: Cache dependencies
+      id: cache-dependencies
+      uses: actions/cache/save@v4
+      if: always()
+      with:
+        path: /home/runner/.openmpi
+        key: ${{runner.os}}-openmpi-${{env.OPENMPI_VER}}
 
     - name: Configure OpenMPI 
       # Set environment variables related to OpenMPI

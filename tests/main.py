@@ -175,6 +175,9 @@ def run_tests(executable_dir, tests_dir, is_old_bosonic):
 
                 # Check if the simulation output directory has the same number of xyz files and same filenames
                 out_xyz_files = list(out_folder.glob("*.xyz"))
+
+                print(out_xyz_files)
+                print(test_xyz_files)
                 
                 #if len(out_xyz_files) != len(test_xyz_files):
                 if sorted(out_xyz_files) != sorted(test_xyz_files):
