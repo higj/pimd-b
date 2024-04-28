@@ -186,8 +186,8 @@ def run_tests(executable_dir, tests_dir, is_old_bosonic):
                 natoms = get_number_of_atoms(tests_dir / input_file)
                 
                 for xyz_file_name in xyz_file_names:
-                    out_xyz_file = out_xyz_files / xyz_file_name
-                    test_xyz_file = test_xyz_files / xyz_file_name
+                    out_xyz_file = out_folder / xyz_file_name
+                    test_xyz_file = test_case / xyz_file_name
                     compare_xyz(actual_xyz_file=out_xyz_file, expected_xyz_file=test_xyz_file, natoms=natoms)
                     
                 print("Test passed: Trajectories match.")
@@ -199,7 +199,7 @@ def run_tests(executable_dir, tests_dir, is_old_bosonic):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='PIMD-B++ testing of observables')
+    parser = argparse.ArgumentParser(description='PIMD-B++ tests')
     parser.add_argument('executable_dir', type=Path, help='Directory containing the executable')
     parser.add_argument('tests_dir', type=Path, help='Directory containing the test cases')
     parser.add_argument('--old-bosonic', default=False, action=argparse.BooleanOptionalAction, 
