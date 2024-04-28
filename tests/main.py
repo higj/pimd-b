@@ -1,3 +1,5 @@
+from math import exp
+import re
 import subprocess
 import os
 import shutil
@@ -6,6 +8,7 @@ import sys
 import numpy as np
 import configparser
 import argparse
+import MDAnalysis as mda
 
 
 # Columns of observables to compare
@@ -40,6 +43,22 @@ def get_number_of_beads(input_file):
         raise RuntimeError(f"Test '{input_file}' does not contain the [simulation] section!")
     except configparser.NoOptionError:
         raise RuntimeError(f"Test '{input_file}' does not contain the 'nbeads' key in the [simulation] section!")
+
+
+def get_number_of_atoms(input_file):
+    config = configparser.ConfigParser()
+    
+    try:
+        config.read(input_file)
+        
+        # Extract the value associated with the "nbeads" key
+        nbeads_value = int(float(config.get('system', 'natoms')))
+        
+        return nbeads_value
+    except configparser.MissingSectionHeaderError:
+        raise RuntimeError(f"Test '{input_file}' does not contain the [system] section!")
+    except configparser.NoOptionError:
+        raise RuntimeError(f"Test '{input_file}' does not contain the 'natoms' key in the [system] section!")
 
 
 def run_simulation(executable_dir, input_file):
@@ -84,6 +103,31 @@ def compare_output(actual_output, expected_output):
     return True
 
 
+def get_coordinates(xyz_path, natoms, dim=3):
+    xyz_class = mda.coordinates.XYZ.XYZReader(xyz_path)
+    steps = xyz_class.n_frames
+
+    coords = np.zeros((steps, natoms, dim))
+
+    for timestep in xyz_class:
+        coords[timestep.frame, :, :] = timestep.positions
+
+    return coords, steps
+
+
+# Coordinates are assumed to be in Angstroms
+# Coordinate files are assumed to have names in the format "position_0.xyz", ..., "position_P-1.xyz"
+def compare_xyz(actual_xyz_file, expected_xyz_file, natoms):
+    coords, steps = get_coordinates(xyz_path=actual_xyz_file, natoms=natoms, dim=3)
+    coords_test, steps_test = get_coordinates(xyz_path=expected_xyz_file, natoms=natoms, dim=3)
+
+    are_equal, index = compare_arrays(coords, coords_test)
+    if not are_equal:
+        raise AssertionError(f"Test failed: Coordinates in {actual_xyz_file.name} do not match at step {index}.")
+    
+    return True
+
+
 def run_tests(executable_dir, tests_dir, is_old_bosonic):
     # Navigate to the directory containing test cases
     os.chdir(tests_dir)
@@ -113,11 +157,38 @@ def run_tests(executable_dir, tests_dir, is_old_bosonic):
             cmd_out = run_simulation(executable_dir, tests_dir / input_file)
             #print(cmd_out)
             
-            # Compare the output with the expected output
+            print("Comparing output files...")
+            # 1st test: Compare the output with the expected output
             if compare_output(out_path, expected_out_path):
                 print("Test passed: Output matches expected output.")
             else:
                 raise AssertionError("Test failed: Output does not match expected output.")
+            
+            # 2nd test: Compare the coordinates with the expected coordinates
+            test_xyz_files = list(test_case.glob("*.xyz"))
+            
+            # If the test contains '.xyz' files, compare them.
+            # Otherwise, skip this test.
+            if test_xyz_files:
+                print("Comparing trajectories...")
+                xyz_file_names = [file.name for file in test_xyz_files]
+
+                # Check if the simulation output directory has the same number of xyz files and same filenames
+                out_xyz_files = list(out_folder.glob("*.xyz"))
+                
+                #if len(out_xyz_files) != len(test_xyz_files):
+                if sorted(out_xyz_files) != sorted(test_xyz_files):
+                    raise AssertionError(f"Test failed: xyz files found in {out_folder} differ in number and/or filename compared to the test files.")
+                
+                natoms = get_number_of_atoms(tests_dir / input_file)
+                
+                for xyz_file_name in xyz_file_names:
+                    out_xyz_file = out_xyz_files / xyz_file_name
+                    test_xyz_file = test_xyz_files / xyz_file_name
+                    compare_xyz(actual_xyz_file=out_xyz_file, expected_xyz_file=test_xyz_file, natoms=natoms)
+                    
+                print("Test passed: Trajectories match.")
+                    
             
             # Clean up the generated output file
             print("Deleting:", out_folder)
