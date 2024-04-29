@@ -128,6 +128,107 @@ def compare_xyz(actual_xyz_file, expected_xyz_file, natoms):
     return True
 
 
+def is_float(element: any) -> bool:
+    if element is None:
+        return False
+    try:
+        float(element)
+        return True
+    except ValueError:
+        return False
+
+
+def extract_numeric_data(file_path):
+    """
+    Extract numeric data from the file, focusing on the last 3 values in each row.
+    """
+    numeric_data = []
+
+    with open(file_path, 'r') as file:
+        for line_idx, line in enumerate(file):
+            values = line.strip().split()[-3:]
+            vals_are_floats = [is_float(value) for value in values]
+            
+            # Check if the values are valid numbers
+            # Also check that the velocity vector has at least three components
+            if all(vals_are_floats) and len(vals_are_floats) > 2:
+                numeric_data.append([float(value) for value in values])
+
+    return np.array(numeric_data)
+
+
+def test_coordinates(output_folder, test_folder, in_file):
+    test_xyz_files = list(test_folder.glob("*.xyz"))
+            
+    # If the test contains '.xyz' files, compare them.
+    # Otherwise, skip this test.
+    if test_xyz_files:
+        print("Comparing trajectories...")
+        xyz_file_names = [file.name for file in test_xyz_files]  # Expected xyz file names
+
+        # Check if the simulation output directory has the same number of xyz files and same filenames
+        out_xyz_files = list(output_folder.glob("*.xyz"))
+                
+        if len(out_xyz_files) != len(test_xyz_files):
+            raise AssertionError(f"Test failed: number of xyz files found in {output_folder} is incorrect.")
+                
+        for xyz_file in out_xyz_files:
+            if xyz_file.name not in xyz_file_names:
+                raise AssertionError(f"Test failed: the generated xyz files have incorrect names.")
+                
+        natoms = get_number_of_atoms(tests_dir / in_file)
+                
+        for xyz_file_name in xyz_file_names:
+            out_xyz_file = output_folder / xyz_file_name
+            test_xyz_file = test_folder / xyz_file_name
+            compare_xyz(actual_xyz_file=out_xyz_file, expected_xyz_file=test_xyz_file, natoms=natoms)
+                    
+        print("Test passed: Trajectories match.")
+
+
+def test_velocities(output_folder, test_folder):
+    # Function to filter files with names in the format "velocity_X.dat"
+    def is_velocity_file(file):
+        return file.name.startswith("velocity_") and file.name.endswith(".dat") and file.stem.split("_")[1].isdigit()
+
+    # Check if the test case has at least one file with the format "velocity_X.dat"
+    velocity_files = list(filter(is_velocity_file, test_folder.glob("velocity_*.dat")))
+    
+    # If not, quit the test
+    if not velocity_files:
+        return True
+
+    print("Comparing velocities...")
+    
+    # Get the names of all 'velocity_X.dat' files in test
+    velocity_file_names = [file.name for file in velocity_files]
+
+    # Check if the output directory has the same number of files and same filenames
+    out_velocity_files = list(filter(is_velocity_file, output_folder.glob("velocity_*.dat")))
+    if len(out_velocity_files) != len(velocity_files):
+        raise AssertionError(f"Test failed: Different number of 'velocity_X.dat' files found in {output_folder}")
+    
+    for velocity_file in out_velocity_files:
+        if velocity_file.name not in velocity_file_names:
+            raise AssertionError(f"Test failed: Different filenames found in {output_folder}")
+
+    # Iterate over similar files in both directories and compare their contents
+    for velocity_file_name in velocity_file_names:
+        test_vel_file = test_folder / velocity_file_name
+        out_vel_file = output_folder / velocity_file_name
+        
+        vels_out = extract_numeric_data(out_vel_file)
+        vels_test = extract_numeric_data(test_vel_file)
+
+        are_equal, index = compare_arrays(vels_out, vels_test)
+        if not are_equal:
+            raise AssertionError(f"Test failed: Velocities do not match at step {index}.")
+    
+    print("Test passed: Velocities match.")
+
+    return True
+
+
 def run_tests(executable_dir, tests_dir, is_old_bosonic):
     # Navigate to the directory containing test cases
     os.chdir(tests_dir)
@@ -165,33 +266,10 @@ def run_tests(executable_dir, tests_dir, is_old_bosonic):
                 raise AssertionError("Test failed: Output does not match expected output.")
             
             # 2nd test: Compare the coordinates with the expected coordinates
-            test_xyz_files = list(test_case.glob("*.xyz"))
+            test_coordinates(out_folder, test_case, input_file)
             
-            # If the test contains '.xyz' files, compare them.
-            # Otherwise, skip this test.
-            if test_xyz_files:
-                print("Comparing trajectories...")
-                xyz_file_names = [file.name for file in test_xyz_files]  # Expected xyz file names
-
-                # Check if the simulation output directory has the same number of xyz files and same filenames
-                out_xyz_files = list(out_folder.glob("*.xyz"))
-                
-                if len(out_xyz_files) != len(test_xyz_files):
-                    raise AssertionError(f"Test failed: number of xyz files found in {out_folder} is incorrect.")
-                
-                for xyz_file in out_xyz_files:
-                    if xyz_file.name not in xyz_file_names:
-                        raise AssertionError(f"Test failed: the generated xyz files have incorrect names.")
-                
-                natoms = get_number_of_atoms(tests_dir / input_file)
-                
-                for xyz_file_name in xyz_file_names:
-                    out_xyz_file = out_folder / xyz_file_name
-                    test_xyz_file = test_case / xyz_file_name
-                    compare_xyz(actual_xyz_file=out_xyz_file, expected_xyz_file=test_xyz_file, natoms=natoms)
-                    
-                print("Test passed: Trajectories match.")
-                    
+            # 3rd test: Compare the velocities with the expected velocities
+            test_velocities(out_folder, test_case)
             
             # Clean up the generated output file
             print("Deleting:", out_folder)
