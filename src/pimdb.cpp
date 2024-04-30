@@ -21,6 +21,11 @@ int main(int argc, char** argv) {
         for (int i = 1; i < argc; ++i) {
             if (std::strcmp(argv[i], "--dim") == 0) {
                 printInfo(std::format("Program was compiled for {}-dimensional systems", NDIM), info_flag, rank);
+            } else if (std::strcmp(argv[i], "--bosonic_alg") == 0) {
+                if constexpr (OLD_BOSONIC_ALGORITHM)
+                    printInfo("Program was compiled with original bosonic algorithm.", info_flag, rank);
+                else
+                    printInfo("Program was compiled with quadratic bosonic algorithm.", info_flag, rank);
             } else if (std::strcmp(argv[i], "-in") == 0) {
                 // Check if there is another argument after "-in"
                 if (i + 1 < argc) {

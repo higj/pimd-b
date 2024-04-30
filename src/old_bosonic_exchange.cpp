@@ -187,7 +187,7 @@ void OldBosonicExchange::springForceLastBead(dVec& f) {
 
         for (int l = 0; l < nbosons; ++l) {
             for (int axis = 0; axis < NDIM; ++axis) {
-                f(l, axis) += weight * temp_force(l, axis);
+                f(l, axis) = weight * temp_force(l, axis);
             }
         }
 

@@ -24,9 +24,9 @@ void printError(const std::string& msg, int this_rank, const std::string& err_ty
 
 void printProgress(int this_step, int total_steps, int this_rank, int out_rank) {
     if (this_rank == out_rank) {
-        double percentage = (double)this_step / (total_steps - 1);
-        int val = (int)(percentage * 100);
-        int lpad = (int)(percentage * PBWIDTH);
+        double percentage = static_cast<double>(this_step) / (total_steps - 1);
+        int val = static_cast<int>(percentage * 100);
+        int lpad = static_cast<int>(percentage * PBWIDTH);
         int rpad = PBWIDTH - lpad;
 
         printf("\r[%.*s%*s] %3d%%", lpad, PBSTR.data(), rpad, "", val);

@@ -12,9 +12,8 @@
 
 /* ---------------------------------------------------------------------- */
 
-RanPark::RanPark(int seed_init)
-{
-    if (seed_init <= 0) 
+RanPark::RanPark(int seed_init): second(0) {
+    if (seed_init <= 0)
         throw std::invalid_argument("Invalid seed for Park random # generator");
     seed = seed_init;
     save = 0;
