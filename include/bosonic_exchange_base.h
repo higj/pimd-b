@@ -17,6 +17,9 @@ public:
     BosonicExchangeBase(int nbosons_, int np_, int bead_num_, double beta_, double spring_constant_,
                         const dVec& x_, const dVec& x_prev_, const dVec& x_next_, bool pbc_, double size_);
     virtual ~BosonicExchangeBase() = default;
+    BosonicExchangeBase(const BosonicExchangeBase&) = delete;
+    BosonicExchangeBase& operator=(const BosonicExchangeBase&) = delete;
+
     void springForce(dVec& f);
 
     virtual void prepare() = 0;
@@ -24,8 +27,8 @@ public:
     virtual double primEstimator() = 0;
 
 protected:
-    void getBeadsSeparation(const dVec x1, int l1, const dVec x2, int l2, double diff[NDIM]) const;
-    double getBeadsSeparationSquared(const dVec x1, int l1, const dVec x2, int l2) const;
+    void getBeadsSeparation(const dVec& x1, int l1, const dVec& x2, int l2, double diff[NDIM]) const;
+    double getBeadsSeparationSquared(const dVec& x1, int l1, const dVec& x2, int l2) const;
 
     double interiorSpringEnergy() const;
     void springForceInteriorBead(dVec& f) const;

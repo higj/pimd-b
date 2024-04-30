@@ -20,7 +20,7 @@ BosonicExchangeBase::BosonicExchangeBase(int nbosons_, int np_, int bead_num_, d
 
 /* ---------------------------------------------------------------------- */
 
-void BosonicExchangeBase::getBeadsSeparation(const dVec x1, int l1, const dVec x2, int l2, double diff[NDIM]) const {
+void BosonicExchangeBase::getBeadsSeparation(const dVec& x1, int l1, const dVec& x2, int l2, double diff[NDIM]) const {
     l1 = l1 % nbosons;
     l2 = l2 % nbosons;
 
@@ -43,7 +43,7 @@ void BosonicExchangeBase::getBeadsSeparation(const dVec x1, int l1, const dVec x
  * @param l2 Particle index of the second bead
  * @return Distance squared between the two beads
  */
-double BosonicExchangeBase::getBeadsSeparationSquared(const dVec x1, int l1, const dVec x2, int l2) const {
+double BosonicExchangeBase::getBeadsSeparationSquared(const dVec& x1, int l1, const dVec& x2, int l2) const {
     double diff[NDIM];
     getBeadsSeparation(x1, l1, x2, l2, diff);
 
