@@ -48,7 +48,7 @@ jobs:
     - name: Cache dependencies
       id: cache-dependencies
       uses: actions/cache/save@v4
-      if: always()
+      if: steps.cache-dependencies-restore.outputs.cache-hit != 'true'
       with:
         path: /home/runner/.openmpi
         key: ${{runner.os}}-openmpi-${{env.OPENMPI_VER}}

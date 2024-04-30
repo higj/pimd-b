@@ -228,6 +228,48 @@ def test_velocities(output_folder, test_folder):
 
     return True
 
+def test_forces(output_folder, test_folder):
+    # Function to filter files with names in the format "force_X.dat"
+    def is_force_file(file):
+        return file.name.startswith("force_") and file.name.endswith(".dat") and file.stem.split("_")[1].isdigit()
+
+    # Check if the test case has at least one file with the format "force_X.dat"
+    force_files = list(filter(is_force_file, test_folder.glob("force_*.dat")))
+    
+    # If not, quit the test
+    if not force_files:
+        return True
+
+    print("Comparing forces...")
+    
+    # Get the names of all 'force_X.dat' files in test
+    force_file_names = [file.name for file in force_files]
+
+    # Check if the output directory has the same number of files and same filenames
+    out_force_files = list(filter(is_force_file, output_folder.glob("force_*.dat")))
+    if len(out_force_files) != len(force_files):
+        raise AssertionError(f"Test failed: Different number of 'force_X.dat' files found in {output_folder}")
+    
+    for force_file in out_force_files:
+        if force_file.name not in force_file_names:
+            raise AssertionError(f"Test failed: Different filenames found in {output_folder}")
+
+    # Iterate over similar files in both directories and compare their contents
+    for force_file_name in force_file_names:
+        test_force_file = test_folder / force_file_name
+        out_force_file = output_folder / force_file_name
+        
+        forces_out = extract_numeric_data(out_force_file)
+        forces_test = extract_numeric_data(test_force_file)
+
+        are_equal, index = compare_arrays(forces_out, forces_test)
+        if not are_equal:
+            raise AssertionError(f"Test failed: Forces do not match at step {index}.")
+    
+    print("Test passed: Forces match.")
+
+    return True
+
 
 def run_tests(executable_dir, tests_dir, is_old_bosonic):
     # Navigate to the directory containing test cases
@@ -270,6 +312,9 @@ def run_tests(executable_dir, tests_dir, is_old_bosonic):
             
             # 3rd test: Compare the velocities with the expected velocities
             test_velocities(out_folder, test_case)
+            
+            # 4th test: Compare the forces with the expected forces
+            test_forces(out_folder, test_case)
             
             # Clean up the generated output file
             print("Deleting:", out_folder)
