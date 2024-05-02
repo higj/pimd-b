@@ -556,8 +556,7 @@ dVec Simulation::getSeparation(int first_ptcl, int second_ptcl, bool minimum_ima
 
     for (int axis = 0; axis < NDIM; ++axis) {
         double diff = coord(first_ptcl, axis) - coord(second_ptcl, axis);
-#if MINIM
-        if (pbc)
+
         if (pbc && minimum_image)
             applyMinimumImage(diff, size);
 
