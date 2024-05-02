@@ -85,40 +85,7 @@ void EnergyObservable::calculateKinetic() {
         quantities["kinetic"] -= spring_energy;
     }
 
-    quantities["kinetic"] = Units::convertToUser("energy", out_unit, quantities["kinetic"]);
-
-#if IPI_CONVENTION
-    spring_energy /= sim.nbeads;
-#endif
-}
-
-    return spring_energy;
-}
-
-/**
- * @brief Calculates the quantum kinetic energy of the system using the primitive kinetic energy estimator.
- * Works both for distinguishable particles and bosons.
- */
-void EnergyObservable::calculateKinetic() {
-    double prefactor = 0.5 * NDIM * sim.natoms / sim.beta;
-
-    if (sim.bosonic) {
-#if OLD_BOSONIC_ALGORITHM
-        if (sim.this_bead == 0) {
-            quantities["kinetic"] = prefactor - sim.bosonic_exchange->primEstimator();
-        } else {
-            quantities["kinetic"] = prefactor - primitiveKineticDistinguishable();
-        }
-#else
-        if (sim.this_bead == 0) {
-            quantities["kinetic"] = prefactor * sim.nbeads + sim.bosonic_exchange->primEstimator();
-        }
-#endif
-    } else {
-        quantities["kinetic"] = prefactor - primitiveKineticDistinguishable();
-    }
-
-    quantities["kinetic"] = Units::convertToUser("energy", out_unit, quantities["kinetic"]);
+    quantities["kinetic"] = Units::convertToUser("energy", out_unit, quantities["kinetic"]);  
 }
 
 /**
@@ -137,10 +104,6 @@ void EnergyObservable::calculatePotential() {
 
     dVec physical_forces(sim.natoms);
     physical_forces = (-1.0) * sim.ext_potential->gradV(sim.coord);
-
-    double ext_pot_val = sim.ext_potential->V(sim.coord);
-    potential += ext_pot_val;
-    ext_pot = ext_pot_val;
 
     for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
@@ -233,11 +196,6 @@ void ClassicalObservable::calculateSpringEnergy() {
 
     if (sim.this_bead == 0 && sim.bosonic) {
         spring_energy = sim.bosonic_exchange->effectivePotential();
-#else
-        if (sim.this_bead == 0) {
-            spring_energy = sim.bosonic_exchange->effectivePotential();
-        }
-#endif
     } else {
         spring_energy = sim.classicalSpringEnergy();
     }
