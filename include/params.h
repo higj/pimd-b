@@ -33,9 +33,8 @@ public:
 
     /// @todo Consider refactoring this method to a more general utility class (maybe to units)?
     static std::pair<double, std::string> parseQuantity(const std::string& input);
-    double getQuantity(const std::string& family, const std::string& input);
-
-    bool parseTokenParentheses(const std::string& input, std::string& token, std::string& value);
+    static double getQuantity(const std::string& family, const std::string& input);
+    static bool parseTokenParentheses(const std::string& input, std::string& token, std::string& value);
 
 private:
     StringsList allowed_int_potential_names;  // Allowed interaction potential names

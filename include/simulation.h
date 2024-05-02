@@ -47,7 +47,7 @@ public:
     std::mt19937 rand_gen;
     std::unique_ptr<RanMars> mars_gen;
 
-    Simulation(int& rank, int& nproc, Params& param_obj, unsigned int seed = static_cast<unsigned int>(time(nullptr)));
+    Simulation(const int& rank, const int& nproc, Params& param_obj, unsigned int seed = static_cast<unsigned int>(time(nullptr)));
     ~Simulation();
 
     dVec coord, momenta, forces;
@@ -81,6 +81,8 @@ public:
     void updateSpringForces(dVec& spring_force_arr) const;
     void updatePhysicalForces(dVec& physical_force_arr) const;
 
+    double classicalSpringEnergy() const;
+
     void getNextCoords(dVec& next);
     void getPrevCoords(dVec& prev);
     void updateNeighboringCoordinates();
@@ -89,7 +91,7 @@ public:
     void outputVelocities(int step);
     void outputForces(int step);
 
-    dVec getSeparation(int first_ptcl, int second_ptcl) const;
+    dVec getSeparation(int first_ptcl, int second_ptcl, bool minimum_image = false) const;
 
     int this_bead;   // Current process id ("rank" of MPI_Comm_rank)
     int nproc;       // Number of processes ("size" of MPI_Comm_size)

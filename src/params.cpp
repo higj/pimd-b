@@ -143,7 +143,7 @@ Params::Params(const std::string& filename) : reader(filename) {
 }
 
 bool Params::labelInArray(const std::string& label, const StringsList& arr) {
-    return std::find(arr.begin(), arr.end(), label) != arr.end();
+    return std::ranges::find(arr, label) != arr.end();
 }
 
 // Splits a string into several strings based on a delimiter

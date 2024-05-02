@@ -64,57 +64,28 @@ void EnergyObservable::calculate() {
     calculatePotential();
 }
 
-/** 
- * @brief Calculates the contribution of the current imaginary time-slice to
- * the primitive kinetic energy estimator of distinguishable particles.
- */
-double EnergyObservable::primitiveKineticDistinguishable() const {
-    double spring_energy = 0.0;
-
-    for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
-        for (int axis = 0; axis < NDIM; ++axis) {
-            double diff = sim.coord(ptcl_idx, axis) - sim.prev_coord(ptcl_idx, axis);
-#if MINIM
-            if (pbc)
-                applyMinimumImage(diff, sim.size);
-#endif
-            spring_energy += diff * diff;
-        }
-    }
-
-    spring_energy = 0.5 * sim.mass * sim.omega_p * sim.omega_p * spring_energy;
-
-#if IPI_CONVENTION
-    spring_energy /= sim.nbeads;
-#endif
-
-    return spring_energy;
-}
-
 /**
  * @brief Calculates the quantum kinetic energy of the system using the primitive kinetic energy estimator.
  * Works both for distinguishable particles and bosons.
  */
 void EnergyObservable::calculateKinetic() {
-    double prefactor = 0.5 * NDIM * sim.natoms / sim.beta;
+    // First, add the constant factor of d*N*P/(2*beta) to the kinetic energy (per bead)
+    quantities["kinetic"] = 0.5 * NDIM * sim.natoms / sim.beta;
 
-    if (sim.bosonic) {
-#if OLD_BOSONIC_ALGORITHM
-        if (sim.this_bead == 0) {
-            quantities["kinetic"] = prefactor - sim.bosonic_exchange->primEstimator();
-        } else {
-            quantities["kinetic"] = prefactor - primitiveKineticDistinguishable();
-        }
-#else
-        if (sim.this_bead == 0) {
-            quantities["kinetic"] = prefactor * sim.nbeads + sim.bosonic_exchange->primEstimator();
-        }
-#endif
+    // Then, subtract the spring energies. In the case of bosons, the exterior
+    // spring energy requires separate treatment.
+    if (sim.this_bead == 0 && sim.bosonic) {
+            quantities["kinetic"] += sim.bosonic_exchange->primEstimator();
     } else {
-        quantities["kinetic"] = prefactor - primitiveKineticDistinguishable();
+        double spring_energy = sim.classicalSpringEnergy();
+#if IPI_CONVENTION
+        spring_energy /= sim.nbeads;
+#endif
+
+        quantities["kinetic"] -= spring_energy;
     }
 
-    quantities["kinetic"] = Units::convertToUser("energy", out_unit, quantities["kinetic"]);
+    quantities["kinetic"] = Units::convertToUser("energy", out_unit, quantities["kinetic"]);  
 }
 
 /**
@@ -124,17 +95,15 @@ void EnergyObservable::calculateKinetic() {
  * kinetic energy of the system.
  */
 void EnergyObservable::calculatePotential() {
-    double potential = 0.0; // Total potential energy
-    double ext_pot = 0.0;   // Potential energy due to external field
-    double int_pot = 0.0;   // Potential energy due to interactions
-    double virial = 0.0;    // Virial kinetic energy
+    double potential = 0.0;                            // Total potential energy
+    double virial = 0.0;                               // Virial kinetic energy
+    double int_pot = 0.0;                              // Potential energy due to interactions
+    double ext_pot = sim.ext_potential->V(sim.coord);  // Potential energy due to external field
+
+    potential += ext_pot;
 
     dVec physical_forces(sim.natoms);
     physical_forces = (-1.0) * sim.ext_potential->gradV(sim.coord);
-
-    double ext_pot_val = sim.ext_potential->V(sim.coord);
-    potential += ext_pot_val;
-    ext_pot = ext_pot_val;
 
     for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
@@ -145,11 +114,10 @@ void EnergyObservable::calculatePotential() {
     if (sim.int_pot_cutoff != 0.0) {
         for (int ptcl_one = 0; ptcl_one < sim.natoms; ++ptcl_one) {
             for (int ptcl_two = ptcl_one + 1; ptcl_two < sim.natoms; ++ptcl_two) {
-                dVec diff = sim.getSeparation(ptcl_one, ptcl_two);  // Vectorial distance
+                dVec diff = sim.getSeparation(ptcl_one, ptcl_two, true);  // Vectorial distance
 
                 if (const double distance = diff.norm(); distance < sim.int_pot_cutoff || sim.int_pot_cutoff < 0.0) {
-                    dVec force_on_one;
-                    force_on_one = (-1.0) * sim.int_potential->gradV(diff);
+                    dVec force_on_one = (-1.0) * sim.int_potential->gradV(diff);
 
                     double int_pot_val = sim.int_potential->V(diff);
                     potential += int_pot_val;
@@ -195,8 +163,7 @@ void ClassicalObservable::calculateKineticEnergy() {
 
     for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
-            double mom = sim.momenta(ptcl_idx, axis);
-            kinetic_energy += mom * mom;
+            kinetic_energy += sim.momenta(ptcl_idx, axis) * sim.momenta(ptcl_idx, axis);
         }
     }
 
@@ -220,29 +187,17 @@ void ClassicalObservable::calculateKineticEnergy() {
 }
 
 /**
- * @brief Calculates the spring energy of the system. In the bosonic case, the spring energy is given by the
- * effective bosonic spring potential.
+ * @brief Calculates the spring energy of the classical ring-polymer system.
+ * In the bosonic case, one must use the effective bosonic spring potential
+ * for the exterior connection.
  */
 void ClassicalObservable::calculateSpringEnergy() {
-    double spring_energy = 0.0;
+    double spring_energy;
 
-    if (sim.bosonic) {
-#if OLD_BOSONIC_ALGORITHM
+    if (sim.this_bead == 0 && sim.bosonic) {
         spring_energy = sim.bosonic_exchange->effectivePotential();
-#else
-        if (sim.this_bead == 0) {
-            spring_energy = sim.bosonic_exchange->effectivePotential();
-        }
-#endif
     } else {
-        for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
-            for (int axis = 0; axis < NDIM; ++axis) {
-                double diff = sim.coord(ptcl_idx, axis) - sim.prev_coord(ptcl_idx, axis);
-                spring_energy += diff * diff;
-            }
-        }
-
-        spring_energy = 0.5 * sim.mass * sim.omega_p * sim.omega_p * spring_energy;
+        spring_energy = sim.classicalSpringEnergy();
     }
 
     quantities["cl_spring"] = Units::convertToUser("energy", out_unit, spring_energy);

@@ -11,7 +11,7 @@
 #include "bosonic_exchange.h"
 #endif
 
-Simulation::Simulation(int& rank, int& nproc, Params& param_obj, unsigned int seed) :
+Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, unsigned int seed) :
     bosonic_exchange(nullptr),
     rand_gen(seed + rank),
     this_bead(rank),
@@ -87,16 +87,16 @@ Simulation::Simulation(int& rank, int& nproc, Params& param_obj, unsigned int se
 
     // Observables
     /// @todo Add the ability to specify the observables in the input file
-    ObservableFactory obs_factory;
-    observables.push_back(obs_factory.createQuantity("energy", *this, sfreq, "kelvin"));
-    observables.push_back(obs_factory.createQuantity("classical", *this, sfreq, "kelvin"));
+    observables.push_back(ObservableFactory::createQuantity("energy", *this, sfreq, "kelvin"));
+    observables.push_back(ObservableFactory::createQuantity("classical", *this, sfreq, "kelvin"));
 
     // Update the coordinate arrays of neighboring particles
     updateNeighboringCoordinates();
 
-    if (bosonic) {
+    if (bosonic && (this_bead == 0 || this_bead == nbeads - 1)) {
 #if OLD_BOSONIC_ALGORITHM
-        bosonic_exchange = std::make_unique<OldBosonicExchange>(natoms, nbeads, this_bead, beta, spring_constant, coord, prev_coord, next_coord, pbc, size);
+        bosonic_exchange = std::make_unique<OldBosonicExchange>(natoms, nbeads, this_bead, beta, spring_constant, coord, 
+                                                                prev_coord, next_coord, pbc, size);
 #else
         bosonic_exchange = std::make_unique<BosonicExchange>(natoms, nbeads, this_bead, beta, spring_constant, coord,
                                                              prev_coord, next_coord, pbc, size);
@@ -450,15 +450,15 @@ void Simulation::updateNeighboringCoordinates() {
  * In the distinguishable case, the force is given by Eqn. (12.6.4) in Tuckerman (1st ed).
  * In the bosonic case, by default, the forces are evaluated using the algorithm 
  * described in https://doi.org/10.1063/5.0173749. It is also possible to perform the
- * bosonic simulation using the original (ineffcient) algorithm, that takes into
+ * bosonic simulation using the original (inefficient) algorithm, that takes into
  * account all the N! permutations, by setting OLD_BOSONIC_ALGORITHM to true.
  * 
  * @param spring_force_arr Vector to store the spring forces.
  */
 void Simulation::updateSpringForces(dVec& spring_force_arr) const {
-    if (bosonic) {
+    if (bosonic && (this_bead == 0 || this_bead == nbeads - 1)) {
         bosonic_exchange->prepare();
-        bosonic_exchange->springForce(spring_force_arr);
+        bosonic_exchange->exteriorSpringForce(spring_force_arr);
     } else {
         for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
             for (int axis = 0; axis < NDIM; ++axis) {
@@ -493,7 +493,9 @@ void Simulation::updatePhysicalForces(dVec& physical_force_arr) const {
             for (int ptcl_two = ptcl_one + 1; ptcl_two < natoms; ++ptcl_two) {
                 // Get the vector distance between the two particles.
                 // Here "diff" contains just one vector of dimension NDIM.
-                dVec diff = getSeparation(ptcl_one, ptcl_two);
+                dVec diff = getSeparation(ptcl_one, ptcl_two, true);
+
+                /// @todo Add minimum image convention here (and also in the observable calculations)
 
                 // If the distance between the particles exceeds the cutoff length
                 // then we assume the interaction is negligible and do not bother
@@ -514,23 +516,50 @@ void Simulation::updatePhysicalForces(dVec& physical_force_arr) const {
 }
 
 /**
+ * Calculates the spring energy contribution of the current and the previous time-slice,
+ * provided they are classical, i.e., are not affected by bosonic exchange.
+ * If the simulation is bosonic, the function is callable only for the interior connections.
+ *
+ * @return Classical spring energy contribution of the current and the previous time-slice.
+ */
+double Simulation::classicalSpringEnergy() const {
+    if (bosonic && this_bead == 0)
+        throw std::runtime_error("classicalSpringEnergy() cannot be called at the first time-slice in the bosonic case.");
+
+    double interior_spring_energy = 0.0;
+
+    for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
+        for (int axis = 0; axis < NDIM; ++axis) {
+            const double diff = coord(ptcl_idx, axis) - prev_coord(ptcl_idx, axis);
+            interior_spring_energy += diff * diff;
+        }
+    }
+
+    interior_spring_energy *= 0.5 * spring_constant;
+
+    return interior_spring_energy;
+}
+
+/**
  * Returns the vectorial distance between two particles at the same imaginary timeslice.
  * Mathematically equivalent to r1-r2, where r1 and r2 are the position-vectors
- * of the first and second particles, respectively.
+ * of the first and second particles, respectively. In the case of PBC, there is an
+ * option to return the minimal distance between the two particles.
  * 
  * @param first_ptcl Index of the first particle.
  * @param second_ptcl Index of the second particle.
+ * @param minimum_image Flag determining whether the minimum image convention should be applied.
  * @return Vectorial distance between the two particles.
  */
-dVec Simulation::getSeparation(int first_ptcl, int second_ptcl) const {
+dVec Simulation::getSeparation(int first_ptcl, int second_ptcl, bool minimum_image) const {
     dVec sep;
 
     for (int axis = 0; axis < NDIM; ++axis) {
         double diff = coord(first_ptcl, axis) - coord(second_ptcl, axis);
-#if MINIM
-        if (pbc)
+
+        if (pbc && minimum_image)
             applyMinimumImage(diff, size);
-#endif
+
         sep(0, axis) = diff;
     }
 
@@ -674,7 +703,7 @@ void Simulation::outputForces(int step) {
  * @brief Zero the linear momentum of a group of atoms by subtracting the velocity
  * of the center of mass from the velocity of each atom.
  * The calculation assumes that all atoms have the same mass, in which case the
- * center of mass momentum is given by p_c=m*v_c=(p_1+..+p_n)/n, where n=N*P
+ * center of mass momentum is given by p_c=m*v_c=(p_1+...+p_n)/n, where n=N*P
  * is the total number of beads in the system.
  */
 void Simulation::zeroMomentum() {
