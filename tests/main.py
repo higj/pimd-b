@@ -12,7 +12,7 @@ import MDAnalysis as mda
 
 
 # Columns of observables to compare
-columns = ["step", "kinetic", "potential", "ext_pot", "int_pot", "virial"]
+columns = ["step", "kinetic", "potential", "ext_pot", "int_pot", "virial", "temperature", "cl_kinetic", "cl_spring"]
 out_filename = "simulation.out"
 
 
