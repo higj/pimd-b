@@ -13,13 +13,24 @@ BosonicExchangeBase::BosonicExchangeBase(int nbosons_, int np_, int bead_num_, d
     x_next(x_next_),
     pbc(pbc_),
     size(size_) {
+    if (bead_num_ != 0 && bead_num_ != nbeads - 1) {
+        throw std::invalid_argument("BosonicExchangeBase: bead_num must be either 0 or nbeads-1");
+    }
+
 #if IPI_CONVENTION
     beta = beta_ / nbeads;
 #endif
 }
 
-/* ---------------------------------------------------------------------- */
-
+/**
+ * Calculates the vector distance between two beads (second minus first).
+ *
+ * @param x1 Coordinates of the first bead.
+ * @param l1 Particle index of the first bead.
+ * @param x2 Coordinates of the second bead.
+ * @param l2 Particle index of the second bead.
+ * @param[out] diff Vector distance between the two beads.
+ */
 void BosonicExchangeBase::getBeadsSeparation(const dVec& x1, int l1, const dVec& x2, int l2, double diff[NDIM]) const {
     l1 = l1 % nbosons;
     l2 = l2 % nbosons;
@@ -37,11 +48,11 @@ void BosonicExchangeBase::getBeadsSeparation(const dVec& x1, int l1, const dVec&
 /**
  * Calculates the distance squared between two beads.
  * 
- * @param x1 Coordinates of the first bead
- * @param l1 Particle index of the first bead
- * @param x2 Coordinates of the second bead
- * @param l2 Particle index of the second bead
- * @return Distance squared between the two beads
+ * @param x1 Coordinates of the first bead.
+ * @param l1 Particle index of the first bead.
+ * @param x2 Coordinates of the second bead.
+ * @param l2 Particle index of the second bead.
+ * @return Distance squared between the two beads.
  */
 double BosonicExchangeBase::getBeadsSeparationSquared(const dVec& x1, int l1, const dVec& x2, int l2) const {
     double diff[NDIM];
@@ -56,66 +67,32 @@ double BosonicExchangeBase::getBeadsSeparationSquared(const dVec& x1, int l1, co
     return dist_sqrd;
 }
 
-/* ---------------------------------------------------------------------- */
-
-void BosonicExchangeBase::springForce(dVec& f) {
+/**
+ * Calculates the bosonic force exerted on the beads
+ * at the first and the last time-slices.
+ *
+ * @param[out] f Vector to store the forces.
+ */
+void BosonicExchangeBase::exteriorSpringForce(dVec& f) {
     if (bead_num == nbeads - 1) {
         springForceLastBead(f);
-    } else if (bead_num == 0) {
-        springForceFirstBead(f);
     } else {
-        springForceInteriorBead(f);
+        springForceFirstBead(f);
     }
 }
 
 /**
- * Calculates the spring energy contribution of the current and the next time-slice,
- * provided that the connection is interior (i.e., not the spring energy between 1st and last bead).
- * This method cannot be called from the last time-slice.
- * 
- * @return Spring energy contribution of the current and the next time-slice
+ * Determines the coordinates of the first and the last bead based on the current time-slice.
+ *
+ * @param[out] x_first_bead The coordinates of the particles in the first time-slice.
+ * @param[out] x_last_bead The coordinates of the particles in the last time-slice.
  */
-double BosonicExchangeBase::interiorSpringEnergy() const {
-    if (bead_num == nbeads - 1)
-        throw std::runtime_error("interiorSpringEnergy() called for the last time-slice");
-
-    double interior_spring_energy = 0.0;
-
-    for (int ptcl_idx = 0; ptcl_idx < nbosons; ++ptcl_idx) {
-        for (int axis = 0; axis < NDIM; ++axis) {
-            double diff = x(ptcl_idx, axis) - x_next(ptcl_idx, axis);
-            interior_spring_energy += diff * diff;
-        }
-    }
-
-    /// @todo Check if division by nbeads is necessary if i-Pi convention is used
-    interior_spring_energy *= 0.5 * spring_constant;
-
-    return interior_spring_energy;
-}
-
-/* ---------------------------------------------------------------------- */
-
-void BosonicExchangeBase::springForceInteriorBead(dVec& f) const {
-    for (int l = 0; l < nbosons; l++) {
-        std::vector<double> sums(NDIM, 0.0);
-
-        double diff_prev[NDIM];
-        getBeadsSeparation(x, l, x_prev, l, diff_prev);
-
-        for (int axis = 0; axis < NDIM; ++axis) {
-            sums[axis] += diff_prev[axis];
-        }
-
-        double diff_next[3];
-        getBeadsSeparation(x, l, x_next, l, diff_next);
-
-        for (int axis = 0; axis < NDIM; ++axis) {
-            sums[axis] += diff_next[axis];
-        }
-
-        for (int axis = 0; axis < NDIM; ++axis) {
-            f(l, axis) = sums[axis] * spring_constant;
-        }
+void BosonicExchangeBase::assignFirstLast(dVec& x_first_bead, dVec& x_last_bead) const {
+    if (bead_num == 0) {
+        x_first_bead = x;
+        x_last_bead = x_prev;
+    } else {
+        x_first_bead = x_next;
+        x_last_bead = x;
     }
 }

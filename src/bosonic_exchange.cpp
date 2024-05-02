@@ -1,5 +1,4 @@
 #include "bosonic_exchange.h"
-#include "mpi.h"
 
 BosonicExchange::BosonicExchange(int nbosons_, int np_, int bead_num_, double beta_, double spring_constant_,
                                  const dVec& x_, const dVec& x_prev_, const dVec& x_next_, bool pbc_, double size_)
@@ -9,23 +8,16 @@ BosonicExchange::BosonicExchange(int nbosons_, int np_, int bead_num_, double be
       V_backwards(nbosons_ + 1),
       connection_probabilities(nbosons_ * nbosons_),
       temp_nbosons_array(nbosons_),
-      separate_atom_spring(nbosons_),
       prim_est(nbosons_ + 1) {
     evaluateBosonicEnergies();
 }
 
-/* ---------------------------------------------------------------------- */
-
 void BosonicExchange::evaluateBosonicEnergies() {
     evaluateCycleEnergies();
-    if (bead_num == 0 || bead_num == nbeads - 1) {
-        // Exterior beads
-        evaluateVBn();
-        evaluateVBackwards();
-        evaluateConnectionProbabilities();
-    }
+    evaluateVBn();
+    evaluateVBackwards();
+    evaluateConnectionProbabilities();
 }
-
 
 /**
  * @brief Re-evaluate the bosonic energies and connection probabilities.
@@ -35,80 +27,44 @@ void BosonicExchange::prepare() {
     evaluateBosonicEnergies();
 }
 
-/* ---------------------------------------------------------------------- */
-
 void BosonicExchange::evaluateCycleEnergies() {
+    dVec x_first_bead(nbosons);
+    dVec x_last_bead(nbosons);
+
+    assignFirstLast(x_first_bead, x_last_bead);
+
     for (int i = 0; i < nbosons; i++) {
-        // After summing temp_nbosons_array across all time-slices,
-        // temp_nbosons_array[i] will be E^[i,i]
-        temp_nbosons_array[i] = getBeadsSeparationSquared(x, i, x_next, i);
+        // temp_nbosons_array[i] is E^[i,i]
+        temp_nbosons_array[i] = getBeadsSeparationSquared(x_first_bead, i, x_last_bead, i);
     }
 
-    // Reduce the result and send to bead_num=0
-    MPI_Reduce(temp_nbosons_array.data(),
-               separate_atom_spring.data(),
-               nbosons,
-               MPI_DOUBLE,
-               MPI_SUM,
-               0,
-               MPI_COMM_WORLD
-    );
+    for (int v = 0; v < nbosons; v++) {
+        setEnk(v + 1, 1, 0.5 * spring_constant * temp_nbosons_array[v]);
 
-    if (bead_num == 0 || bead_num == nbeads - 1) {
-        dVec x_first_bead(nbosons);
-        dVec x_last_bead(nbosons);
+        for (int u = v - 1; u >= 0; u--) {
+            double val = getEnk(v + 1, v - u) +
+                0.5 * spring_constant * (
+                    // connect u to u+1
+                    + getBeadsSeparationSquared(x_last_bead, u, x_first_bead, u + 1)
+                    // break cycle [u+1,v]
+                    - getBeadsSeparationSquared(x_first_bead, u + 1, x_last_bead, v)
+                    // close cycle from v to u
+                    + getBeadsSeparationSquared(x_first_bead, u, x_last_bead, v));
 
-        if (bead_num == 0) {
-            // Send to bead_num=nbeads-1
-            MPI_Send(separate_atom_spring.data(), nbosons, MPI_DOUBLE, nbeads - 1, 0, MPI_COMM_WORLD);
-
-            x_first_bead = x;
-            x_last_bead = x_prev;
-        } else {
-            // Receive at bead_num=nbeads-1 from bead_num=0
-            MPI_Recv(separate_atom_spring.data(), nbosons, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-
-            x_first_bead = x_next;
-            x_last_bead = x;
-        }
-
-        for (int v = 0; v < nbosons; v++) {
-            setEnk(v + 1, 1,
-                    0.5 * spring_constant * separate_atom_spring[v]);
-
-            for (int u = v - 1; u >= 0; u--) {
-                double val = getEnk(v + 1, v - u) +
-                    0.5 * spring_constant * (
-                        // Eint(u)
-                        separate_atom_spring[u] - getBeadsSeparationSquared(x_first_bead, u, x_last_bead, u)
-                        // connect u to u+1
-                        + getBeadsSeparationSquared(x_last_bead, u, x_first_bead, u + 1)
-                        // break cycle [u+1,v]
-                        - getBeadsSeparationSquared(x_first_bead, u + 1, x_last_bead, v)
-                        // close cycle from v to u
-                        + getBeadsSeparationSquared(x_first_bead, u, x_last_bead, v));
-
-                setEnk(v + 1, v - u + 1, val);
-            }
+            setEnk(v + 1, v - u + 1, val);
         }
     }
 }
-
-/* ---------------------------------------------------------------------- */
 
 double BosonicExchange::getEnk(int m, int k) const {
     int end_of_m = m * (m + 1) / 2;
     return E_kn[end_of_m - k];
 }
 
-/* ---------------------------------------------------------------------- */
-
 void BosonicExchange::setEnk(int m, int k, double val) {
     int end_of_m = m * (m + 1) / 2;
     E_kn[end_of_m - k] = val;
 }
-
-/* ---------------------------------------------------------------------- */
 
 void BosonicExchange::evaluateVBn() {
     V[0] = 0.0;
@@ -137,8 +93,6 @@ void BosonicExchange::evaluateVBn() {
         }
     }
 }
-
-/* ---------------------------------------------------------------------- */
 
 void BosonicExchange::evaluateVBackwards() {
     V_backwards[nbosons] = 0.0;
@@ -169,25 +123,17 @@ void BosonicExchange::evaluateVBackwards() {
     V_backwards[0] = V[nbosons];
 }
 
-/* ---------------------------------------------------------------------- */
-
 double BosonicExchange::effectivePotential() {
     return V[nbosons];
 }
-
-/* ---------------------------------------------------------------------- */
 
 double BosonicExchange::getVn(int n) const {
     return V[n];
 }
 
-/* ---------------------------------------------------------------------- */
-
 double BosonicExchange::getEknSerialOrder(int i) const {
     return E_kn[i];
 }
-
-/* ---------------------------------------------------------------------- */
 
 void BosonicExchange::evaluateConnectionProbabilities() {
     for (int l = 0; l < nbosons - 1; l++) {
@@ -205,8 +151,6 @@ void BosonicExchange::evaluateConnectionProbabilities() {
         }
     }
 }
-
-/* ---------------------------------------------------------------------- */
 
 void BosonicExchange::springForceLastBead(dVec& f) {
     for (int l = 0; l < nbosons; l++) {
@@ -236,8 +180,6 @@ void BosonicExchange::springForceLastBead(dVec& f) {
         }
     }
 }
-
-/* ---------------------------------------------------------------------- */
 
 void BosonicExchange::springForceFirstBead(dVec& f) {
     for (int l = 0; l < nbosons; l++) {
@@ -273,13 +215,9 @@ void BosonicExchange::springForceFirstBead(dVec& f) {
  * Corresponds to Eqns. (4)-(5) in SI of pnas.1913365116, 
  * excluding the constant factor of d*N*P/(2*beta).
  * 
- * @return The spring contribution to the overall kinetic energy.
+ * @return The exterior spring contribution to the overall kinetic energy.
  */
 double BosonicExchange::primEstimator() {
-    // It is sufficient to evaluate the primitive kinetic estimator at a single imaginary time slice
-    if (bead_num != 0)
-        return 0.0;
-
     prim_est[0] = 0.0;
 
     for (int m = 1; m < nbosons + 1; ++m) {
@@ -293,12 +231,12 @@ double BosonicExchange::primEstimator() {
         }
 
         for (int k = m; k > 0; --k) {
-            double E_kn_val = getEnk(m, k);
+            const double e_kn_val = getEnk(m, k);
 
-            sig += (prim_est[m - k] - E_kn_val) * exp(-beta * (E_kn_val + V[m - k] - e_shift));
+            sig += (prim_est[m - k] - e_kn_val) * exp(-beta * (e_kn_val + V[m - k] - e_shift));
         }
 
-        double sig_denom_m = m * exp(-beta * (V[m] - e_shift));
+        const double sig_denom_m = m * exp(-beta * (V[m] - e_shift));
 
         prim_est[m] = sig / sig_denom_m;
     }
@@ -309,5 +247,3 @@ double BosonicExchange::primEstimator() {
     return prim_est[nbosons];
 #endif
 }
-
-/* ---------------------------------------------------------------------- */

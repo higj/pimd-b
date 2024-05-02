@@ -31,8 +31,8 @@ protected:
 
 class ObservableFactory {
 public:
-    std::unique_ptr<Observable> createQuantity(const std::string& observable_type, const Simulation& _sim, int _freq,
-                                               const std::string& _out_unit);
+    static std::unique_ptr<Observable> createQuantity(const std::string& observable_type, const Simulation& _sim, int _freq,
+                                                      const std::string& _out_unit);
 };
 
 /* -------------------------------- */

@@ -37,7 +37,6 @@ private:
     std::vector<double> connection_probabilities;
 
     std::vector<double> temp_nbosons_array;
-    std::vector<double> separate_atom_spring;
 
     std::vector<double> prim_est;
 };

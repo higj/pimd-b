@@ -1,6 +1,5 @@
 #include <numeric>
 #include <algorithm>
-#include "mpi.h"
 
 #include "old_bosonic_exchange.h"
 
@@ -59,63 +58,43 @@ int OldBosonicExchange::lastBeadNeighbor(int ptcl_idx) const {
  * @return The largest exterior spring energy contribution due to a permutation.
  */
 double OldBosonicExchange::getMaxExteriorSpringEnergy() {
-    // Given the fact that the exterior spring energy is symmetric with respect to the first and the last time-slice,
-    // we can calculate the exterior spring energy at the last time-slice and then communicate it to the first time-slice.
-    if (bead_num == nbeads - 1) {
-        double max_delta = 0.0;
+    dVec x_first_bead(nbosons);
+    dVec x_last_bead(nbosons);
 
-        // Iterate over all permutations
-        do {
-            double delta_e_sigma = 0.0;
+    assignFirstLast(x_first_bead, x_last_bead);
 
-            // Iterate over all particles at time-slice P (within the current permutation)
-            for (int l = 0; l < nbosons; ++l) {
-                std::vector<double> sums(NDIM, 0.0);
+    double max_delta = 0.0;
 
-                double diff_next[NDIM];
+    // Iterate over all permutations
+    do {
+        double diff2 = 0.0;
 
-                // First bead (1) of some particle (depending on the permutation) minus last bead (P) of the l-th particle
-                getBeadsSeparation(x, l, x_next, lastBeadNeighbor(l), diff_next);
+        for (int l = 0; l < nbosons; ++l) {
+            std::vector<double> sums(NDIM, 0.0);
 
-                // Coordinate differences corresponding to exterior beads
-                for (int axis = 0; axis < NDIM; ++axis) {
-                    delta_e_sigma += 0.5 * spring_constant * diff_next[axis] * diff_next[axis];
-                }
-            }
+            // First bead of some particle (depending on the permutation) minus last bead of the l-th particle
+            diff2 += getBeadsSeparationSquared(x_first_bead, l, x_last_bead, lastBeadNeighbor(l));
+        }
 
-            // Compare the current total exterior spring energy with the maximum total exterior spring energy found so far
-            max_delta = std::max(max_delta, delta_e_sigma);
-        } while (std::ranges::next_permutation(labels).found);
+        // Compare the current total exterior spring energy with the maximum total exterior spring energy found so far
+        max_delta = std::max(max_delta, 0.5 * spring_constant * diff2);
+    } while (std::ranges::next_permutation(labels).found);
 
-        // Communicate the maximum exterior spring energy to the first time-slice
-        MPI_Send(&max_delta, 1, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
-
-        return max_delta;
-    }
-
-    if (bead_num == 0) {
-        double max_delta_from_np;
-
-        MPI_Recv(&max_delta_from_np, 1, MPI_DOUBLE, nbeads - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-
-        return max_delta_from_np;
-    }
-
-    return 0.0;
+    return max_delta;
 }
 
 /**
- * Calculates the contribution of the current time-slice to the effective bosonic spring potential.
- * For interior beads, this is the same as the ordinary spring energies in systems of distinguishable particles.
- * For exterior beads, the contribution is no longer harmonic, but is a sum of Boltzmann weights due to all permutations.
+ * Calculates the effective bosonic spring potential. This is V_eff from the exp(-beta * V_eff) in the
+ * partition function. In contrast to the classical spring energy of interior beads,
+ * this contribution is no longer harmonic, but is a sum of Boltzmann weights due to all permutations.
  *
  * @return Effective bosonic exchange potential.
  */
 double OldBosonicExchange::effectivePotential() {
-    // If the current time-slice is not the last one, then the spring energy is the 
-    // same as the interior spring energy.
-    if (bead_num != nbeads - 1)
-        return interiorSpringEnergy();
+    dVec x_first_bead(nbosons);
+    dVec x_last_bead(nbosons);
+
+    assignFirstLast(x_first_bead, x_last_bead);
 
     long permutation_counter = 0;
     double weights_sum = 0.0;
@@ -127,20 +106,12 @@ double OldBosonicExchange::effectivePotential() {
         double diff2 = 0.0;
 
         for (int ptcl_idx = 0; ptcl_idx < nbosons; ++ptcl_idx) {
-            double diff[NDIM];
-
-            getBeadsSeparation(x, ptcl_idx, x_next, lastBeadNeighbor(ptcl_idx), diff);
-
-            // Coordinate differences corresponding to exterior beads
-            for (int axis = 0; axis < NDIM; ++axis) {
-                diff2 += diff[axis] * diff[axis];
-            }
+            diff2 += getBeadsSeparationSquared(x_first_bead, ptcl_idx, x_last_bead, lastBeadNeighbor(ptcl_idx));
         }
 
         weights_sum += exp(-beta * 0.5 * spring_constant * diff2);
     } while (std::ranges::next_permutation(labels).found);
 
-    /// @todo Think about how the i-Pi convention might affect the calculation
     return (-1.0 / beta) * log(weights_sum / permutation_counter);
 }
 
@@ -266,8 +237,10 @@ void OldBosonicExchange::springForceFirstBead(dVec& f) {
  * @return Weighted average of exterior spring energies over all permutations. 
  */
 double OldBosonicExchange::primEstimator() {
-    if (bead_num != 0)
-        throw std::runtime_error("primEstimator() can only be called at the 1st time-slice");
+    dVec x_first_bead(nbosons);
+    dVec x_last_bead(nbosons);
+
+    assignFirstLast(x_first_bead, x_last_bead);
 
     double numerator = 0.0;
     double denom_weight = 0.0;
@@ -276,15 +249,8 @@ double OldBosonicExchange::primEstimator() {
         double weight = 0.0;
 
         for (int l = 0; l < nbosons; ++l) {
-            double diff_prev[NDIM];
-
-            // Last bead (P) of some particle (depending on the permutation) minus first bead (1) of the l-th particle
-            getBeadsSeparation(x, l, x_prev, firstBeadNeighbor(l), diff_prev);
-
-            // Coordinate differences corresponding to exterior beads
-            for (int axis = 0; axis < NDIM; ++axis) {
-                weight += diff_prev[axis] * diff_prev[axis];
-            }
+            // Last bead of some particle (depending on the permutation) minus first bead of the l-th particle
+            weight += getBeadsSeparationSquared(x_first_bead, l, x_last_bead, firstBeadNeighbor(l));
         }
 
         double delta_spring_energy = 0.5 * spring_constant * weight;
@@ -303,5 +269,5 @@ double OldBosonicExchange::primEstimator() {
     bosonic_spring_energy /= nbeads;
 #endif
 
-    return bosonic_spring_energy;
+    return (-1.0) * bosonic_spring_energy;
 }
