@@ -4,7 +4,6 @@
 #include <random>
 #include <ctime>
 #include <memory>
-#include "mpi.h"
 
 #include "random_mars.h"
 #include "common.h"
@@ -36,6 +35,12 @@ public:
     bool fixcom;        // Fix the center of mass?
     bool pbc;           // Enable periodic boundary conditions?
 
+    bool apply_mic_spring;     // Apply minimum image convention to the spring forces?
+    bool apply_mic_potential;  // Apply minimum image convention to the potential forces?
+    bool apply_wrap;           // Apply wrapping to the coordinates?
+    bool apply_wrap_first;     // Apply wrapping only to the coordinates at the first time-slice?
+    bool apply_wind;           // Apply the winding correction?
+
     bool out_pos;       // Output trajectories?
     bool out_vel;       // Output velocities?
     bool out_force;     // Output forces?
@@ -53,11 +58,18 @@ public:
     dVec coord, momenta, forces;
     dVec prev_coord, next_coord;
 
+    iVec wind;                              // A list of winding vectors
+    std::vector<double> wind_weights;       // A list of Boltzmann weights associated with the winding vectors
+    std::vector<double> wind_weight_args;   // A list of energies with the winding vectors
+    int max_wind;                           // Winding number cutoff
+    int winding_timeslice;                  // Main time-slice affected by winding
+
     double mass;
     double spring_constant;  // k=m*omega_p^2 (where omega_p depends on the convention)
     double omega_p;          // Angular frequency of the ring polymer
 
     void genRandomPositions(dVec& pos_arr);
+    void uniformParticleGrid(dVec& pos_arr) const;
     void genMomentum(dVec& momenta_arr);
 
     void zeroMomentum();
@@ -66,6 +78,7 @@ public:
     void initializeMomenta(dVec& momentum_arr);
     std::unique_ptr<Potential> initializePotential(const std::string& potential_name,
                                                    const VariantMap& potential_options);
+    void initializeWindingVectors(iVec& wind_arr, int wind_cutoff);
 
     double sampleMaxwellBoltzmann();
 
@@ -80,6 +93,7 @@ public:
     void updateForces();
     void updateSpringForces(dVec& spring_force_arr) const;
     void updatePhysicalForces(dVec& physical_force_arr) const;
+    void addWindingForce(dVec& spring_force_arr) const;
 
     double classicalSpringEnergy() const;
 

@@ -4,9 +4,9 @@
 #include "old_bosonic_exchange.h"
 
 OldBosonicExchange::OldBosonicExchange(int nbosons_, int np_, int bead_num_, double beta_, double spring_constant_,
-                                       const dVec& x_, const dVec& x_prev_, const dVec& x_next_, bool pbc_,
+                                       const dVec& x_, const dVec& x_prev_, const dVec& x_next_, bool pbc_, bool mic_,
                                        double size_) :
-    BosonicExchangeBase(nbosons_, np_, bead_num_, beta_, spring_constant_, x_, x_prev_, x_next_, pbc_, size_),
+    BosonicExchangeBase(nbosons_, np_, bead_num_, beta_, spring_constant_, x_, x_prev_, x_next_, pbc_, mic_, size_),
     labels(nbosons_) {
     // Fill the labels array with numbers from 0 to nbosons-1
     std::iota(labels.begin(), labels.end(), 0);

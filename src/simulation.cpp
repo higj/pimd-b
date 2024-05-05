@@ -1,6 +1,7 @@
 #include <ranges>
 #include <fstream>
 #include <filesystem>
+#include "mpi.h"
 
 #include "observable.h"
 #include "simulation.h"
@@ -29,6 +30,7 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     getVariant(param_obj.sim["bosonic"], bosonic);
     getVariant(param_obj.sim["fixcom"], fixcom);
     getVariant(param_obj.sim["pbc"], pbc);
+    getVariant(param_obj.sim["max_wind"], max_wind);
 
     getVariant(param_obj.out["positions"], out_pos);
     getVariant(param_obj.out["velocities"], out_vel);
@@ -69,6 +71,15 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     momenta = dVec(natoms);
     forces = dVec(natoms);
 
+    // Initialize the winding vectors if PBC are requested
+    if (pbc) {
+        /// @todo Ensure winding timeslice is set correctly (does not exceed nbeads-2)
+        /// @todo Make the winding cutoff configurable
+        winding_timeslice = nbeads - 2;
+
+        initializeWindingVectors(wind, max_wind);
+    }
+
     initializePositions(coord, param_obj.sim);
     initializeMomenta(momenta);
 
@@ -96,10 +107,10 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     if (bosonic && (this_bead == 0 || this_bead == nbeads - 1)) {
 #if OLD_BOSONIC_ALGORITHM
         bosonic_exchange = std::make_unique<OldBosonicExchange>(natoms, nbeads, this_bead, beta, spring_constant, coord, 
-                                                                prev_coord, next_coord, pbc, size);
+                                                                prev_coord, next_coord, pbc, apply_mic_spring, size);
 #else
         bosonic_exchange = std::make_unique<BosonicExchange>(natoms, nbeads, this_bead, beta, spring_constant, coord,
-                                                             prev_coord, next_coord, pbc, size);
+                                                             prev_coord, next_coord, pbc, apply_mic_spring, size);
 #endif
     }
 }
@@ -109,7 +120,7 @@ Simulation::~Simulation() = default;
 /**
  * Generates random positions in the interval [-L/2, L/2] for each particle along each axis.
  * 
- * @param pos_arr Array to store the generated positions.
+ * @param[out] pos_arr Array to store the generated positions.
  */
 void Simulation::genRandomPositions(dVec& pos_arr) {
     /// @todo Add ability to generate non-random positions (e.g., lattice)
@@ -118,6 +129,68 @@ void Simulation::genRandomPositions(dVec& pos_arr) {
     for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
             pos_arr(ptcl_idx, axis) = u_dist(rand_gen);
+        }
+    }
+}
+
+/**
+ * Places particles in a uniform grid according to the specified box size.
+ *
+ * @param[out] pos_arr Array to store the generated positions.
+ */
+void Simulation::uniformParticleGrid(dVec& pos_arr) const {
+    const double volume = std::pow(size, NDIM);
+
+    // Get the linear size per particle, and the number of particles */
+    const double init_side = std::pow((1.0 * natoms / volume), -1.0 / (1.0 * NDIM));
+
+    // Determine the number and the size of initial grid boxes in each dimension
+    int tot_num_grid_boxes = 1;
+    iVec num_nn_grid;
+    dVec size_nn_grid;
+
+    for (int i = 0; i < NDIM; i++) {
+        num_nn_grid(0, i) = static_cast<int>(std::ceil((size / init_side) - EPS));
+
+        // Make sure we have at least one grid box
+        if (num_nn_grid(0, i) < 1)
+            num_nn_grid(0, i) = 1;
+
+        // Compute the actual size of the grid
+        size_nn_grid(0, i) = size / (1.0 * num_nn_grid(0, i));
+
+        // Determine the total number of grid boxes
+        tot_num_grid_boxes *= num_nn_grid(0, i);
+    }
+
+    // Place the particles at the middle of each box
+    if (tot_num_grid_boxes < natoms) {
+        throw std::runtime_error("Number of grid boxes is less than the number of particles");
+    }
+
+    dVec pos;
+    for (int n = 0; n < tot_num_grid_boxes; n++) {
+
+        iVec grid_index;
+        for (int i = 0; i < NDIM; i++) {
+            int scale = 1;
+            for (int j = i + 1; j < NDIM; j++)
+                scale *= num_nn_grid(0, j);
+
+            grid_index(0, i) = (n / scale) % num_nn_grid(0, i);
+        }
+
+        for (int i = 0; i < NDIM; i++)
+            pos(0, i) = (grid_index(0, i) + 0.5) * size_nn_grid(0, i) - 0.5 * size;
+
+        //if (pbc)
+        //    putInside(pos, side);
+
+        if (n >= natoms)
+            break;
+
+        for (int axis = 0; axis < NDIM; axis++) {
+            pos_arr(n, axis) = pos(0, axis);
         }
     }
 }
@@ -192,15 +265,21 @@ void Simulation::velocityVerletStep() {
         }
     }
 
-#if WRAP
-    if (pbc) {
+    if (pbc && apply_wrap) {
         for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
             for (int axis = 0; axis < NDIM; ++axis) {
                 periodicWrap(coord(ptcl_idx, axis), size);
             }
         }
     }
-#endif
+
+    if (pbc && apply_wrap_first && this_bead == 0) {
+        for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
+            for (int axis = 0; axis < NDIM; ++axis) {
+                periodicWrap(coord(ptcl_idx, axis), size);
+            }
+        }
+    }
 
 #if RECENTER
     // Recentering should be attempted only in the case of periodic boundary conditions.
@@ -446,6 +525,77 @@ void Simulation::updateNeighboringCoordinates() {
 }
 
 /**
+ * Adds the winding force to the spring force vector.
+ *
+ * @param[out] spring_force_arr Spring forces array to which the winding contribution is added.
+ */
+void Simulation::addWindingForce(dVec& spring_force_arr) const {
+    // The winding force only affects two adjacent time-slices
+    if (this_bead == winding_timeslice) {
+        dVec winding_force(natoms);
+
+        // The minus sign is due to the fact that this is the gradient at the k-th time-slice
+        double prefactor = beta * spring_constant * size;
+
+        // Loop over all the particles at the current time-slice
+        for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
+            double denom = 0.0;
+
+            // For each particle, take into account the contribution of all the winding vectors
+            for (int wind_idx = 0; wind_idx < wind.len(); ++wind_idx) {
+                double pos_dot_winding = 0.0;
+                for (int axis = 0; axis < NDIM; ++axis) {
+                    double diff = coord(ptcl_idx, axis) - next_coord(ptcl_idx, axis);
+                    pos_dot_winding += diff * wind(wind_idx, axis);
+                }
+
+                double total_weight = wind_weights[wind_idx] * exp(-prefactor * pos_dot_winding);
+                denom += total_weight;
+
+                for (int axis = 0; axis < NDIM; ++axis) {
+                    winding_force(ptcl_idx, axis) += (-1.0) * spring_constant * size * wind(wind_idx, axis) * total_weight;
+                }
+            }
+
+            for (int axis = 0; axis < NDIM; ++axis) {
+                winding_force(ptcl_idx, axis) /= denom;
+                spring_force_arr(ptcl_idx, axis) += winding_force(ptcl_idx, axis);
+            }
+        }
+
+        // Communicate the force to the next time-slice
+        /// @todo 1) Instead of communication, perform the same calculation in the next time-slice
+        /// @todo 2) Verify that "winding_timeslice + 1" is a valid process
+        MPI_Send(winding_force.data(),
+            winding_force.size(),
+            MPI_DOUBLE,
+            winding_timeslice + 1,
+            0,
+            MPI_COMM_WORLD
+        );
+
+    } else if (this_bead == winding_timeslice + 1) {
+        dVec winding_force_from_prev(natoms);
+
+        MPI_Recv(winding_force_from_prev.data(),
+            winding_force_from_prev.size(),
+            MPI_DOUBLE,
+            winding_timeslice,
+            0,
+            MPI_COMM_WORLD,
+            MPI_STATUS_IGNORE
+        );
+
+        for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
+            for (int axis = 0; axis < NDIM; ++axis) {
+                // The sign of the force at this time-slice is opposite to the sign at the previous time-slice
+                spring_force_arr(ptcl_idx, axis) -= winding_force_from_prev(ptcl_idx, axis);
+            }
+        }
+    }
+}
+
+/**
  * Updates the spring force vector exerted on a specific bead by the two neighboring beads.
  * In the distinguishable case, the force is given by Eqn. (12.6.4) in Tuckerman (1st ed).
  * In the bosonic case, by default, the forces are evaluated using the algorithm 
@@ -465,17 +615,19 @@ void Simulation::updateSpringForces(dVec& spring_force_arr) const {
                 double d_prev = prev_coord(ptcl_idx, axis) - coord(ptcl_idx, axis);
                 double d_next = next_coord(ptcl_idx, axis) - coord(ptcl_idx, axis);
 
-#if MINIM
-                if (pbc) {
+                if (pbc && apply_mic_spring) {
                     applyMinimumImage(d_prev, size);
                     applyMinimumImage(d_next, size);
                 }
-#endif
 
                 spring_force_arr(ptcl_idx, axis) = spring_constant * (d_prev + d_next);
             }
         }
     }
+
+    // The winding contribution is coupled to the spring energies, so we add it here
+    if (pbc && apply_wind)
+        addWindingForce(spring_force_arr);
 }
 
 /**
@@ -493,9 +645,7 @@ void Simulation::updatePhysicalForces(dVec& physical_force_arr) const {
             for (int ptcl_two = ptcl_one + 1; ptcl_two < natoms; ++ptcl_two) {
                 // Get the vector distance between the two particles.
                 // Here "diff" contains just one vector of dimension NDIM.
-                dVec diff = getSeparation(ptcl_one, ptcl_two, true);
-
-                /// @todo Add minimum image convention here (and also in the observable calculations)
+                dVec diff = getSeparation(ptcl_one, ptcl_two, apply_mic_potential);
 
                 // If the distance between the particles exceeds the cutoff length
                 // then we assume the interaction is negligible and do not bother
@@ -523,6 +673,7 @@ void Simulation::updatePhysicalForces(dVec& physical_force_arr) const {
  * @return Classical spring energy contribution of the current and the previous time-slice.
  */
 double Simulation::classicalSpringEnergy() const {
+    /// @todo Perhaps an assert is more appropriate here
     if (bosonic && this_bead == 0)
         throw std::runtime_error("classicalSpringEnergy() cannot be called at the first time-slice in the bosonic case.");
 
@@ -530,7 +681,12 @@ double Simulation::classicalSpringEnergy() const {
 
     for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
-            const double diff = coord(ptcl_idx, axis) - prev_coord(ptcl_idx, axis);
+            double diff = coord(ptcl_idx, axis) - prev_coord(ptcl_idx, axis);
+
+            if (pbc && apply_mic_spring) {
+                applyMinimumImage(diff, size);
+            }
+
             interior_spring_energy += diff * diff;
         }
     }
@@ -559,7 +715,6 @@ dVec Simulation::getSeparation(int first_ptcl, int second_ptcl, bool minimum_ima
 
         if (pbc && minimum_image)
             applyMinimumImage(diff, size);
-
         sep(0, axis) = diff;
     }
 
@@ -586,6 +741,10 @@ void Simulation::printReport(std::ofstream& out_file) const {
     }
 
     out_file << formattedReportLine("PBC", pbc);
+    if (pbc) {
+        out_file << formattedReportLine("Winding cutoff", max_wind);
+        out_file << formattedReportLine("Winding time-slice", winding_timeslice);
+    }
     out_file << formattedReportLine("Dimension", NDIM);
     out_file << formattedReportLine("Seed", params_seed);
     out_file << formattedReportLine("Coordinate initialization method", init_pos_type);
@@ -606,8 +765,15 @@ void Simulation::printReport(std::ofstream& out_file) const {
     out_file << formattedReportLine("External potential name", external_potential_name);
 
     out_file << "---------\nFeatures\n---------\n";
-    out_file << formattedReportLine("Minimum image convention", MINIM);
-    out_file << formattedReportLine("Wrapping of coordinates", WRAP);
+    //out_file << formattedReportLine("Minimum image convention", MINIM);
+    //out_file << formattedReportLine("Wrapping of coordinates", WRAP);
+    //out_file << formattedReportLine("Wrapping of the first time-slice", WRAP_FIRST);
+    out_file << formattedReportLine("Minimum image convention applied to the springs", apply_mic_spring);
+    out_file << formattedReportLine("Minimum image convention applied to the potential", apply_mic_potential);
+    out_file << formattedReportLine("Wrapping of the coordinates", apply_wrap);
+    out_file << formattedReportLine("Wrapping of the coordinates at the 1st time-slice", apply_wrap);
+    out_file << formattedReportLine("Winding effects are taken into account", apply_wind);
+
     out_file << formattedReportLine("Polymer recentering", RECENTER);
     out_file << formattedReportLine("Using i-Pi convention", IPI_CONVENTION);
 }
@@ -802,6 +968,60 @@ void Simulation::initializeMomenta(dVec& momentum_arr) {
         // If generating momenta from the Maxwell-Boltzmann distribution, zero the total momentum
         genMomentum(momentum_arr);
         zeroMomentum();
+    }
+}
+
+/**
+ * Initializes the winding vectors for the PBC.
+ *
+ * @param[out] wind_arr The array to store the winding vectors.
+ * @param wind_cutoff The cutoff for the winding vectors.
+ */
+void Simulation::initializeWindingVectors(iVec& wind_arr, int wind_cutoff) {
+    // Number of different winding vectors for a given cutoff
+    int num_wind = std::pow(2 * wind_cutoff + 1, NDIM);
+    // Vector holding all the different winding vectors
+    wind_arr = iVec(num_wind);
+    // Vector holding the weights of the winding vectors, given by exp(-0.5 * beta * k * |w|^2 * L^2)
+    wind_weights = std::vector<double>(num_wind, 0.0);
+    // Vector holding the energies associated with the winding vectors, given by 0.5 * k * |w|^2 * L^2
+    wind_weight_args = std::vector<double>(num_wind, 0.0);
+
+    std::vector<int> current(NDIM, -wind_cutoff); // Initialize with minimum value
+    int current_idx = 0; // Index of the current winding vector
+
+    const double prefactor = 0.5 * spring_constant * size * size; // Pre-factor for the winding weights
+
+    // This loop will generate all the possible winding vectors for the provided cutoff.
+    // Once a winding vector is generated, its norm is calculated and the corresponding weight is stored.
+    while (true) {
+        double w_norm2 = 0.0; // Stores the norm squared of the current winding vector
+
+        // Add the current vector to the result
+        for (int axis = 0; axis < NDIM; ++axis) {
+            wind_arr(current_idx, axis) = current[axis]; // Save the winding vector component to the global array
+            w_norm2 += current[axis] * current[axis]; // Calculate the norm squared of the winding vector
+        }
+
+        // Using the norm squared, calculate the weight and the energy associated with the winding vector
+        wind_weights[current_idx] = exp(-beta * prefactor * w_norm2);
+        wind_weight_args[current_idx] = prefactor * w_norm2;
+
+        // Increment the index after we saved the current winding vector
+        current_idx++;
+
+        int index = NDIM - 1;
+        while (index >= 0 && current[index] == wind_cutoff) {
+            current[index] = -wind_cutoff;
+            index--;
+        }
+
+        // If all components are at their maximum value, break the loop
+        if (index < 0)
+            break;
+
+        // Increment the component at the current index
+        current[index]++;
     }
 }
 

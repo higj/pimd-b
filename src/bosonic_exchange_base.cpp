@@ -1,7 +1,7 @@
 #include "bosonic_exchange_base.h"
 
 BosonicExchangeBase::BosonicExchangeBase(int nbosons_, int np_, int bead_num_, double beta_, double spring_constant_,
-                                         const dVec& x_, const dVec& x_prev_, const dVec& x_next_, bool pbc_,
+                                         const dVec& x_, const dVec& x_prev_, const dVec& x_next_, bool pbc_, bool mic_,
                                          double size_) :
     nbosons(nbosons_),
     nbeads(np_),
@@ -12,6 +12,7 @@ BosonicExchangeBase::BosonicExchangeBase(int nbosons_, int np_, int bead_num_, d
     x_prev(x_prev_),
     x_next(x_next_),
     pbc(pbc_),
+    mic(mic_),
     size(size_) {
     if (bead_num_ != 0 && bead_num_ != nbeads - 1) {
         throw std::invalid_argument("BosonicExchangeBase: bead_num must be either 0 or nbeads-1");
@@ -37,10 +38,10 @@ void BosonicExchangeBase::getBeadsSeparation(const dVec& x1, int l1, const dVec&
 
     for (int axis = 0; axis < NDIM; ++axis) {
         double dx = x2(l2, axis) - x1(l1, axis);
-#if MINIM
-        if (pbc)
+
+        if (pbc && mic)
             applyMinimumImage(dx, size);
-#endif
+
         diff[axis] = dx;
     }
 }

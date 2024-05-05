@@ -1,6 +1,7 @@
 ﻿#include "params.h"
 #include "simulation.h"
 #include <cstring>
+#include "mpi.h"
 
 int main(int argc, char** argv) {
     MPI_Init(&argc, &argv);
@@ -35,6 +36,8 @@ int main(int argc, char** argv) {
                 } else {
                     throw std::invalid_argument("-in option requires a filename argument");
                 }
+            } else {
+                throw std::invalid_argument(std::format("Unknown option: {}", argv[i]));
             }
         }
 

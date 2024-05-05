@@ -56,7 +56,7 @@ std::unique_ptr<Observable> ObservableFactory::createQuantity(const std::string&
  */
 EnergyObservable::EnergyObservable(const Simulation& _sim, int _freq, const std::string& _out_unit) :
     Observable(_sim, _freq, _out_unit) {
-    initialize({ "kinetic", "potential", "ext_pot", "int_pot", "virial" });
+    initialize({ "kinetic", "kinetic_wind", "potential", "ext_pot", "int_pot", "virial" });
 }
 
 void EnergyObservable::calculate() {
@@ -85,7 +85,54 @@ void EnergyObservable::calculateKinetic() {
         quantities["kinetic"] -= spring_energy;
     }
 
-    quantities["kinetic"] = Units::convertToUser("energy", out_unit, quantities["kinetic"]);  
+    quantities["kinetic"] = Units::convertToUser("energy", out_unit, quantities["kinetic"]);
+
+    if (sim.pbc && sim.apply_wind)
+        quantities["kinetic_wind"] = Units::convertToUser("energy", out_unit, windingCorrection());
+}
+
+double EnergyObservable::windingCorrection() const {
+    // For the energy, we only care about the winding time-slice
+    /// @todo Ensure that windingCorrection is only called for the correct time-slice
+    if (sim.this_bead != sim.winding_timeslice)
+        return 0.0;
+
+    double result = 0.0;
+
+    double prefactor = sim.beta * sim.spring_constant * sim.size;
+
+    // Loop over all the particles at the current time-slice
+    for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
+        double numer = 0.0;
+        double denom = 0.0;
+
+        // For each particle, take into account the contribution of all the winding vectors
+        for (int wind_idx = 0; wind_idx < sim.wind.len(); ++wind_idx) {
+            double pos_dot_winding = 0.0;
+            for (int axis = 0; axis < NDIM; ++axis) {
+                double diff = sim.coord(ptcl_idx, axis) - sim.next_coord(ptcl_idx, axis);
+                pos_dot_winding += diff * sim.wind(wind_idx, axis);
+            }
+
+            double total_weight = sim.wind_weights[wind_idx] * exp(-prefactor * pos_dot_winding);
+            denom += total_weight;
+
+            for (int axis = 0; axis < NDIM; ++axis) {
+                numer += sim.size * sim.spring_constant * pos_dot_winding * total_weight;
+            }
+
+            numer += sim.wind_weight_args[wind_idx];
+
+        }
+
+        result -= numer / denom;
+    }
+
+#if IPI_CONVENTION
+    result /= sim.nbeads;
+#endif
+
+    return result;
 }
 
 /**
@@ -114,7 +161,7 @@ void EnergyObservable::calculatePotential() {
     if (sim.int_pot_cutoff != 0.0) {
         for (int ptcl_one = 0; ptcl_one < sim.natoms; ++ptcl_one) {
             for (int ptcl_two = ptcl_one + 1; ptcl_two < sim.natoms; ++ptcl_two) {
-                dVec diff = sim.getSeparation(ptcl_one, ptcl_two, true);  // Vectorial distance
+                dVec diff = sim.getSeparation(ptcl_one, ptcl_two, sim.apply_mic_potential);  // Vectorial distance
 
                 if (const double distance = diff.norm(); distance < sim.int_pot_cutoff || sim.int_pot_cutoff < 0.0) {
                     dVec force_on_one = (-1.0) * sim.int_potential->gradV(diff);

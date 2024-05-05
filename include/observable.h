@@ -44,7 +44,7 @@ public:
     void calculate() override;
 
 private:
-    double primitiveKineticDistinguishable() const;
+    [[nodiscard]] double windingCorrection() const;
     void calculateKinetic();
     void calculatePotential();
 };

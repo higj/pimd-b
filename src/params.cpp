@@ -13,7 +13,7 @@ Params::Params(const std::string& filename) : reader(filename) {
     sim["threshold"] = reader.GetReal(Sections::SIMULATION, "threshold", 0.1);
     sim["gamma"] = reader.GetReal(Sections::SIMULATION, "gamma", -1.0);
 
-    if (std::get<double>(sim["gamma"]) == -1.0)
+    if (std::get<double>(sim["gamma"]) < 0)
         sim["gamma"] = 1 / (100.0 * std::get<double>(sim["dt"]));
 
     sim["steps"] = static_cast<long>(
@@ -34,6 +34,15 @@ Params::Params(const std::string& filename) : reader(filename) {
     sim["fixcom"] = reader.GetBoolean(Sections::SIMULATION, "fixcom", true);
     // Enable periodic boundary conditions?
     sim["pbc"] = reader.GetBoolean(Sections::SIMULATION, "pbc", false);
+
+    sim["apply_mic_spring"] = reader.GetBoolean(Sections::SIMULATION, "is_mic_potential", false);
+    sim["apply_mic_potential"] = reader.GetBoolean(Sections::SIMULATION, "is_mic_potential", true);
+    sim["apply_wrap"] = reader.GetBoolean(Sections::SIMULATION, "apply_wrap", false);
+    sim["apply_wrap_first"] = reader.GetBoolean(Sections::SIMULATION, "apply_wrap_first", false);
+    sim["apply_wind"] = reader.GetBoolean(Sections::SIMULATION, "apply_wind", false);
+
+    // Maximum winding sector to consider for periodic boundary conditions
+    sim["max_wind"] = reader.GetInteger(Sections::SIMULATION, "max_wind", 0);
 
     std::string init_pos_type, init_pos_specification;
 

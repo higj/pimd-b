@@ -6,7 +6,7 @@
 class BosonicExchange final : public BosonicExchangeBase {
 public:
     BosonicExchange(int nbosons_, int np_, int bead_num_, double beta_, double spring_constant_,
-                    const dVec& x_, const dVec& x_prev_, const dVec& x_next_, bool pbc_, double size_);
+                    const dVec& x_, const dVec& x_prev_, const dVec& x_next_, bool pbc_, bool mic_, double size_);
     ~BosonicExchange() override = default;
 
     double effectivePotential() override;

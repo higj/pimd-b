@@ -1,8 +1,8 @@
 #include "bosonic_exchange.h"
 
 BosonicExchange::BosonicExchange(int nbosons_, int np_, int bead_num_, double beta_, double spring_constant_,
-                                 const dVec& x_, const dVec& x_prev_, const dVec& x_next_, bool pbc_, double size_)
-    : BosonicExchangeBase(nbosons_, np_, bead_num_, beta_, spring_constant_, x_, x_prev_, x_next_, pbc_, size_),
+                                 const dVec& x_, const dVec& x_prev_, const dVec& x_next_, bool pbc_, bool mic_, double size_)
+    : BosonicExchangeBase(nbosons_, np_, bead_num_, beta_, spring_constant_, x_, x_prev_, x_next_, pbc_, mic_, size_),
       E_kn(nbosons_ * (nbosons_ + 1) / 2),
       V(nbosons_ + 1),
       V_backwards(nbosons_ + 1),
