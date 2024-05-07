@@ -35,8 +35,8 @@ Params::Params(const std::string& filename) : reader(filename) {
     // Enable periodic boundary conditions?
     sim["pbc"] = reader.GetBoolean(Sections::SIMULATION, "pbc", false);
 
-    sim["apply_mic_spring"] = reader.GetBoolean(Sections::SIMULATION, "is_mic_potential", false);
-    sim["apply_mic_potential"] = reader.GetBoolean(Sections::SIMULATION, "is_mic_potential", true);
+    sim["apply_mic_spring"] = reader.GetBoolean(Sections::SIMULATION, "apply_mic_spring", false);
+    sim["apply_mic_potential"] = reader.GetBoolean(Sections::SIMULATION, "apply_mic_potential", true);
     sim["apply_wrap"] = reader.GetBoolean(Sections::SIMULATION, "apply_wrap", false);
     sim["apply_wrap_first"] = reader.GetBoolean(Sections::SIMULATION, "apply_wrap_first", false);
     sim["apply_wind"] = reader.GetBoolean(Sections::SIMULATION, "apply_wind", false);

@@ -121,7 +121,7 @@ double EnergyObservable::windingCorrection() const {
                 numer += sim.size * sim.spring_constant * pos_dot_winding * total_weight;
             }
 
-            numer += sim.wind_weight_args[wind_idx];
+            numer += sim.wind_weight_args[wind_idx] * sim.wind_weights[wind_idx];
 
         }
 
