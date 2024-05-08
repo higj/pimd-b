@@ -32,6 +32,12 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     getVariant(param_obj.sim["pbc"], pbc);
     getVariant(param_obj.sim["max_wind"], max_wind);
 
+    getVariant(param_obj.sim["apply_mic_spring"], apply_mic_spring);
+    getVariant(param_obj.sim["apply_mic_potential"], apply_mic_potential);
+    getVariant(param_obj.sim["apply_wrap"], apply_wrap);
+    getVariant(param_obj.sim["apply_wrap_first"], apply_wrap_first);
+    getVariant(param_obj.sim["apply_wind"], apply_wind);
+
     getVariant(param_obj.out["positions"], out_pos);
     getVariant(param_obj.out["velocities"], out_vel);
     getVariant(param_obj.out["forces"], out_force);
