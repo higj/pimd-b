@@ -79,6 +79,7 @@ public:
     std::unique_ptr<Potential> initializePotential(const std::string& potential_name,
                                                    const VariantMap& potential_options);
     void initializeWindingVectors(iVec& wind_arr, int wind_cutoff);
+    double windingShift() const;
 
     double sampleMaxwellBoltzmann();
 
@@ -120,5 +121,5 @@ private:
     std::string external_potential_name;
     std::string interaction_potential_name;
 
-    void printDebug(const std::string& text) const;
+    void printDebug(const std::string& text, int target_bead = 0) const;
 };

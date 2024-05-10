@@ -530,6 +530,42 @@ void Simulation::updateNeighboringCoordinates() {
     getNextCoords(next_coord);
 }
 
+double Simulation::windingShift() const {
+    if (this_bead != winding_timeslice && this_bead != winding_timeslice + 1)
+        return 0.0;
+
+    double max_delta = 0.0;
+
+    dVec left_x(natoms);
+    dVec right_x(natoms);
+
+    if (this_bead == winding_timeslice) {
+        left_x = coord;
+        right_x = next_coord;
+    } else {
+        left_x = prev_coord;
+        right_x = coord;
+    }
+
+    dVec winding_force(natoms);
+
+    // Loop over all the particles at the current time-slice
+    for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
+        // For each particle, take into account the contribution of all the winding vectors
+        for (int wind_idx = 0; wind_idx < wind.len(); ++wind_idx) {
+            double pos_dot_winding = 0.0;
+            for (int axis = 0; axis < NDIM; ++axis) {
+                const double diff = left_x(ptcl_idx, axis) - right_x(ptcl_idx, axis);
+                pos_dot_winding += diff * wind(wind_idx, axis);
+            }
+
+            max_delta = std::max(max_delta, pos_dot_winding);
+        }
+    }
+
+    return max_delta;
+}
+
 /**
  * Adds the winding force to the spring force vector.
  *
@@ -537,68 +573,71 @@ void Simulation::updateNeighboringCoordinates() {
  */
 void Simulation::addWindingForce(dVec& spring_force_arr) const {
     // The winding force only affects two adjacent time-slices
+    if (this_bead != winding_timeslice && this_bead != winding_timeslice + 1)
+        return;
+
+    dVec left_x(natoms);
+    dVec right_x(natoms);
+
+    double force_prefactor = spring_constant * size;
+
     if (this_bead == winding_timeslice) {
-        dVec winding_force(natoms);
+        left_x = coord;
+        right_x = next_coord;
+    } else {
+        left_x = prev_coord;
+        right_x = coord;
+        force_prefactor *= -1.0;
+    }
 
-        // The minus sign is due to the fact that this is the gradient at the k-th time-slice
-        double prefactor = beta * spring_constant * size;
+    
+    double w_shift = windingShift();
 
-        // Loop over all the particles at the current time-slice
-        for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
-            double denom = 0.0;
+    dVec winding_force(natoms);
 
-            // For each particle, take into account the contribution of all the winding vectors
-            for (int wind_idx = 0; wind_idx < wind.len(); ++wind_idx) {
-                double pos_dot_winding = 0.0;
-                for (int axis = 0; axis < NDIM; ++axis) {
-                    double diff = coord(ptcl_idx, axis) - next_coord(ptcl_idx, axis);
-                    pos_dot_winding += diff * wind(wind_idx, axis);
-                }
+    double prefactor = beta * spring_constant * size;
 
-                double total_weight = wind_weights[wind_idx] * exp(-prefactor * pos_dot_winding);
-                denom += total_weight;
+    // Loop over all the particles at the current time-slice
+    for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
+        double denom = 0.0;
 
-                for (int axis = 0; axis < NDIM; ++axis) {
-                    winding_force(ptcl_idx, axis) += (-1.0) * spring_constant * size * wind(wind_idx, axis) * total_weight;
-                }
+        // For each particle, take into account the contribution of all the winding vectors
+        for (int wind_idx = 0; wind_idx < wind.len(); ++wind_idx) {
+            double pos_dot_winding = 0.0;
+
+            // Calculate the dot product of the distance vector and the winding vector
+            for (int axis = 0; axis < NDIM; ++axis) {
+                double diff = left_x(ptcl_idx, axis) - right_x(ptcl_idx, axis);
+                pos_dot_winding += diff * wind(wind_idx, axis);
             }
 
+            double full_weight = wind_weights[wind_idx] * exp(-prefactor * (pos_dot_winding - w_shift));
+            //printDebug(std::format("Full weight: {:4.2f}\n", full_weight), winding_timeslice);
+            denom += full_weight;
+
             for (int axis = 0; axis < NDIM; ++axis) {
-                winding_force(ptcl_idx, axis) /= denom;
-                spring_force_arr(ptcl_idx, axis) += winding_force(ptcl_idx, axis);
+                winding_force(ptcl_idx, axis) += wind(wind_idx, axis) * full_weight;
+
+                //if (!std::isfinite(winding_force(ptcl_idx, axis))) {
+                //    throw std::overflow_error(
+                //        std::format("Invalid winding force with w_shift {:4.2f} in addWindingForce", w_shift)
+                //    );
+                //}
             }
         }
 
-        // Communicate the force to the next time-slice
-        /// @todo 1) Instead of communication, perform the same calculation in the next time-slice
-        /// @todo 2) Verify that "winding_timeslice + 1" is a valid process
-        MPI_Send(winding_force.data(),
-            winding_force.size(),
-            MPI_DOUBLE,
-            winding_timeslice + 1,
-            0,
-            MPI_COMM_WORLD
-        );
-
-    } else if (this_bead == winding_timeslice + 1) {
-        dVec winding_force_from_prev(natoms);
-
-        MPI_Recv(winding_force_from_prev.data(),
-            winding_force_from_prev.size(),
-            MPI_DOUBLE,
-            winding_timeslice,
-            0,
-            MPI_COMM_WORLD,
-            MPI_STATUS_IGNORE
-        );
-
-        for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
-            for (int axis = 0; axis < NDIM; ++axis) {
-                // The sign of the force at this time-slice is opposite to the sign at the previous time-slice
-                spring_force_arr(ptcl_idx, axis) -= winding_force_from_prev(ptcl_idx, axis);
-            }
+        for (int axis = 0; axis < NDIM; ++axis) {
+            winding_force(ptcl_idx, axis) *= force_prefactor / denom;
+            //if (!std::isfinite(winding_force(ptcl_idx, axis))) {
+            //    throw std::overflow_error(
+            //        std::format("Invalid winding force with w_shift {:4.2f} in addWindingForce", w_shift)
+            //    );
+            //}
+            spring_force_arr(ptcl_idx, axis) += winding_force(ptcl_idx, axis);
         }
     }
+
+    //printDebug("===\n", winding_timeslice);
 }
 
 /**
@@ -774,11 +813,11 @@ void Simulation::printReport(std::ofstream& out_file) const {
     //out_file << formattedReportLine("Minimum image convention", MINIM);
     //out_file << formattedReportLine("Wrapping of coordinates", WRAP);
     //out_file << formattedReportLine("Wrapping of the first time-slice", WRAP_FIRST);
-    out_file << formattedReportLine("Minimum image convention applied to the springs", apply_mic_spring);
-    out_file << formattedReportLine("Minimum image convention applied to the potential", apply_mic_potential);
-    out_file << formattedReportLine("Wrapping of the coordinates", apply_wrap);
-    out_file << formattedReportLine("Wrapping of the coordinates at the 1st time-slice", apply_wrap);
-    out_file << formattedReportLine("Winding effects are taken into account", apply_wind);
+    out_file << formattedReportLine("Minimum image convention (springs)", apply_mic_spring);
+    out_file << formattedReportLine("Minimum image convention (potential)", apply_mic_potential);
+    out_file << formattedReportLine("Coordinate wrap (all time-slices)", apply_wrap);
+    out_file << formattedReportLine("Coordinate wrap (1st time-slice only)", apply_wrap);
+    out_file << formattedReportLine("Winding effects", apply_wind);
 
     out_file << formattedReportLine("Polymer recentering", RECENTER);
     out_file << formattedReportLine("Using i-Pi convention", IPI_CONVENTION);
@@ -998,6 +1037,9 @@ void Simulation::initializeWindingVectors(iVec& wind_arr, int wind_cutoff) {
 
     const double prefactor = 0.5 * spring_constant * size * size; // Pre-factor for the winding weights
 
+    // For numerical stability
+    double w2_shift = 0.5 * NDIM;  // Shift the norm squared of the winding vector by (1,1,...,1)^2
+
     // This loop will generate all the possible winding vectors for the provided cutoff.
     // Once a winding vector is generated, its norm is calculated and the corresponding weight is stored.
     while (true) {
@@ -1010,7 +1052,16 @@ void Simulation::initializeWindingVectors(iVec& wind_arr, int wind_cutoff) {
         }
 
         // Using the norm squared, calculate the weight and the energy associated with the winding vector
-        wind_weights[current_idx] = exp(-beta * prefactor * w_norm2);
+        wind_weights[current_idx] = exp(-beta * prefactor * (w_norm2 - w2_shift));
+
+        //printDebug(std::format("Weight: {:4.2f}, Arg: {:4.2f}, const = {:4.2f}\n", wind_weights[current_idx], beta * prefactor * w_norm2, beta * prefactor), winding_timeslice);
+
+        if (!std::isfinite(wind_weights[current_idx])) {
+            throw std::overflow_error(
+                std::format("Invalid winding weight with w_shift {:4.2f} and arg {:4.2f} in initializeWindingVectors", w2_shift, beta * prefactor * w_norm2)
+            );
+        }
+
         wind_weight_args[current_idx] = prefactor * w_norm2;
 
         // Increment the index after we saved the current winding vector
@@ -1029,15 +1080,18 @@ void Simulation::initializeWindingVectors(iVec& wind_arr, int wind_cutoff) {
         // Increment the component at the current index
         current[index]++;
     }
+
+    //printDebug("-----\n", winding_timeslice);
 }
 
 /**
  * Prints information for debugging purposes.
  * 
  * @param text Text to print.
+ * @param target_bead Bead for which the text should be printed.
  */
-void Simulation::printDebug(const std::string& text) const {
-    if (this_bead == 0) {
+void Simulation::printDebug(const std::string& text, int target_bead) const {
+    if (this_bead == target_bead) {
         std::ofstream debug;
         debug.open(std::format("{}/debug.log", Output::FOLDER_NAME), std::ios::out | std::ios::app);
         debug << text;

@@ -99,7 +99,8 @@ double EnergyObservable::windingCorrection() const {
 
     double result = 0.0;
 
-    double prefactor = sim.beta * sim.spring_constant * sim.size;
+    const double prefactor = sim.beta * sim.spring_constant * sim.size;
+    const double w_shift = sim.windingShift();
 
     // Loop over all the particles at the current time-slice
     for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
@@ -109,24 +110,29 @@ double EnergyObservable::windingCorrection() const {
         // For each particle, take into account the contribution of all the winding vectors
         for (int wind_idx = 0; wind_idx < sim.wind.len(); ++wind_idx) {
             double pos_dot_winding = 0.0;
+
+            // Calculate the dot product of the distance vector and the winding vector
             for (int axis = 0; axis < NDIM; ++axis) {
                 double diff = sim.coord(ptcl_idx, axis) - sim.next_coord(ptcl_idx, axis);
                 pos_dot_winding += diff * sim.wind(wind_idx, axis);
             }
 
-            double total_weight = sim.wind_weights[wind_idx] * exp(-prefactor * pos_dot_winding);
-            denom += total_weight;
+            // Calculate exp(-beta*k*f(w_j))
+            double full_weight = sim.wind_weights[wind_idx] * exp(-prefactor * (pos_dot_winding - w_shift));
 
-            for (int axis = 0; axis < NDIM; ++axis) {
-                numer += sim.size * sim.spring_constant * pos_dot_winding * total_weight;
-            }
-
-            numer += sim.wind_weight_args[wind_idx] * sim.wind_weights[wind_idx];
+            // Add f(w_j) * exp(-beta*k*f(w_j)) to the numerator, and just the weight to the denominator
+            numer += (sim.size * pos_dot_winding + sim.wind_weight_args[wind_idx]) * full_weight;
+            denom += full_weight;
 
         }
 
-        result -= numer / denom;
+        // Accumulate the winding contributions for all particles
+        result += numer / denom;
     }
+
+    // Remember to multiply by the spring constant, because this is the winding spring energy.
+    // The negative sign is due to the fact that the spring terms are negative in the thermodynamic energy estimator.
+    result *= (-1.0) * sim.spring_constant;
 
 #if IPI_CONVENTION
     result /= sim.nbeads;
