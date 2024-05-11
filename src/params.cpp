@@ -51,7 +51,7 @@ Params::Params(const std::string& filename) : reader(filename) {
         throw std::invalid_argument("The coordinate initialization method format is invalid!");
     }
 
-    allowed_coord_init_methods = { "random", "xyz" }; /// @todo Add "cell" option
+    allowed_coord_init_methods = { "random", "xyz", "grid" }; /// @todo Add "cell" option
 
     if (!labelInArray(init_pos_type, allowed_coord_init_methods))
         throw std::invalid_argument(std::format("The specified coordinate initialization method ({}) is not supported!",

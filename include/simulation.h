@@ -79,7 +79,7 @@ public:
     std::unique_ptr<Potential> initializePotential(const std::string& potential_name,
                                                    const VariantMap& potential_options);
     void initializeWindingVectors(iVec& wind_arr, int wind_cutoff);
-    double windingShift() const;
+    double windingShift(int ptcl_idx) const;
 
     double sampleMaxwellBoltzmann();
 

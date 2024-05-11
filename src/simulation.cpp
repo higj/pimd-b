@@ -81,7 +81,8 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     if (pbc) {
         /// @todo Ensure winding timeslice is set correctly (does not exceed nbeads-2)
         /// @todo Make the winding cutoff configurable
-        winding_timeslice = nbeads - 2;
+        //winding_timeslice = nbeads - 2;
+        winding_timeslice = 3;
 
         initializeWindingVectors(wind, max_wind);
     }
@@ -530,11 +531,9 @@ void Simulation::updateNeighboringCoordinates() {
     getNextCoords(next_coord);
 }
 
-double Simulation::windingShift() const {
+double Simulation::windingShift(int ptcl_idx) const {
     if (this_bead != winding_timeslice && this_bead != winding_timeslice + 1)
         return 0.0;
-
-    double max_delta = 0.0;
 
     dVec left_x(natoms);
     dVec right_x(natoms);
@@ -547,23 +546,22 @@ double Simulation::windingShift() const {
         right_x = coord;
     }
 
-    dVec winding_force(natoms);
-
     // Loop over all the particles at the current time-slice
-    for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
-        // For each particle, take into account the contribution of all the winding vectors
-        for (int wind_idx = 0; wind_idx < wind.len(); ++wind_idx) {
-            double pos_dot_winding = 0.0;
-            for (int axis = 0; axis < NDIM; ++axis) {
-                const double diff = left_x(ptcl_idx, axis) - right_x(ptcl_idx, axis);
-                pos_dot_winding += diff * wind(wind_idx, axis);
-            }
+    double shift = std::numeric_limits<double>::max();
 
-            max_delta = std::max(max_delta, pos_dot_winding);
+    // For each particle, take into account the contribution of all the winding vectors
+    for (int wind_idx = 0; wind_idx < wind.len(); ++wind_idx) {
+        double diff_plus_wind_squared = 0.0;
+
+        for (int axis = 0; axis < NDIM; ++axis) {
+            double diff = left_x(ptcl_idx, axis) - right_x(ptcl_idx, axis) + wind(wind_idx, axis) * size;
+            diff_plus_wind_squared += diff * diff;
         }
+
+        shift = std::min(shift, 0.5 * spring_constant * diff_plus_wind_squared);
     }
 
-    return max_delta;
+    return shift;
 }
 
 /**
@@ -581,37 +579,40 @@ void Simulation::addWindingForce(dVec& spring_force_arr) const {
 
     double force_prefactor = spring_constant * size;
 
+    double beta_ = beta;
+
+#if IPI_CONVENTION
+    beta_ /= nbeads;
+#endif
+
     if (this_bead == winding_timeslice) {
         left_x = coord;
         right_x = next_coord;
+        force_prefactor *= -1.0;
     } else {
         left_x = prev_coord;
         right_x = coord;
-        force_prefactor *= -1.0;
     }
-
-    
-    double w_shift = windingShift();
 
     dVec winding_force(natoms);
 
-    double prefactor = beta * spring_constant * size;
-
     // Loop over all the particles at the current time-slice
     for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
+        double w_shift = windingShift(ptcl_idx);
+
         double denom = 0.0;
 
         // For each particle, take into account the contribution of all the winding vectors
         for (int wind_idx = 0; wind_idx < wind.len(); ++wind_idx) {
-            double pos_dot_winding = 0.0;
+            double diff_plus_wind_squared = 0.0;
 
-            // Calculate the dot product of the distance vector and the winding vector
             for (int axis = 0; axis < NDIM; ++axis) {
-                double diff = left_x(ptcl_idx, axis) - right_x(ptcl_idx, axis);
-                pos_dot_winding += diff * wind(wind_idx, axis);
+                double diff = left_x(ptcl_idx, axis) - right_x(ptcl_idx, axis) + wind(wind_idx, axis) * size;
+                diff_plus_wind_squared += diff * diff;
             }
 
-            double full_weight = wind_weights[wind_idx] * exp(-prefactor * (pos_dot_winding - w_shift));
+            double sp_energy = 0.5 * spring_constant * diff_plus_wind_squared;
+            double full_weight = exp(-beta_ * (sp_energy - w_shift));
             //printDebug(std::format("Full weight: {:4.2f}\n", full_weight), winding_timeslice);
             denom += full_weight;
 
@@ -628,11 +629,6 @@ void Simulation::addWindingForce(dVec& spring_force_arr) const {
 
         for (int axis = 0; axis < NDIM; ++axis) {
             winding_force(ptcl_idx, axis) *= force_prefactor / denom;
-            //if (!std::isfinite(winding_force(ptcl_idx, axis))) {
-            //    throw std::overflow_error(
-            //        std::format("Invalid winding force with w_shift {:4.2f} in addWindingForce", w_shift)
-            //    );
-            //}
             spring_force_arr(ptcl_idx, axis) += winding_force(ptcl_idx, axis);
         }
     }
@@ -668,11 +664,10 @@ void Simulation::updateSpringForces(dVec& spring_force_arr) const {
                 spring_force_arr(ptcl_idx, axis) = spring_constant * (d_prev + d_next);
             }
         }
-    }
 
-    // The winding contribution is coupled to the spring energies, so we add it here
-    if (pbc && apply_wind)
-        addWindingForce(spring_force_arr);
+        if (pbc && apply_wind)
+            addWindingForce(spring_force_arr);
+    }
 }
 
 /**
@@ -991,6 +986,9 @@ void Simulation::initializePositions(dVec& coord_arr, const VariantMap& sim_para
         // Uncomment the next line to restrict the coordinate initialization to the first time-slice
         //if (this_bead == 0)
         loadTrajectories(xyz_filename, coord_arr);
+    } else if (init_pos_type == "grid") {
+        // Generate a grid of particles
+        uniformParticleGrid(coord_arr);
     } else {
         // Sample positions from a uniform distribution
         genRandomPositions(coord_arr);
@@ -1027,42 +1025,16 @@ void Simulation::initializeWindingVectors(iVec& wind_arr, int wind_cutoff) {
     int num_wind = std::pow(2 * wind_cutoff + 1, NDIM);
     // Vector holding all the different winding vectors
     wind_arr = iVec(num_wind);
-    // Vector holding the weights of the winding vectors, given by exp(-0.5 * beta * k * |w|^2 * L^2)
-    wind_weights = std::vector<double>(num_wind, 0.0);
-    // Vector holding the energies associated with the winding vectors, given by 0.5 * k * |w|^2 * L^2
-    wind_weight_args = std::vector<double>(num_wind, 0.0);
-
     std::vector<int> current(NDIM, -wind_cutoff); // Initialize with minimum value
     int current_idx = 0; // Index of the current winding vector
-
-    const double prefactor = 0.5 * spring_constant * size * size; // Pre-factor for the winding weights
-
-    // For numerical stability
-    double w2_shift = 0.5 * NDIM;  // Shift the norm squared of the winding vector by (1,1,...,1)^2
 
     // This loop will generate all the possible winding vectors for the provided cutoff.
     // Once a winding vector is generated, its norm is calculated and the corresponding weight is stored.
     while (true) {
-        double w_norm2 = 0.0; // Stores the norm squared of the current winding vector
-
         // Add the current vector to the result
         for (int axis = 0; axis < NDIM; ++axis) {
             wind_arr(current_idx, axis) = current[axis]; // Save the winding vector component to the global array
-            w_norm2 += current[axis] * current[axis]; // Calculate the norm squared of the winding vector
         }
-
-        // Using the norm squared, calculate the weight and the energy associated with the winding vector
-        wind_weights[current_idx] = exp(-beta * prefactor * (w_norm2 - w2_shift));
-
-        //printDebug(std::format("Weight: {:4.2f}, Arg: {:4.2f}, const = {:4.2f}\n", wind_weights[current_idx], beta * prefactor * w_norm2, beta * prefactor), winding_timeslice);
-
-        if (!std::isfinite(wind_weights[current_idx])) {
-            throw std::overflow_error(
-                std::format("Invalid winding weight with w_shift {:4.2f} and arg {:4.2f} in initializeWindingVectors", w2_shift, beta * prefactor * w_norm2)
-            );
-        }
-
-        wind_weight_args[current_idx] = prefactor * w_norm2;
 
         // Increment the index after we saved the current winding vector
         current_idx++;
@@ -1080,8 +1052,6 @@ void Simulation::initializeWindingVectors(iVec& wind_arr, int wind_cutoff) {
         // Increment the component at the current index
         current[index]++;
     }
-
-    //printDebug("-----\n", winding_timeslice);
 }
 
 /**

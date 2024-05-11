@@ -99,29 +99,36 @@ double EnergyObservable::windingCorrection() const {
 
     double result = 0.0;
 
-    const double prefactor = sim.beta * sim.spring_constant * sim.size;
-    const double w_shift = sim.windingShift();
+    double beta_ = sim.beta;
+
+#if IPI_CONVENTION
+    beta_ /= sim.nbeads;
+#endif
 
     // Loop over all the particles at the current time-slice
     for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
+        double w_shift = sim.windingShift(ptcl_idx);
+
         double numer = 0.0;
         double denom = 0.0;
 
         // For each particle, take into account the contribution of all the winding vectors
         for (int wind_idx = 0; wind_idx < sim.wind.len(); ++wind_idx) {
-            double pos_dot_winding = 0.0;
+            double diff_bare_squared = 0.0;
+            double diff_plus_wind_squared = 0.0;
 
-            // Calculate the dot product of the distance vector and the winding vector
             for (int axis = 0; axis < NDIM; ++axis) {
                 double diff = sim.coord(ptcl_idx, axis) - sim.next_coord(ptcl_idx, axis);
-                pos_dot_winding += diff * sim.wind(wind_idx, axis);
+                double diff_plus_wind = diff + sim.wind(wind_idx, axis) * sim.size;
+                diff_plus_wind_squared += diff_plus_wind * diff_plus_wind;
+                diff_bare_squared += diff * diff;
             }
 
-            // Calculate exp(-beta*k*f(w_j))
-            double full_weight = sim.wind_weights[wind_idx] * exp(-prefactor * (pos_dot_winding - w_shift));
+            double sp_energy = 0.5 * sim.spring_constant * diff_plus_wind_squared;
+            double full_weight = exp(-beta_ * (sp_energy - w_shift));
 
-            // Add f(w_j) * exp(-beta*k*f(w_j)) to the numerator, and just the weight to the denominator
-            numer += (sim.size * pos_dot_winding + sim.wind_weight_args[wind_idx]) * full_weight;
+            // Add f(w_j) * exp(-beta*k*..) to the numerator, and just the weight to the denominator
+            numer += 0.5 * sim.spring_constant * (diff_plus_wind_squared - diff_bare_squared) * full_weight;
             denom += full_weight;
 
         }
