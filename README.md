@@ -146,17 +146,10 @@ requires the `omega` parameter that sets the angular frequency of the oscillator
 All pair interaction potentials require the `cutoff` parameter. By default, the cutoff distance is set to a negative value, which tells the program to calculate all interactions, regardless of the distance between a given pair of particles. Setting cutoff to zero will disable interactions altogether.
 A positive cutoff aborts the calculation of the interaction force if the inter-particle distance is larger than the specified cutoff distance.
 
-The `initial_position` option allows to specify the method of initialization for the bead coordinates. Currently, three options are available:
+The `initial_position` option allows to specify the method of initialization for the bead coordinates. Currently, two options are available:
 
 * `random` (default): samples random positions in each Cartesian direction from a uniform distribution on the interval $[-L/2, L/2]$, where $L$ is the linear size of the system.
 * `xyz(<filename>.xyz)`: initializes the coordinates based on the provided `.xyz` file. A given particle is initialized at the same location across all imaginary time-slices (beads).
-* `xyz(<filename_format>)`: if a [python-style formatted string](https://docs.python.org/3/tutorial/inputoutput.html) is provided, the indices of the imaginary time-slices (starting with 1 as per LAMMPS convention) will be substituted as the format argument and the imaginary time-slices will be initialized from the files with the resulting names.
-
-Similarly, the `initial_velocity` option gives the user the ability to initialize the bead velocities. Three options are evailable as of now:
-
-* `random` (default): samples velocities from the Maxwell-Boltzmann distribution at the given temperature of the simulation.
-* `manual`: the velocities are initialized from the files `init/vel_XX.dat` where `XX` symbolizes the two-digit index of the imaginary time-slice, starting from 01.
-* `manual(<filename_format>)`: similar behavior to `xyz(<filename_format>)`.
 
 The `size` option defines the linear size of the system. Currently, only cube geometry is supported. In the absence of periodic boundary conditions, `size` only affects the way initial positions are generated. However, if periodic boundary conditions are enabled, the system size also affects the cutoff distance for interactions, as well as the estimators. Also, the coordinates may be wrapped in this case, and minimum image convention can potentially be employed, if such functionality is desired.
 
