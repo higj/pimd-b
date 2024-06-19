@@ -63,7 +63,7 @@ public:
     void zeroMomentum();
 
     void initializePositions(dVec& coord_arr, const VariantMap& sim_params);
-    void initializeMomenta(dVec& momentum_arr);
+    void initializeMomenta(dVec& momentum_arr, const VariantMap& sim_params);
     std::unique_ptr<Potential> initializePotential(const std::string& potential_name,
                                                    const VariantMap& potential_options);
 
