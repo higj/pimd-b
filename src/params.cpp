@@ -3,6 +3,7 @@
 #include <sstream>
 #include <regex>
 #include <format>
+#include <fstream>
 
 Params::Params(const std::string& filename) : reader(filename) {
     if (reader.ParseError() < 0)
@@ -49,34 +50,36 @@ Params::Params(const std::string& filename) : reader(filename) {
                                                 init_pos_type));
     
     if (init_pos_type == "xyz") {
-		try {
-			int nbeads = std::get<int>(sim["nbeads"]);
-			for (int i = 0; i <= nbeads; ++i) {
-				[[maybe_unused]] auto tmp = std::vformat(init_pos_specification, std::make_format_args(i));  // Try using specification as filename format. Check validity for all beads
+        try {
+            const int dummy = 0;  // Dummy variable for std::make_format_args lvalue reference shenanigans
+            std::string formatted_filename = std::vformat(init_pos_specification, std::make_format_args(dummy));  // Try using specification as filename format
+            // If the formatted string remains unchanged, that means it wasn't a format
+            if (formatted_filename != init_pos_specification) {
+                sim["init_pos_first_index"] = static_cast<int>(std::ifstream(formatted_filename.c_str())? 0 : 1);  // Ensure the value is being saved as the right type
+                init_pos_type = "xyz_formatted";
             }
-			init_pos_type = "xyz_formatted";
-		} catch (const std::format_error&) {
-			throw std::invalid_argument(std::format("The filename format ({}) for coordinate initialization is invalid!", init_pos_specification));
-		} catch (...) {
-			throw std::runtime_error(std::format("Filename format ({}) for coordinate initialization validation failed", init_pos_specification));
-		}
-	}
+        } catch (const std::format_error&) {
+            throw std::invalid_argument(std::format("The filename format ({}) for coordinate initialization is invalid!", init_pos_specification));
+        } catch (...) {
+            throw std::runtime_error(std::format("Filename format ({}) for coordinate initialization validation failed", init_pos_specification));
+        }
+    }
     
     sim["init_pos_type"] = init_pos_type;
 
     if (init_pos_type == "xyz") {
         sim["init_pos_xyz_filename"] = init_pos_specification;
     } else if (init_pos_type == "xyz_formatted") {
-		sim["init_pos_xyz_filename_format"] = init_pos_specification;
-	}
+        sim["init_pos_xyz_filename_format"] = init_pos_specification;
+    }
 
     // Allowed velocity initialization methods:
     // "random": samples from Maxwell-Boltzmann distribution
     // "manual": reads from vel_X.dat files
     // "manual(format)": reads from format(X) files
-	std::string init_vel_type, init_vel_specification;
+    std::string init_vel_type, init_vel_specification;
 
-	if (!parseTokenParentheses(reader.Get(Sections::SIMULATION, "initial_velocity", "random"), init_vel_type,
+    if (!parseTokenParentheses(reader.Get(Sections::SIMULATION, "initial_velocity", "random"), init_vel_type,
                                init_vel_specification)) {
         throw std::invalid_argument("The velocity initialization method format is invalid!");
     }
@@ -88,24 +91,26 @@ Params::Params(const std::string& filename) : reader(filename) {
                                                 init_vel_type));
     
     if (init_vel_type == "manual" && init_vel_specification != "") {
-		try {
-			int nbeads = std::get<int>(sim["nbeads"]);
-			for (int i = 0; i <= nbeads; ++i) {
-				[[maybe_unused]] auto tmp = std::vformat(init_vel_specification, std::make_format_args(i));  // Try using specification as filename format. Check validity for all beads
+        try {
+            const int dummy = 0;  // Dummy variable for std::make_format_args lvalue reference shenanigans
+            std::string formatted_filename = std::vformat(init_vel_specification, std::make_format_args(dummy));  // Try using specification as filename format
+            // If the formatted string remains unchanged, that means it wasn't a format
+            if (formatted_filename != init_vel_specification) {
+                sim["init_vel_first_index"] = static_cast<int>(std::ifstream(formatted_filename.c_str()).good()? 0 : 1);  // Ensure the value is being saved as the right type
+                init_vel_type = "manual_formatted";
             }
-			init_vel_type = "manual_formatted";
-		} catch (const std::format_error&) {
-			throw std::invalid_argument(std::format("The filename format ({}) for velocity initialization is invalid!", init_pos_specification));
-		} catch (...) {
-			throw std::runtime_error(std::format("Filename format ({}) for velocity initialization validation failed", init_pos_specification));
-		}
-	}
+        } catch (const std::format_error&) {
+            throw std::invalid_argument(std::format("The filename format ({}) for velocity initialization is invalid!", init_vel_specification));
+        } catch (...) {
+            throw std::runtime_error(std::format("Filename format ({}) for velocity initialization validation failed", init_vel_specification));
+        }
+    }
 
     sim["init_vel_type"] = init_vel_type;
 
-	if (init_vel_type == "manual_formatted") {
-		sim["init_vel_manual_filename_format"] = init_vel_specification;
-	}
+    if (init_vel_type == "manual_formatted") {
+        sim["init_vel_manual_filename_format"] = init_vel_specification;
+    }
     
     /* System params */
     sys["temperature"] = getQuantity("temperature", reader.Get(Sections::SYSTEM, "temperature", "1.0 kelvin"));
