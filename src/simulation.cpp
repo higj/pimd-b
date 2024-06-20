@@ -782,9 +782,10 @@ void Simulation::initializePositions(dVec& coord_arr, const VariantMap& sim_para
         loadTrajectories(xyz_filename, coord_arr);
     } else if (init_pos_type == "xyz_formatted") {
         const std::string xyz_filename_format = std::get<std::string>(sim_params.at("init_pos_xyz_filename_format"));
-        const int arg = this_bead + std::get<int>(sim_params.at("init_pos_first_index"));
+        const auto arg = this_bead + 1; // LAMMPS convention
+        //const auto arg = this_bead; // i-Pi convention
         
-        loadTrajectories(std::vformat(xyz_filename_format, std::make_format_args(arg)), coord_arr);
+        loadTrajectories(std::vformat(xyz_filename_format, std::make_format_args(std::move(arg))), coord_arr);
     } else {
         // Sample positions from a uniform distribution
         genRandomPositions(coord_arr);
@@ -806,9 +807,10 @@ void Simulation::initializeMomenta(dVec& momentum_arr, const VariantMap& sim_par
         /// @todo Handle the cases when the file does not exist or has a wrong format
     } else if (init_vel_type == "manual_formatted") {
         const std::string vel_filename_format = std::get<std::string>(sim_params.at("init_vel_manual_filename_format"));
-        const int arg = this_bead + std::get<int>(sim_params.at("init_vel_first_index"));
+        const auto arg = this_bead + 1; // LAMMPS convention
+        //const auto arg = this_bead; // i-Pi convention
         
-        loadMomenta(std::vformat(vel_filename_format, std::make_format_args(arg)), mass, momentum_arr);
+        loadMomenta(std::vformat(vel_filename_format, std::make_format_args(std::move(arg))), mass, momentum_arr);
     } else {
         // If generating momenta from the Maxwell-Boltzmann distribution, zero the total momentum
         genMomentum(momentum_arr);
