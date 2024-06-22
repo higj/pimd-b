@@ -3,7 +3,7 @@
 #include <sstream>
 #include <regex>
 #include <format>
-#include <fstream>
+#include <filesystem>
 
 Params::Params(const std::string& filename) : reader(filename) {
     if (reader.ParseError() < 0)
@@ -52,16 +52,24 @@ Params::Params(const std::string& filename) : reader(filename) {
     if (init_pos_type == "xyz") {
         try {
             const int dummy = 0;  // Dummy variable for std::make_format_args lvalue reference shenanigans
-            std::string formatted_filename = std::vformat(init_pos_specification, std::make_format_args(dummy));  // Try using specification as filename format
+            // Try using specification as filename format
+            std::string formatted_filename = std::vformat(init_pos_specification, std::make_format_args(dummy));
             // If the formatted string remains unchanged, that means it wasn't a format
             if (formatted_filename != init_pos_specification) {
-                sim["init_pos_first_index"] = static_cast<int>(std::ifstream(formatted_filename.c_str())? 0 : 1);  // Ensure the value is being saved as the right type
+                // Ensure the value is being saved as the right type
+                sim["init_pos_first_index"] = static_cast<int>(!std::filesystem::exists(formatted_filename));
                 init_pos_type = "xyz_formatted";
             }
         } catch (const std::format_error&) {
-            throw std::invalid_argument(std::format("The filename format ({}) for coordinate initialization is invalid!", init_pos_specification));
+            throw std::invalid_argument(
+                    std::format("The filename format ({}) for coordinate initialization is invalid!",
+                                init_pos_specification)
+                  );
         } catch (...) {
-            throw std::runtime_error(std::format("Filename format ({}) for coordinate initialization validation failed", init_pos_specification));
+            throw std::runtime_error(
+                    std::format("Filename format ({}) for coordinate initialization validation failed",
+                                init_pos_specification)
+                  );
         }
     }
     
@@ -93,16 +101,24 @@ Params::Params(const std::string& filename) : reader(filename) {
     if (init_vel_type == "manual" && init_vel_specification != "") {
         try {
             const int dummy = 0;  // Dummy variable for std::make_format_args lvalue reference shenanigans
-            std::string formatted_filename = std::vformat(init_vel_specification, std::make_format_args(dummy));  // Try using specification as filename format
+            // Try using specification as filename format
+            std::string formatted_filename = std::vformat(init_vel_specification, std::make_format_args(dummy));
             // If the formatted string remains unchanged, that means it wasn't a format
             if (formatted_filename != init_vel_specification) {
-                sim["init_vel_first_index"] = static_cast<int>(std::ifstream(formatted_filename.c_str()).good()? 0 : 1);  // Ensure the value is being saved as the right type
+                // Ensure the value is being saved as the right type
+                sim["init_vel_first_index"] = static_cast<int>(!std::filesystem::exists(formatted_filename));
                 init_vel_type = "manual_formatted";
             }
         } catch (const std::format_error&) {
-            throw std::invalid_argument(std::format("The filename format ({}) for velocity initialization is invalid!", init_vel_specification));
+            throw std::invalid_argument(
+                    std::format("The filename format ({}) for velocity initialization is invalid!",
+                                init_vel_specification)
+                  );
         } catch (...) {
-            throw std::runtime_error(std::format("Filename format ({}) for velocity initialization validation failed", init_vel_specification));
+            throw std::runtime_error(
+                    std::format("Filename format ({}) for velocity initialization validation failed",
+                                init_vel_specification)
+                  );
         }
     }
 
