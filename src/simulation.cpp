@@ -70,7 +70,7 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     forces = dVec(natoms);
 
     initializePositions(coord, param_obj.sim);
-    initializeMomenta(momenta);
+    initializeMomenta(momenta, param_obj.sim);
 
     // Initialize the potential based on the input
     external_potential_name = std::get<std::string>(param_obj.external_pot["name"]);
@@ -780,6 +780,11 @@ void Simulation::initializePositions(dVec& coord_arr, const VariantMap& sim_para
         // Uncomment the next line to restrict the coordinate initialization to the first time-slice
         //if (this_bead == 0)
         loadTrajectories(xyz_filename, coord_arr);
+    } else if (init_pos_type == "xyz_formatted") {
+        const std::string xyz_filename_format = std::get<std::string>(sim_params.at("init_pos_xyz_filename_format"));
+        const int arg = this_bead + std::get<int>(sim_params.at("init_pos_first_index"));
+        
+        loadTrajectories(std::vformat(xyz_filename_format, std::make_format_args(arg)), coord_arr);
     } else {
         // Sample positions from a uniform distribution
         genRandomPositions(coord_arr);
@@ -790,14 +795,20 @@ void Simulation::initializePositions(dVec& coord_arr, const VariantMap& sim_para
  * Initializes the momenta of the particles based on the input parameters.
  *
  * @param[out] momentum_arr Array to store the generated momenta.
+ * @param sim_params Simulation parameters object containing information about the init velocities file. 
  */
-void Simulation::initializeMomenta(dVec& momentum_arr) {
+void Simulation::initializeMomenta(dVec& momentum_arr, const VariantMap& sim_params) {
     if (init_vel_type == "manual") {
         // If loading momenta from elsewhere, do not zero momentum after that
         loadMomenta(std::format("init/vel_{:02}.dat", this_bead + 1), mass, momentum_arr); // LAMMPS convention
         //loadMomenta(std::format("init/vel_{:02}.dat", this_bead), mass, momenta); // i-Pi convention
 
         /// @todo Handle the cases when the file does not exist or has a wrong format
+    } else if (init_vel_type == "manual_formatted") {
+        const std::string vel_filename_format = std::get<std::string>(sim_params.at("init_vel_manual_filename_format"));
+        const int arg = this_bead + std::get<int>(sim_params.at("init_vel_first_index"));
+        
+        loadMomenta(std::vformat(vel_filename_format, std::make_format_args(arg)), mass, momentum_arr);
     } else {
         // If generating momenta from the Maxwell-Boltzmann distribution, zero the total momentum
         genMomentum(momentum_arr);
