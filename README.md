@@ -150,9 +150,9 @@ The `initial_position` option allows to specify the method of initialization for
 
 * `random` (default): samples random positions in each Cartesian direction from a uniform distribution on the interval $[-L/2, L/2]$, where $L$ is the linear size of the system.
 * `xyz(<filename>.xyz)`: initializes the coordinates based on the provided `.xyz` file. A given particle is initialized at the same location across all imaginary time-slices (beads).
-* `xyz(<filename_format>)`: if a [python-style formatted string](https://docs.python.org/3/tutorial/inputoutput.html) is provided, the indices of the imaginary time-slices (starting with either 0 or 1, automatically detected from the available files) will be substituted as the format argument and the imaginary time-slices will be initialized from the files with the resulting names.
+* `xyz(<filename_format>)`: if the provided filename is a [Python format string](https://docs.python.org/3/library/string.html#formatspec), the indices of the imaginary time-slices (starting with either 0 or 1, automatically detected from the available files) are substituted as the format argument, and the resulting filenames are then used to initialize the coordinates. The formatted string can contain only a single replacement field.
 
-Similarly, the `initial_velocity` option gives the user the ability to initialize the bead velocities. Three options are evailable as of now:
+Similarly, the `initial_velocity` option gives the user the ability to initialize the bead velocities. Three options are available as of now:
 
 * `random` (default): samples velocities from the Maxwell-Boltzmann distribution at the given temperature of the simulation.
 * `manual`: the velocities are initialized from the files `init/vel_XX.dat` where `XX` symbolizes the two-digit index of the imaginary time-slice, starting from 01.
