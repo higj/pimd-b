@@ -232,7 +232,7 @@ module load gcc/gcc-13.2.0
 cd $RUNDIR
 
 # Run the simulation
-mpirun -np $NCORE $EXE -partition ${NCORE}x1
+mpirun -np $NCORE $EXE
 ```
 
 where the paths and the number of beads (`P`) must be replaced according to the specifics of your simulation. 
