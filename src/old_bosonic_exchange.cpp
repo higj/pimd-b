@@ -12,14 +12,14 @@ OldBosonicExchange::OldBosonicExchange(int nbosons_, int np_, int bead_num_, dou
     std::iota(labels.begin(), labels.end(), 0);
 
     // For numerical stability
-    e_shift = getMaxExteriorSpringEnergy();
+    e_shift = getMinExteriorSpringEnergy();
 }
 
 /**
  * @brief Recalculates the longest exterior spring energy after each coordinate update.
  */
 void OldBosonicExchange::prepare() {
-    e_shift = getMaxExteriorSpringEnergy();
+    e_shift = getMinExteriorSpringEnergy();
 }
 
 /**
@@ -51,19 +51,19 @@ int OldBosonicExchange::lastBeadNeighbor(int ptcl_idx) const {
 }
 
 /**
- * Calculates the largest exterior spring energy that a permutation can yield in a given time-step. This energy is then used to shift
+ * Calculates the smallest exterior spring energy that a permutation can yield in a given time-step. This energy is then used to shift
  * the spring energies in the Boltzmann weights to avoid numerical instabilities, which can be especially prominent
  * at high Trotter numbers.
  *
- * @return The largest exterior spring energy contribution due to a permutation.
+ * @return The smallest exterior spring energy contribution due to a permutation.
  */
-double OldBosonicExchange::getMaxExteriorSpringEnergy() {
+double OldBosonicExchange::getMinExteriorSpringEnergy() {
     dVec x_first_bead(nbosons);
     dVec x_last_bead(nbosons);
 
     assignFirstLast(x_first_bead, x_last_bead);
 
-    double max_delta = 0.0;
+    double min_delta = std::numeric_limits<double>::max();
 
     // Iterate over all permutations
     do {
@@ -76,11 +76,11 @@ double OldBosonicExchange::getMaxExteriorSpringEnergy() {
             diff2 += getBeadsSeparationSquared(x_first_bead, l, x_last_bead, lastBeadNeighbor(l));
         }
 
-        // Compare the current total exterior spring energy with the maximum total exterior spring energy found so far
-        max_delta = std::max(max_delta, 0.5 * spring_constant * diff2);
+        // Compare the current total exterior spring energy with the minimum total exterior spring energy found so far
+        min_delta = std::min(min_delta, 0.5 * spring_constant * diff2);
     } while (std::ranges::next_permutation(labels).found);
 
-    return max_delta;
+    return min_delta;
 }
 
 /**
