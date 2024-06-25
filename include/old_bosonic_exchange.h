@@ -21,7 +21,7 @@ private:
     int firstBeadNeighbor(int ptcl_idx) const;
     int lastBeadNeighbor(int ptcl_idx) const;
 
-    double getMaxExteriorSpringEnergy();
+    double getMinExteriorSpringEnergy();
 
     std::vector<int> labels;  // Particle labels
 
