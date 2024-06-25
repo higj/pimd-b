@@ -197,13 +197,13 @@ where `P` is the number of beads.
 
 On power, run using:
 ```bash
-mpirun -np P pimdb -partition Px1
+mpirun -np P pimdb
 ```
 
 If the configuration file for the simulation is not located in the same directory as the executable, you can specify the path to the configuration file using the `-in` flag, e.g.,
 
 ```bash
-mpirun -np P pimdb -partition Px1 -in /path/to/config.ini
+mpirun -np P pimdb -in /path/to/config.ini
 ```
 
 For convenience, you may use the following bash script:
