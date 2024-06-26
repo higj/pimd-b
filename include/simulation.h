@@ -10,6 +10,7 @@
 #include "common.h"
 #include "params.h"
 #include "potential.h"
+#include "propagator.h"
 #include "bosonic_exchange_base.h"
 
 
@@ -68,7 +69,9 @@ public:
                                                    const VariantMap& potential_options);
 
     double sampleMaxwellBoltzmann();
-
+    
+    std::unique_ptr<Propagator> propagator;
+    
     void langevinStep();
     void velocityVerletStep();
     void run();
@@ -102,6 +105,7 @@ private:
 
     std::string init_pos_type;
     std::string init_vel_type;
+    std::string propagator_type;
 
     std::string external_potential_name;
     std::string interaction_potential_name;

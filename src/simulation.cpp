@@ -61,7 +61,15 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
 
     init_pos_type = std::get<std::string>(param_obj.sim["init_pos_type"]);
     init_vel_type = std::get<std::string>(param_obj.sim["init_vel_type"]);
-
+    propagator_type = std::get<std::string>(param_obj.sim["propagator_type"]);
+    
+    // Choose time propagation scheme
+    if (propagator_type == "cartesian") {
+        propagator = std::make_unique<VelocityVerletPropagator>(*this);
+    } else if (propagator_type == "normal_modes") {
+        propagator = std::make_unique<NormalModesPropagator>(*this);
+    }
+    
     // Initialize the coordinate, momenta, and force arrays
     coord = dVec(natoms);
     prev_coord = dVec(natoms);
@@ -299,7 +307,8 @@ void Simulation::run() {
         if (fixcom)
             zeroMomentum();
 
-        velocityVerletStep();
+        //vvStep();
+        propagator->step();
 
         // "O" step
         if (enable_t)
@@ -584,7 +593,8 @@ void Simulation::printReport(std::ofstream& out_file) const {
     } else {
         out_file << formattedReportLine("Statistics", "Boltzmannonic");
     }
-
+    
+    out_file << formattedReportLine("Time propagation algorithm", propagator_type);
     out_file << formattedReportLine("PBC", pbc);
     out_file << formattedReportLine("Dimension", NDIM);
     out_file << formattedReportLine("Seed", params_seed);
