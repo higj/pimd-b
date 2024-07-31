@@ -421,45 +421,48 @@ void Simulation::run() {
         }
 
         if (step % sfreq == 0) {
-            if (out_pos)
+            if (out_pos) {
                 outputTrajectories(step);
-            if (out_vel)
+            }
+            if (out_vel) {
                 outputVelocities(step);
-            if (out_force)
+            }
+            if (out_force) {
                 outputForces(step);
+            }
         }
 
         // "O" step
-        if (enable_t)
+        if (enable_t) {
             langevinStep();
+        }
 
         // If fixcom=true, the center of mass of the ring polymers is fixed during the simulation
-        if (fixcom)
+        if (fixcom) {
             zeroMomentum();
+        }
 
         velocityVerletStep();
 
         // "O" step
-        if (enable_t)
+        if (enable_t) {
             langevinStep();
+        }
 
         // Zero momentum after every Langevin step (if needed)
-        if (fixcom)
+        if (fixcom) {
             zeroMomentum();
-
-        /*
-        if (step % sfreq == 0) {
-            printWindingInfo(wind_file);
         }
-        */
+
 
 #if PROGRESS
             printProgress(step, steps, this_bead);
 #endif
 
         // If we have not reached the thermalization threshold, skip to the next step (thermalization stage)
-        if (step < threshold)
+        if (step < threshold) {
             continue;
+        }
 
         // Calculate and print the observables (production stage)
         for (const auto& observable : observables) {
@@ -473,8 +476,9 @@ void Simulation::run() {
         */
 
         if (step % sfreq == 0) {
-            if (this_bead == 0)
+            if (this_bead == 0) {
                 out_file << std::format("{:^16.8e}", static_cast<double>(step));
+            }
 
             for (const auto& observable : observables) {
                 // The inner loop is necessary because some observable classes can calculate
@@ -486,13 +490,15 @@ void Simulation::run() {
                     // Sum the results from all processes (beads)
                     MPI_Allreduce(&local_quantity_value, &quantity_value, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
-                    if (this_bead == 0)
+                    if (this_bead == 0) {
                         out_file << std::format(" {:^16.8e}", quantity_value);
+                    }
                 }
             }
 
-            if (this_bead == 0)
-                out_file << "\n";
+            if (this_bead == 0) {
+                out_file << '\n';
+            }
 
             if (pbc && apply_wind && out_wind_prob) {
                 printWindingInfo(wind_file);
