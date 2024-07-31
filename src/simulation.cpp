@@ -1,6 +1,10 @@
 #include <ranges>
 #include <fstream>
 #include <filesystem>
+#include <chrono>
+#include <array>
+#include <cassert>
+#include "mpi.h"
 
 #include "observable.h"
 #include "simulation.h"
@@ -29,10 +33,18 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     getVariant(param_obj.sim["bosonic"], bosonic);
     getVariant(param_obj.sim["fixcom"], fixcom);
     getVariant(param_obj.sim["pbc"], pbc);
+    getVariant(param_obj.sim["max_wind"], max_wind);
+
+    getVariant(param_obj.sim["apply_mic_spring"], apply_mic_spring);
+    getVariant(param_obj.sim["apply_mic_potential"], apply_mic_potential);
+    getVariant(param_obj.sim["apply_wrap"], apply_wrap);
+    getVariant(param_obj.sim["apply_wrap_first"], apply_wrap_first);
+    getVariant(param_obj.sim["apply_wind"], apply_wind);
 
     getVariant(param_obj.out["positions"], out_pos);
     getVariant(param_obj.out["velocities"], out_vel);
     getVariant(param_obj.out["forces"], out_force);
+    getVariant(param_obj.out["wind_prob"], out_wind_prob);
 
     getVariant(param_obj.sys["temperature"], temperature);
     getVariant(param_obj.sys["natoms"], natoms);
@@ -51,6 +63,12 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
 #endif
 
     spring_constant = mass * omega_p * omega_p;
+
+    beta_half_k = beta * 0.5 * spring_constant;
+
+#if IPI_CONVENTION
+    beta_half_k /= nbeads;
+#endif
 
     // Get the seed from the config file
     getVariant(param_obj.sim["seed"], params_seed);
@@ -79,8 +97,12 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
 
     // For cubic cells with PBC, the cutoff distance must be no greater than L/2 for consistency with
     // the minimum image convention (see 1.6.3 in Allen & Tildesley).
-    if (pbc)
+    if (pbc) {
         int_pot_cutoff = std::min(int_pot_cutoff, 0.5 * size);
+        initializeWindingVectors(wind, max_wind);
+    }
+
+    include_wind_corr = pbc && apply_wind && (max_wind > 0);
 
     ext_potential = initializePotential(external_potential_name, param_obj.external_pot);
     int_potential = initializePotential(interaction_potential_name, param_obj.interaction_pot);
@@ -89,27 +111,37 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     /// @todo Add the ability to specify the observables in the input file
     observables.push_back(ObservableFactory::createQuantity("energy", *this, sfreq, "kelvin"));
     observables.push_back(ObservableFactory::createQuantity("classical", *this, sfreq, "kelvin"));
+    observables.push_back(ObservableFactory::createQuantity("bosonic", *this, sfreq, ""));
 
     // Update the coordinate arrays of neighboring particles
     updateNeighboringCoordinates();
 
-    if (bosonic && (this_bead == 0 || this_bead == nbeads - 1)) {
+    bosonic = bosonic && (nbeads > 1); // Bosonic exchange is only possible for P>1
+    is_bosonic_bead = bosonic && (this_bead == 0 || this_bead == nbeads - 1);
+
+    if (is_bosonic_bead) {
 #if OLD_BOSONIC_ALGORITHM
-        bosonic_exchange = std::make_unique<OldBosonicExchange>(natoms, nbeads, this_bead, beta, spring_constant, coord, 
-                                                                prev_coord, next_coord, pbc, size);
+        bosonic_exchange = std::make_unique<OldBosonicExchange>(*this);
 #else
-        bosonic_exchange = std::make_unique<BosonicExchange>(natoms, nbeads, this_bead, beta, spring_constant, coord,
-                                                             prev_coord, next_coord, pbc, size);
+        bosonic_exchange = std::make_unique<BosonicExchange>(*this);
 #endif
     }
 }
 
 Simulation::~Simulation() = default;
 
+int Simulation::getStep() const {
+    return md_step;
+}
+
+void Simulation::setStep(int step) {
+    md_step = step;
+}
+
 /**
  * Generates random positions in the interval [-L/2, L/2] for each particle along each axis.
  * 
- * @param pos_arr Array to store the generated positions.
+ * @param[out] pos_arr Array to store the generated positions.
  */
 void Simulation::genRandomPositions(dVec& pos_arr) {
     /// @todo Add ability to generate non-random positions (e.g., lattice)
@@ -118,6 +150,74 @@ void Simulation::genRandomPositions(dVec& pos_arr) {
     for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
             pos_arr(ptcl_idx, axis) = u_dist(rand_gen);
+        }
+    }
+}
+
+/**
+ * Places particles in a uniform grid according to the specified box size.
+ *
+ * @param[out] pos_arr Array to store the generated positions.
+ */
+void Simulation::uniformParticleGrid(dVec& pos_arr) const {
+    const double volume = std::pow(size, NDIM);
+
+    // Get the linear size per particle, and the number of particles
+    const double init_side = std::pow((1.0 * natoms / volume), -1.0 / (1.0 * NDIM));
+
+    // Determine the number and the size of initial grid boxes in each dimension
+    int tot_num_grid_boxes = 1;
+    iVec num_nn_grid;
+    dVec size_nn_grid;
+
+    for (int i = 0; i < NDIM; i++) {
+        num_nn_grid(0, i) = static_cast<int>(std::ceil((size / init_side) - EPS));
+
+        // Make sure we have at least one grid box
+        if (num_nn_grid(0, i) < 1)
+            num_nn_grid(0, i) = 1;
+
+        // Compute the actual size of the grid
+        size_nn_grid(0, i) = size / (1.0 * num_nn_grid(0, i));
+
+        // Determine the total number of grid boxes
+        tot_num_grid_boxes *= num_nn_grid(0, i);
+    }
+
+    // Place the particles at the middle of each box
+    if (tot_num_grid_boxes < natoms) {
+        throw std::runtime_error("Number of grid boxes is less than the number of particles");
+    }
+
+    dVec pos;
+    for (int n = 0; n < tot_num_grid_boxes; n++) {
+        iVec grid_index;
+
+        for (int i = 0; i < NDIM; i++) {
+            int scale = 1;
+            for (int j = i + 1; j < NDIM; j++)
+                scale *= num_nn_grid(0, j);
+
+            grid_index(0, i) = (n / scale) % num_nn_grid(0, i);
+        }
+
+        for (int axis = 0; axis < NDIM; ++axis) {
+            pos(0, axis) = (grid_index(0, axis) + 0.5) * size_nn_grid(0, axis) - 0.5 * size;
+        }
+
+        /// @todo If wrapping should be applied regardless of PBC, then it can be moved to the previous loop
+        if (pbc) {
+            for (int axis = 0; axis < NDIM; ++axis) {
+                applyMinimumImage(pos(0, axis), size);
+            }
+        }
+
+        if (n >= natoms) {
+            break;
+        }
+
+        for (int axis = 0; axis < NDIM; axis++) {
+            pos_arr(n, axis) = pos(0, axis);
         }
     }
 }
@@ -192,15 +292,21 @@ void Simulation::velocityVerletStep() {
         }
     }
 
-#if WRAP
-    if (pbc) {
+    if (pbc && apply_wrap) {
         for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
             for (int axis = 0; axis < NDIM; ++axis) {
-                periodicWrap(coord(ptcl_idx, axis), size);
+                applyMinimumImage(coord(ptcl_idx, axis), size);
             }
         }
     }
-#endif
+
+    if (pbc && apply_wrap_first && this_bead == 0) {
+        for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
+            for (int axis = 0; axis < NDIM; ++axis) {
+                applyMinimumImage(coord(ptcl_idx, axis), size);
+            }
+        }
+    }
 
 #if RECENTER
     // Recentering should be attempted only in the case of periodic boundary conditions.
@@ -258,6 +364,11 @@ void Simulation::velocityVerletStep() {
  * @brief Perform a molecular dynamics run using the OBABO scheme.
  */
 void Simulation::run() {
+    printStatus("Running the simulation", this_bead);
+
+    MPI_Barrier(MPI_COMM_WORLD);
+    const double sim_exec_time_start = MPI_Wtime();
+
     std::filesystem::create_directory(Output::FOLDER_NAME);
     std::ofstream out_file;
 
@@ -276,55 +387,98 @@ void Simulation::run() {
         out_file << "\n";
     }
 
+    // Winding report
+    std::ofstream wind_file;
+
+    if (pbc && apply_wind && out_wind_prob) {
+        wind_file.open(std::format("{}/wind-prob-{}.log", Output::FOLDER_NAME, this_bead), std::ios::out | std::ios::app);
+        wind_file << std::format("{:^16s}", "step");
+        wind_file << std::format(" {:^8s}", "ptcl");
+
+        for (int wind_idx = 0; wind_idx < wind.len(); ++wind_idx) {
+            std::ostringstream wind_ss;
+            wind_ss << "(";
+            for (int axis = 0; axis < NDIM; ++axis) {
+                wind_ss << wind(wind_idx, axis);
+                if (axis != NDIM - 1) {
+                    wind_ss << ",";
+                }
+            }
+            wind_ss << ")";
+            std::string wind_str = wind_ss.str();
+            wind_file << std::format(" {:^16s}", wind_str);
+        }
+
+        wind_file << '\n';
+    }
+
     // Main loop performing molecular dynamics steps
     for (int step = 0; step <= steps; ++step) {
+        setStep(step);
+
         for (const auto& observable : observables) {
             observable->resetValues();
         }
 
         if (step % sfreq == 0) {
-            if (out_pos)
+            if (out_pos) {
                 outputTrajectories(step);
-            if (out_vel)
+            }
+            if (out_vel) {
                 outputVelocities(step);
-            if (out_force)
+            }
+            if (out_force) {
                 outputForces(step);
+            }
         }
 
         // "O" step
-        if (enable_t)
+        if (enable_t) {
             langevinStep();
+        }
 
         // If fixcom=true, the center of mass of the ring polymers is fixed during the simulation
-        if (fixcom)
+        if (fixcom) {
             zeroMomentum();
+        }
 
         velocityVerletStep();
 
         // "O" step
-        if (enable_t)
+        if (enable_t) {
             langevinStep();
+        }
 
         // Zero momentum after every Langevin step (if needed)
-        if (fixcom)
+        if (fixcom) {
             zeroMomentum();
+        }
+
 
 #if PROGRESS
             printProgress(step, steps, this_bead);
 #endif
 
         // If we have not reached the thermalization threshold, skip to the next step (thermalization stage)
-        if (step < threshold)
+        if (step < threshold) {
             continue;
+        }
 
         // Calculate and print the observables (production stage)
         for (const auto& observable : observables) {
             observable->calculate();
         }
 
+        /*
+        if (is_bosonic_bead) {
+            bosonic_exchange->printBosonicDebug();
+        }
+        */
+
         if (step % sfreq == 0) {
-            if (this_bead == 0)
+            if (this_bead == 0) {
                 out_file << std::format("{:^16.8e}", static_cast<double>(step));
+            }
 
             for (const auto& observable : observables) {
                 // The inner loop is necessary because some observable classes can calculate
@@ -336,23 +490,40 @@ void Simulation::run() {
                     // Sum the results from all processes (beads)
                     MPI_Allreduce(&local_quantity_value, &quantity_value, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
-                    if (this_bead == 0)
+                    if (this_bead == 0) {
                         out_file << std::format(" {:^16.8e}", quantity_value);
+                    }
                 }
             }
 
-            if (this_bead == 0)
-                out_file << "\n";
+            if (this_bead == 0) {
+                out_file << '\n';
+            }
+
+            if (pbc && apply_wind && out_wind_prob) {
+                printWindingInfo(wind_file);
+            }
         }
     }
+
+    MPI_Barrier(MPI_COMM_WORLD);
+    const double sim_exec_time_end = MPI_Wtime();
+
+    const double wall_time = sim_exec_time_end - sim_exec_time_start;
+
+    printStatus(std::format("Simulation finished running successfully (Runtime = {:.3} sec)", wall_time), this_bead);
 
     if (this_bead == 0) {
         out_file.close();
 
         std::ofstream report_file;
         report_file.open(std::format("{}/report.txt", Output::FOLDER_NAME), std::ios::out | std::ios::app);
-        printReport(report_file);
+        printReport(report_file, wall_time);
         report_file.close();
+    }
+
+    if (pbc && apply_wind && out_wind_prob) {
+        wind_file.close();
     }
 }
 
@@ -456,23 +627,43 @@ void Simulation::updateNeighboringCoordinates() {
  * @param spring_force_arr Vector to store the spring forces.
  */
 void Simulation::updateSpringForces(dVec& spring_force_arr) const {
-    if (bosonic && (this_bead == 0 || this_bead == nbeads - 1)) {
+    if (is_bosonic_bead) {
+        // If the simulation is bosonic and the current bead is either 1 or P, we calculate
+        // the exterior spring forces in the appropriate bosonic class.
+        // Any winding effects that pertain to the exterior springs are taken into account
+        // inside the bosonic exchange class.
         bosonic_exchange->prepare();
         bosonic_exchange->exteriorSpringForce(spring_force_arr);
     } else {
+        // If particles are distinguishable, or if the current bead is an interior bead,
+        // the force is calculated based on the standard expression for distinguishable particles.
         for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
             for (int axis = 0; axis < NDIM; ++axis) {
-                double d_prev = prev_coord(ptcl_idx, axis) - coord(ptcl_idx, axis);
-                double d_next = next_coord(ptcl_idx, axis) - coord(ptcl_idx, axis);
+                double diff_prev = prev_coord(ptcl_idx, axis) - coord(ptcl_idx, axis);
+                double diff_next = next_coord(ptcl_idx, axis) - coord(ptcl_idx, axis);
 
-#if MINIM
-                if (pbc) {
-                    applyMinimumImage(d_prev, size);
-                    applyMinimumImage(d_next, size);
+                if (pbc && apply_mic_spring) {
+                    applyMinimumImage(diff_prev, size);
+                    applyMinimumImage(diff_next, size);
                 }
-#endif
 
-                spring_force_arr(ptcl_idx, axis) = spring_constant * (d_prev + d_next);
+                spring_force_arr(ptcl_idx, axis) = spring_constant * (diff_prev + diff_next);
+
+                // Winding effects due to interior neighbors are taken into account for all beads
+                if (include_wind_corr) {
+                    // Only the nonzero winding numbers contribute to the force
+                    for (int wind_idx = 1; wind_idx <= max_wind; ++wind_idx) {
+                        //spring_force_arr(ptcl_idx, axis) -= spring_constant * size * 
+                        //    wind_idx * (getWindingProbability(-diff_next, wind_idx) - getWindingProbability(-diff_next, -wind_idx));
+
+                        // This is equivalent to the above because the winding probability satisfies p(-diff, w) = p(diff, -w)
+                        spring_force_arr(ptcl_idx, axis) += spring_constant * size * 
+                                wind_idx * (getWindingProbability(diff_next, wind_idx) - getWindingProbability(diff_next, -wind_idx));
+
+                        spring_force_arr(ptcl_idx, axis) += spring_constant * size * 
+                                wind_idx * (getWindingProbability(diff_prev, wind_idx) - getWindingProbability(diff_prev, -wind_idx));
+                    }
+                }
             }
         }
     }
@@ -493,9 +684,7 @@ void Simulation::updatePhysicalForces(dVec& physical_force_arr) const {
             for (int ptcl_two = ptcl_one + 1; ptcl_two < natoms; ++ptcl_two) {
                 // Get the vector distance between the two particles.
                 // Here "diff" contains just one vector of dimension NDIM.
-                dVec diff = getSeparation(ptcl_one, ptcl_two, true);
-
-                /// @todo Add minimum image convention here (and also in the observable calculations)
+                dVec diff = getSeparation(ptcl_one, ptcl_two, apply_mic_potential);
 
                 // If the distance between the particles exceeds the cutoff length
                 // then we assume the interaction is negligible and do not bother
@@ -523,19 +712,29 @@ void Simulation::updatePhysicalForces(dVec& physical_force_arr) const {
  * @return Classical spring energy contribution of the current and the previous time-slice.
  */
 double Simulation::classicalSpringEnergy() const {
-    if (bosonic && this_bead == 0)
-        throw std::runtime_error("classicalSpringEnergy() cannot be called at the first time-slice in the bosonic case.");
+    assert(!bosonic || (bosonic && this_bead != 0));
 
     double interior_spring_energy = 0.0;
 
-    for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
-        for (int axis = 0; axis < NDIM; ++axis) {
-            const double diff = coord(ptcl_idx, axis) - prev_coord(ptcl_idx, axis);
-            interior_spring_energy += diff * diff;
+    if (include_wind_corr) {
+        for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
+            interior_spring_energy += getWindingEnergyExpectation(prev_coord, ptcl_idx, coord, ptcl_idx);
         }
-    }
+    } else {
+        for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
+            for (int axis = 0; axis < NDIM; ++axis) {
+                double diff = prev_coord(ptcl_idx, axis) - coord(ptcl_idx, axis);
 
-    interior_spring_energy *= 0.5 * spring_constant;
+                if (pbc && apply_mic_spring) {
+                    applyMinimumImage(diff, size);
+                }
+
+                interior_spring_energy += diff * diff;
+            }
+        }
+
+        interior_spring_energy *= 0.5 * spring_constant;
+    }
 
     return interior_spring_energy;
 }
@@ -559,7 +758,6 @@ dVec Simulation::getSeparation(int first_ptcl, int second_ptcl, bool minimum_ima
 
         if (pbc && minimum_image)
             applyMinimumImage(diff, size);
-
         sep(0, axis) = diff;
     }
 
@@ -569,7 +767,7 @@ dVec Simulation::getSeparation(int first_ptcl, int second_ptcl, bool minimum_ima
 /**
  * @brief Prints a summary of the simulation parameters at the end of the simulation.
  */
-void Simulation::printReport(std::ofstream& out_file) const {
+void Simulation::printReport(std::ofstream& out_file, double wall_time) const {
     out_file << "---------\nParameters\n---------\n";
 
     if (bosonic) {
@@ -585,7 +783,10 @@ void Simulation::printReport(std::ofstream& out_file) const {
         out_file << formattedReportLine("Statistics", "Boltzmannonic");
     }
 
-    out_file << formattedReportLine("PBC", pbc);
+    out_file << formattedReportLine("Periodic boundary conditions", pbc);
+    if (pbc) {
+        out_file << formattedReportLine("Winding cutoff", max_wind);
+    }
     out_file << formattedReportLine("Dimension", NDIM);
     out_file << formattedReportLine("Seed", params_seed);
     out_file << formattedReportLine("Coordinate initialization method", init_pos_type);
@@ -606,10 +807,22 @@ void Simulation::printReport(std::ofstream& out_file) const {
     out_file << formattedReportLine("External potential name", external_potential_name);
 
     out_file << "---------\nFeatures\n---------\n";
-    out_file << formattedReportLine("Minimum image convention", MINIM);
-    out_file << formattedReportLine("Wrapping of coordinates", WRAP);
+    //out_file << formattedReportLine("Minimum image convention", MINIM);
+    //out_file << formattedReportLine("Wrapping of coordinates", WRAP);
+    //out_file << formattedReportLine("Wrapping of the first time-slice", WRAP_FIRST);
+    out_file << formattedReportLine("Minimum image convention (springs)", apply_mic_spring);
+    out_file << formattedReportLine("Minimum image convention (potential)", apply_mic_potential);
+    out_file << formattedReportLine("Coordinate wrap (all time-slices)", apply_wrap);
+    out_file << formattedReportLine("Coordinate wrap (1st time-slice only)", apply_wrap_first);
+    out_file << formattedReportLine("Winding effects", apply_wind);
+
     out_file << formattedReportLine("Polymer recentering", RECENTER);
     out_file << formattedReportLine("Using i-Pi convention", IPI_CONVENTION);
+
+    out_file << "---------\n";
+    out_file << formattedReportLine("Wall time", std::format("{:%T}", 
+        std::chrono::duration<double>(wall_time)
+    ));
 }
 
 /**
@@ -627,9 +840,11 @@ void Simulation::outputTrajectories(int step) {
     for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
         xyz_file << "1";
 
-        for (int axis = 0; axis < NDIM; ++axis)
+        for (int axis = 0; axis < NDIM; ++axis) {
             /// @todo Make the units configurable
-            xyz_file << std::format(" {:^20.12e}", Units::convertToUser("length", "angstrom", coord(ptcl_idx, axis)));
+            //xyz_file << std::format(" {:^20.12e}", Units::convertToUser("length", "angstrom", coord(ptcl_idx, axis)));
+            xyz_file << std::format(" {:^20.12e}", coord(ptcl_idx, axis));
+        }
 #if NDIM == 1
         xyz_file << " 0.0 0.0";
 #elif NDIM == 2
@@ -656,10 +871,12 @@ void Simulation::outputVelocities(int step) {
     for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
         vel_file << (ptcl_idx + 1) << " 1";
 
-        for (int axis = 0; axis < NDIM; ++axis)
+        for (int axis = 0; axis < NDIM; ++axis) {
             /// @todo Make the units configurable
-            vel_file << std::format(" {:^20.12e}",
-                                    Units::convertToUser("velocity", "angstrom/ps", momenta(ptcl_idx, axis) / mass));
+            //vel_file << std::format(" {:^20.12e}",
+            //    Units::convertToUser("velocity", "angstrom/ps", momenta(ptcl_idx, axis) / mass));
+            vel_file << std::format(" {:^20.12e}", momenta(ptcl_idx, axis) / mass);
+        }
 #if NDIM == 1
         vel_file << " 0.0 0.0";
 #elif NDIM == 2
@@ -686,8 +903,10 @@ void Simulation::outputForces(int step) {
     for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
         force_file << (ptcl_idx + 1) << " 1";
 
-        for (int axis = 0; axis < NDIM; ++axis)
-            force_file << std::format(" {:^20.12e}", Units::convertToUser("force", "ev/ang", forces(ptcl_idx, axis)));
+        for (int axis = 0; axis < NDIM; ++axis) {
+            //force_file << std::format(" {:^20.12e}", Units::convertToUser("force", "ev/ang", forces(ptcl_idx, axis)));
+            force_file << std::format(" {:^20.12e}", forces(ptcl_idx, axis));
+        }
 #if NDIM == 1
         force_file << " 0.0 0.0";
 #elif NDIM == 2
@@ -785,6 +1004,9 @@ void Simulation::initializePositions(dVec& coord_arr, const VariantMap& sim_para
         const int arg = this_bead + std::get<int>(sim_params.at("init_pos_first_index"));
         
         loadTrajectories(std::vformat(xyz_filename_format, std::make_format_args(arg)), coord_arr);
+    } else if (init_pos_type == "grid") {
+        // Generate a grid of particles
+        uniformParticleGrid(coord_arr);
     } else {
         // Sample positions from a uniform distribution
         genRandomPositions(coord_arr);
@@ -800,8 +1022,8 @@ void Simulation::initializePositions(dVec& coord_arr, const VariantMap& sim_para
 void Simulation::initializeMomenta(dVec& momentum_arr, const VariantMap& sim_params) {
     if (init_vel_type == "manual") {
         // If loading momenta from elsewhere, do not zero momentum after that
-        loadMomenta(std::format("init/vel_{:02}.dat", this_bead + 1), mass, momentum_arr); // LAMMPS convention
-        //loadMomenta(std::format("init/vel_{:02}.dat", this_bead), mass, momenta); // i-Pi convention
+        //loadMomenta(std::format("init/vel_{:02}.dat", this_bead + 1), mass, momentum_arr); // LAMMPS convention
+        loadMomenta(std::format("init/vel_{:02}.dat", this_bead), mass, momenta); // i-Pi convention
 
         /// @todo Handle the cases when the file does not exist or has a wrong format
     } else if (init_vel_type == "manual_formatted") {
@@ -817,12 +1039,175 @@ void Simulation::initializeMomenta(dVec& momentum_arr, const VariantMap& sim_par
 }
 
 /**
+ * Returns the sum of Boltzmann exponents over all the winding vectors for a pair of beads.
+ *
+ * @param left_x Coordinate vectors of left time-slice (e.g., P).
+ * @param left_idx Particle index at the left time-slice.
+ * @param right_x Coordinate vectors of right time-slice (e.g., 1).
+ * @param right_idx Particle index at the right time-slice.
+ * @return Sum of Boltzmann exponents.
+ */
+double Simulation::getWindingWeight(const dVec& left_x, int left_idx, const dVec& right_x, int right_idx) const {
+    double result = 1.0;
+
+    for (int axis = 0; axis < NDIM; ++axis) {
+        const double diff = left_x(left_idx, axis) - right_x(right_idx, axis);
+        double weight = exp(-beta_half_k * diff * diff); // Zero winding contribution
+
+        for (int wind_num = 1; wind_num <= max_wind; ++wind_num) {
+            const double diff_plus = diff + wind_num * size;
+            const double diff_minus = diff - wind_num * size;
+            weight += exp(-beta_half_k * diff_plus * diff_plus) + exp(-beta_half_k * diff_minus * diff_minus);
+        }
+
+        result *= weight;
+    }
+
+    return result;
+}
+
+/**
+ * Returns the expectation of the spring energy with respect to the winding probability.
+ *
+ * @param left_x Coordinate vectors of left time-slice (e.g., P).
+ * @param left_idx Particle index at the left time-slice.
+ * @param right_x Coordinate vectors of right time-slice (e.g., 1).
+ * @param right_idx Particle index at the right time-slice.
+ * @return Expectation of the spring energy.
+ */
+double Simulation::getWindingEnergyExpectation(const dVec& left_x, int left_idx, const dVec& right_x, int right_idx) const {
+    double total = 0.0;
+
+    for (int axis = 0; axis < NDIM; ++axis) {
+        const double diff = left_x(left_idx, axis) - right_x(right_idx, axis);
+        total += diff * diff * getWindingProbability(diff, 0);
+
+        for (int wind_num = 1; wind_num <= max_wind; ++wind_num) {
+            const double diff_plus = diff + wind_num * size;
+            const double diff_minus = diff - wind_num * size;
+
+            total += diff_plus * diff_plus * getWindingProbability(diff, wind_num);
+            total += diff_minus * diff_minus * getWindingProbability(diff, -wind_num);
+        }
+    }
+
+    return 0.5 * spring_constant * total;
+}
+
+/**
+ * Calculates the position squared shift for numerical stability of the winding probabilities
+ *
+ * @param diff Difference between the positions of the two particles.
+ * @return Position squared shift.
+ */
+double Simulation::getWindingShift(const double diff) const {
+    // Start from the zero winding
+    double shift = std::min(std::numeric_limits<double>::max(), diff * diff);
+
+    for (int wind_idx = 1; wind_idx <= max_wind; ++wind_idx) {
+        const double diff_plus_wind = diff + wind_idx * size;
+        const double diff_minus_wind = diff - wind_idx * size;
+
+        shift = std::min(shift, diff_plus_wind * diff_plus_wind);
+        shift = std::min(shift, diff_minus_wind * diff_minus_wind);
+    }
+
+    return shift;
+}
+
+/**
+ * Returns the probability of a particular winding number along some axis for a pair of beads.
+ *
+ * @param diff Distance between the beads along some axis.
+ * @param winding_number Value of the winding number.
+ * @return Probability of attaing a configuration with the specified winding number.
+ */
+double Simulation::getWindingProbability(const double diff, const int winding_number) const {
+    // Shift for numerical stability
+    const double shift = getWindingShift(diff);
+
+    // Start with the zero winding contribution
+    double denominator = exp(-beta_half_k * (diff * diff - shift));
+
+    // Add the contribution of the nonzero winding numbers
+    for (int wind_idx = 1; wind_idx <= max_wind; ++wind_idx) {
+        const double diff_plus = diff + wind_idx * size;
+        const double diff_minus = diff - wind_idx * size;
+
+        denominator += exp(-beta_half_k * (diff_plus * diff_plus - shift));
+        denominator += exp(-beta_half_k * (diff_minus * diff_minus - shift));
+    }
+
+    const double diff_val = diff + winding_number * size;
+
+    return exp(-beta_half_k * (diff_val * diff_val - shift)) / denominator;
+}
+
+/**
+ * Initializes the winding vectors for periodic boundary conditions.
+ * Currently used only for debugging purposes.
+ *
+ * @param[out] wind_arr The array to store the winding vectors.
+ * @param wind_cutoff The cutoff for the winding vectors.
+ */
+void Simulation::initializeWindingVectors(iVec& wind_arr, int wind_cutoff) {
+    // Number of different winding vectors for a given cutoff
+    const int num_wind = static_cast<int>(std::pow(2 * wind_cutoff + 1, NDIM));
+    wind_arr = iVec(num_wind);
+
+    std::array<int, NDIM> current = {};
+    current.fill(-wind_cutoff);  // Initialize with minimum value
+
+    int current_idx = 0; // Index of the current winding vector
+
+    // Generate all the possible winding vectors for the provided cutoff
+    while (true) {
+        // Add the current vector to the result
+        for (int axis = 0; axis < NDIM; ++axis) {
+            wind_arr(current_idx, axis) = current[axis];
+        }
+        current_idx++;
+
+        int index = NDIM - 1;
+        while (index >= 0 && current[index] == wind_cutoff) {
+            current[index] = -wind_cutoff;
+            index--;
+        }
+
+        // If all components are at their maximum value, break the loop
+        if (index < 0)
+            break;
+
+        current[index]++;
+    }
+}
+
+void Simulation::printWindingInfo(std::ofstream& wind_file) const {
+    for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
+        wind_file << std::format("{:^16.8e}", static_cast<double>(getStep()));
+        wind_file << std::format(" {:^8d} ", ptcl_idx + 1);
+        for (int wind_idx = 0; wind_idx < wind.len(); ++wind_idx) {
+            double prob = 1.0;
+
+            for (int axis = 0; axis < NDIM; ++axis) {
+                prob *= getWindingProbability(coord(ptcl_idx, axis) - next_coord(ptcl_idx, axis), wind(wind_idx, axis));
+            }
+
+            wind_file << std::format(" {:^16.8e}", prob);
+        }
+        wind_file << '\n';
+    }
+    wind_file << '\n';
+}
+
+/**
  * Prints information for debugging purposes.
  * 
  * @param text Text to print.
+ * @param target_bead Bead for which the text should be printed.
  */
-void Simulation::printDebug(const std::string& text) const {
-    if (this_bead == 0) {
+void Simulation::printDebug(const std::string& text, int target_bead) const {
+    if (this_bead == target_bead) {
         std::ofstream debug;
         debug.open(std::format("{}/debug.log", Output::FOLDER_NAME), std::ios::out | std::ios::app);
         debug << text;

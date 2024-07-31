@@ -1,6 +1,33 @@
-﻿#include "params.h"
+﻿#include <cstring>
+#include "mpi.h"
+
+#include "params.h"
 #include "simulation.h"
-#include <cstring>
+
+void parseArguments(int arg_num, char** arg_arr, std::string& conf_filename, bool& info_flag, const int rank) {
+    // Check for command line arguments.
+    // If the "--dim" flag is present, print the dimension of the system and exit.
+    // If the "-in" flag is present, use the next argument as the configuration filename. Otherwise, use the default filename.
+    for (int i = 1; i < arg_num; ++i) {
+        if (std::strcmp(arg_arr[i], "--dim") == 0) {
+            printInfo(std::format("Program was compiled for {}-dimensional systems", NDIM), info_flag, rank);
+        } else if (std::strcmp(arg_arr[i], "--bosonic_alg") == 0) {
+            if constexpr (OLD_BOSONIC_ALGORITHM)
+                printInfo("Program was compiled with naive bosonic algorithm.", info_flag, rank);
+            else
+                printInfo("Program was compiled with quadratic bosonic algorithm.", info_flag, rank);
+        } else if (std::strcmp(arg_arr[i], "-in") == 0) {
+            // Check if there is another argument after "-in"
+            if (i + 1 < arg_num) {
+                conf_filename = arg_arr[i + 1];
+                // Increment i to skip the next argument as it has been consumed as the filename
+                ++i;
+            } else {
+                throw std::invalid_argument("-in option requires a filename argument");
+            }
+        }
+    }
+}
 
 int main(int argc, char** argv) {
     MPI_Init(&argc, &argv);
@@ -13,56 +40,22 @@ int main(int argc, char** argv) {
     std::string config_filename = "config.ini";
 
     try {
-        bool info_flag = false;
+        // Flag to check if the user requested information about the program as opposed to running the simulation
+        bool display_info = false;
 
-        // Check for command line arguments.
-        // If the "--dim" flag is present, print the dimension of the system and exit.
-        // If the "-in" flag is present, use the next argument as the configuration filename. Otherwise, use the default filename.
-        for (int i = 1; i < argc; ++i) {
-            if (std::strcmp(argv[i], "--dim") == 0) {
-                printInfo(std::format("Program was compiled for {}-dimensional systems", NDIM), info_flag, rank);
-            } else if (std::strcmp(argv[i], "--bosonic_alg") == 0) {
-                if constexpr (OLD_BOSONIC_ALGORITHM)
-                    printInfo("Program was compiled with original bosonic algorithm.", info_flag, rank);
-                else
-                    printInfo("Program was compiled with quadratic bosonic algorithm.", info_flag, rank);
-            } else if (std::strcmp(argv[i], "-in") == 0) {
-                // Check if there is another argument after "-in"
-                if (i + 1 < argc) {
-                    config_filename = argv[i + 1];
-                    // Increment i to skip the next argument as it has been consumed as the filename
-                    ++i;
-                } else {
-                    throw std::invalid_argument("-in option requires a filename argument");
-                }
-            }
-        }
+        parseArguments(argc, argv, config_filename, display_info, rank);
 
         // If we got to this point, and no info has been requested then initiate the simulation
-        if (!info_flag) {
+        if (!display_info) {
             printMsg(LOGO, rank);
-            printStatus("Initializing the simulation parameters", rank);
 
             // Load the simulation parameters from the configuration file
-            Params params(config_filename);
+            Params params(config_filename, rank);
 
-            // Initialize the random number generator seed using the current time
-            const unsigned int initial_seed = static_cast<unsigned int>(time(nullptr));
-
-            Simulation sim(rank, size, params, initial_seed);
-
-            printStatus("Running the simulation", rank);
-
-            MPI_Barrier(MPI_COMM_WORLD);
-            const double sim_exec_time_start = MPI_Wtime();
+            // Initialize the random number generator seed based on the current time
+            Simulation sim(rank, size, params, static_cast<unsigned int>(time(nullptr)));
 
             sim.run();
-
-            MPI_Barrier(MPI_COMM_WORLD);
-            const double sim_exec_time_end = MPI_Wtime();
-
-            printStatus(std::format("Simulation finished running successfully (Runtime = {:.3} sec)",
-                                    sim_exec_time_end - sim_exec_time_start), rank);
         }
     }
     catch (const std::invalid_argument& ex) {

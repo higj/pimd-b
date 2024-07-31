@@ -23,6 +23,10 @@
 #define WRAP false                   // Wrap coordinates when PBC are used
 #endif
 
+#ifndef WRAP_FIRST
+#define WRAP_FIRST true             // Wrap the beads at the first time-slice?
+#endif
+
 #ifndef RECENTER
 #define RECENTER false               // Recenter polymer when the initial bead moves outside the fundamental cell?
 #endif
@@ -233,6 +237,9 @@ VectorArray<T, dim> operator*(const T& lhs_scalar, VectorArray<T, dim> rhs_vec) 
 
 // Define an array of vectors of doubles of dimension NDIM
 using dVec = VectorArray<double, NDIM>;
+
+// Define an array of vectors of integers of dimension NDIM
+using iVec = VectorArray<int, NDIM>;
 
 // Define a map of variant types
 using VariantMap = std::unordered_map<std::string, std::variant<int, unsigned int, long, double, bool, std::string>>;

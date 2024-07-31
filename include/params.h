@@ -17,7 +17,7 @@ namespace Sections {
 
 class Params {
 public:
-    explicit Params(const std::string& filename);
+    explicit Params(const std::string& filename, const int& rank);
     INIReader reader;
 
     // Map holding the simulation parameters

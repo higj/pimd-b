@@ -5,7 +5,9 @@
 #include <format>
 #include <filesystem>
 
-Params::Params(const std::string& filename) : reader(filename) {
+Params::Params(const std::string& filename, const int& rank) : reader(filename) {
+    printStatus("Initializing the simulation parameters", rank);
+
     if (reader.ParseError() < 0)
         throw std::invalid_argument(std::format("Unable to read the configuration file {}", filename));
 
@@ -14,7 +16,7 @@ Params::Params(const std::string& filename) : reader(filename) {
     sim["threshold"] = reader.GetReal(Sections::SIMULATION, "threshold", 0.1);
     sim["gamma"] = reader.GetReal(Sections::SIMULATION, "gamma", -1.0);
 
-    if (std::get<double>(sim["gamma"]) == -1.0)
+    if (std::get<double>(sim["gamma"]) < 0)
         sim["gamma"] = 1 / (100.0 * std::get<double>(sim["dt"]));
 
     sim["steps"] = static_cast<long>(
@@ -23,8 +25,11 @@ Params::Params(const std::string& filename) : reader(filename) {
     sim["enable_t"] = reader.GetBoolean(Sections::SIMULATION, "enable_thermostat", true);
     sim["nbeads"] = reader.GetInteger(Sections::SIMULATION, "nbeads", 4);
 
-    if (int nbeads = std::get<int>(sim["nbeads"]); nbeads < 2)
-        throw std::invalid_argument(std::format("The specified number of beads ({}) is less than two!", nbeads));
+    // if (int nbeads = std::get<int>(sim["nbeads"]); nbeads < 2)
+    //     throw std::invalid_argument(std::format("The specified number of beads ({}) is less than two!", nbeads));
+
+    if (int nbeads = std::get<int>(sim["nbeads"]); nbeads < 1)
+        throw std::invalid_argument(std::format("The specified number of beads ({}) is less than one!", nbeads));
 
     sim["seed"] = static_cast<unsigned int>(std::stod(reader.Get(Sections::SIMULATION, "seed", "1234")));
 
@@ -36,6 +41,15 @@ Params::Params(const std::string& filename) : reader(filename) {
     // Enable periodic boundary conditions?
     sim["pbc"] = reader.GetBoolean(Sections::SIMULATION, "pbc", false);
 
+    sim["apply_mic_spring"] = reader.GetBoolean(Sections::SIMULATION, "apply_mic_spring", false);
+    sim["apply_mic_potential"] = reader.GetBoolean(Sections::SIMULATION, "apply_mic_potential", true);
+    sim["apply_wrap"] = reader.GetBoolean(Sections::SIMULATION, "apply_wrap", false);
+    sim["apply_wrap_first"] = reader.GetBoolean(Sections::SIMULATION, "apply_wrap_first", false);
+    sim["apply_wind"] = reader.GetBoolean(Sections::SIMULATION, "apply_wind", false);
+
+    // Maximum winding sector to consider for periodic boundary conditions
+    sim["max_wind"] = reader.GetInteger(Sections::SIMULATION, "max_wind", 0);
+
     std::string init_pos_type, init_pos_specification;
 
     if (!parseTokenParentheses(reader.Get(Sections::SIMULATION, "initial_position", "random"), init_pos_type,
@@ -43,7 +57,7 @@ Params::Params(const std::string& filename) : reader(filename) {
         throw std::invalid_argument("The coordinate initialization method format is invalid!");
     }
 
-    allowed_coord_init_methods = { "random", "xyz" }; /// @todo Add "cell" option
+    allowed_coord_init_methods = { "random", "xyz", "grid" }; /// @todo Add "cell" option
 
     if (!labelInArray(init_pos_type, allowed_coord_init_methods))
         throw std::invalid_argument(std::format("The specified coordinate initialization method ({}) is not supported!",
@@ -203,6 +217,7 @@ Params::Params(const std::string& filename) : reader(filename) {
     out["positions"] = reader.GetBoolean(Sections::OUTPUT, "positions", false);
     out["velocities"] = reader.GetBoolean(Sections::OUTPUT, "velocities", false);
     out["forces"] = reader.GetBoolean(Sections::OUTPUT, "forces", false);
+    out["wind_prob"] = reader.GetBoolean(Sections::OUTPUT, "wind_prob", false);
 }
 
 bool Params::labelInArray(const std::string& label, const StringsList& arr) {

@@ -16,7 +16,7 @@ public:
     virtual void calculate() = 0;
     virtual ~Observable() = default;
 
-    void initialize(const std::vector<std::string>& _labels);
+    void initialize(const std::vector<std::string>& labels);
     void resetValues();
 
     tsl::ordered_map<std::string, double> quantities;
@@ -44,7 +44,6 @@ public:
     void calculate() override;
 
 private:
-    double primitiveKineticDistinguishable() const;
     void calculateKinetic();
     void calculatePotential();
 };
@@ -60,4 +59,18 @@ public:
 private:
     void calculateKineticEnergy();
     void calculateSpringEnergy();
+};
+
+
+/* -------------------------------- */
+
+class BosonicObservable : public Observable {
+public:
+    BosonicObservable(const Simulation& _sim, int _freq, const std::string& _out_unit);
+
+    void calculate() override;
+
+private:
+    //void calculateKineticEnergy();
+    //void calculateSpringEnergy();
 };
