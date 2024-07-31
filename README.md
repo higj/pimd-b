@@ -146,10 +146,17 @@ requires the `omega` parameter that sets the angular frequency of the oscillator
 All pair interaction potentials require the `cutoff` parameter. By default, the cutoff distance is set to a negative value, which tells the program to calculate all interactions, regardless of the distance between a given pair of particles. Setting cutoff to zero will disable interactions altogether.
 A positive cutoff aborts the calculation of the interaction force if the inter-particle distance is larger than the specified cutoff distance.
 
-The `initial_position` option allows to specify the method of initialization for the bead coordinates. Currently, two options are available:
+The `initial_position` option allows to specify the method of initialization for the bead coordinates. Currently, three options are available:
 
 * `random` (default): samples random positions in each Cartesian direction from a uniform distribution on the interval $[-L/2, L/2]$, where $L$ is the linear size of the system.
 * `xyz(<filename>.xyz)`: initializes the coordinates based on the provided `.xyz` file. A given particle is initialized at the same location across all imaginary time-slices (beads).
+* `xyz(<filename_format>)`: if the provided filename is a [Python format string](https://docs.python.org/3/library/string.html#formatspec), the indices of the imaginary time-slices (starting with either 0 or 1, automatically detected from the available files) are substituted as the format argument, and the resulting filenames are then used to initialize the coordinates. The formatted string can contain only a single replacement field.
+
+Similarly, the `initial_velocity` option gives the user the ability to initialize the bead velocities. Three options are available as of now:
+
+* `random` (default): samples velocities from the Maxwell-Boltzmann distribution at the given temperature of the simulation.
+* `manual`: the velocities are initialized from the files `init/vel_XX.dat` where `XX` symbolizes the two-digit index of the imaginary time-slice, starting from 01.
+* `manual(<filename_format>)`: similar behavior to `xyz(<filename_format>)`.
 
 The `size` option defines the linear size of the system. Currently, only cube geometry is supported. In the absence of periodic boundary conditions, `size` only affects the way initial positions are generated. However, if periodic boundary conditions are enabled, the system size also affects the cutoff distance for interactions, as well as the estimators. Also, the coordinates may be wrapped in this case, and minimum image convention can potentially be employed, if such functionality is desired.
 
@@ -190,13 +197,13 @@ where `P` is the number of beads.
 
 On power, run using:
 ```bash
-mpirun -np P pimdb -partition Px1
+mpirun -np P pimdb
 ```
 
 If the configuration file for the simulation is not located in the same directory as the executable, you can specify the path to the configuration file using the `-in` flag, e.g.,
 
 ```bash
-mpirun -np P pimdb -partition Px1 -in /path/to/config.ini
+mpirun -np P pimdb -in /path/to/config.ini
 ```
 
 For convenience, you may use the following bash script:
@@ -225,7 +232,7 @@ module load gcc/gcc-13.2.0
 cd $RUNDIR
 
 # Run the simulation
-mpirun -np $NCORE $EXE -partition ${NCORE}x1
+mpirun -np $NCORE $EXE
 ```
 
 where the paths and the number of beads (`P`) must be replaced according to the specifics of your simulation. 
