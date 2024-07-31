@@ -4,7 +4,9 @@
 #include <regex>
 #include <format>
 
-Params::Params(const std::string& filename) : reader(filename) {
+Params::Params(const std::string& filename, const int& rank) : reader(filename) {
+    printStatus("Initializing the simulation parameters", rank);
+
     if (reader.ParseError() < 0)
         throw std::invalid_argument(std::format("Unable to read the configuration file {}", filename));
 
@@ -22,8 +24,11 @@ Params::Params(const std::string& filename) : reader(filename) {
     sim["enable_t"] = reader.GetBoolean(Sections::SIMULATION, "enable_thermostat", true);
     sim["nbeads"] = reader.GetInteger(Sections::SIMULATION, "nbeads", 4);
 
-    if (int nbeads = std::get<int>(sim["nbeads"]); nbeads < 2)
-        throw std::invalid_argument(std::format("The specified number of beads ({}) is less than two!", nbeads));
+    // if (int nbeads = std::get<int>(sim["nbeads"]); nbeads < 2)
+    //     throw std::invalid_argument(std::format("The specified number of beads ({}) is less than two!", nbeads));
+
+    if (int nbeads = std::get<int>(sim["nbeads"]); nbeads < 1)
+        throw std::invalid_argument(std::format("The specified number of beads ({}) is less than one!", nbeads));
 
     sim["seed"] = static_cast<unsigned int>(std::stod(reader.Get(Sections::SIMULATION, "seed", "1234")));
 
@@ -149,6 +154,7 @@ Params::Params(const std::string& filename) : reader(filename) {
     out["positions"] = reader.GetBoolean(Sections::OUTPUT, "positions", false);
     out["velocities"] = reader.GetBoolean(Sections::OUTPUT, "velocities", false);
     out["forces"] = reader.GetBoolean(Sections::OUTPUT, "forces", false);
+    out["wind_prob"] = reader.GetBoolean(Sections::OUTPUT, "wind_prob", false);
 }
 
 bool Params::labelInArray(const std::string& label, const StringsList& arr) {

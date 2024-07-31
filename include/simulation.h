@@ -44,7 +44,9 @@ public:
     bool out_pos;       // Output trajectories?
     bool out_vel;       // Output velocities?
     bool out_force;     // Output forces?
+    bool out_wind_prob; // Output winding probabilities?
 
+    bool is_bosonic_bead; // Is the current simulation bosonic and the time-slice is either 1 or P?
     std::unique_ptr<BosonicExchangeBase> bosonic_exchange;
 
     std::vector<std::unique_ptr<Observable>> observables;
@@ -58,15 +60,24 @@ public:
     dVec coord, momenta, forces;
     dVec prev_coord, next_coord;
 
+    int getStep() const;
+    void setStep(int step);
+
     iVec wind;                              // A list of winding vectors
-    std::vector<double> wind_weights;       // A list of Boltzmann weights associated with the winding vectors
-    std::vector<double> wind_weight_args;   // A list of energies with the winding vectors
     int max_wind;                           // Winding number cutoff
-    int winding_timeslice;                  // Main time-slice affected by winding
+    bool include_wind_corr;                 // Include the winding correction in the simulation?
+
+    [[nodiscard]] double getWindingWeight(const dVec& left_x, int left_idx, const dVec& right_x, int right_idx) const;
+    [[nodiscard]] double getWindingEnergyExpectation(const dVec& left_x, int left_idx, const dVec& right_x, int right_idx) const;
+    [[nodiscard]] double getWindingShift(double diff) const;
+    [[nodiscard]] double getWindingProbability(double diff, int winding_number) const;
+    static void initializeWindingVectors(iVec& wind_arr, int wind_cutoff);
+    void printWindingInfo(std::ofstream& wind_file) const;
 
     double mass;
     double spring_constant;  // k=m*omega_p^2 (where omega_p depends on the convention)
     double omega_p;          // Angular frequency of the ring polymer
+    double beta_half_k;      // Pre-factor of beta*0.5*k
 
     void genRandomPositions(dVec& pos_arr);
     void uniformParticleGrid(dVec& pos_arr) const;
@@ -78,8 +89,6 @@ public:
     void initializeMomenta(dVec& momentum_arr);
     std::unique_ptr<Potential> initializePotential(const std::string& potential_name,
                                                    const VariantMap& potential_options);
-    void initializeWindingVectors(iVec& wind_arr, int wind_cutoff);
-    double windingShift(int ptcl_idx) const;
 
     double sampleMaxwellBoltzmann();
 
@@ -94,7 +103,6 @@ public:
     void updateForces();
     void updateSpringForces(dVec& spring_force_arr) const;
     void updatePhysicalForces(dVec& physical_force_arr) const;
-    void addWindingForce(dVec& spring_force_arr) const;
 
     double classicalSpringEnergy() const;
 
@@ -113,7 +121,9 @@ public:
     unsigned int params_seed;
 
 private:
-    void printReport(std::ofstream& out_file) const;
+    int md_step;
+
+    void printReport(std::ofstream& out_file, double wall_time) const;
 
     std::string init_pos_type;
     std::string init_vel_type;

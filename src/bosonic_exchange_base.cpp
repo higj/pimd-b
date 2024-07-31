@@ -1,25 +1,20 @@
+#include <cassert>
+
 #include "bosonic_exchange_base.h"
+#include "simulation.h"
 
-BosonicExchangeBase::BosonicExchangeBase(int nbosons_, int np_, int bead_num_, double beta_, double spring_constant_,
-                                         const dVec& x_, const dVec& x_prev_, const dVec& x_next_, bool pbc_, bool mic_,
-                                         double size_) :
-    nbosons(nbosons_),
-    nbeads(np_),
-    bead_num(bead_num_),
-    spring_constant(spring_constant_),
-    beta(beta_),
-    x(x_),
-    x_prev(x_prev_),
-    x_next(x_next_),
-    pbc(pbc_),
-    mic(mic_),
-    size(size_) {
-    if (bead_num_ != 0 && bead_num_ != nbeads - 1) {
-        throw std::invalid_argument("BosonicExchangeBase: bead_num must be either 0 or nbeads-1");
-    }
-
+BosonicExchangeBase::BosonicExchangeBase(const Simulation& _sim) :
+    sim(_sim),
+    nbosons(_sim.natoms),
+    nbeads(_sim.nbeads),
+    spring_constant(_sim.spring_constant),
+    beta(_sim.beta),
+    x(_sim.coord),
+    x_prev(_sim.prev_coord),
+    x_next(_sim.next_coord) {
+    assert(_sim.is_bosonic_bead);
 #if IPI_CONVENTION
-    beta = beta_ / nbeads;
+    beta /= _sim.nbeads;
 #endif
 }
 
@@ -39,8 +34,9 @@ void BosonicExchangeBase::getBeadsSeparation(const dVec& x1, int l1, const dVec&
     for (int axis = 0; axis < NDIM; ++axis) {
         double dx = x2(l2, axis) - x1(l1, axis);
 
-        if (pbc && mic)
-            applyMinimumImage(dx, size);
+        if (sim.pbc && sim.apply_mic_spring) {
+            applyMinimumImage(dx, sim.size);
+        }
 
         diff[axis] = dx;
     }
@@ -75,10 +71,10 @@ double BosonicExchangeBase::getBeadsSeparationSquared(const dVec& x1, int l1, co
  * @param[out] f Vector to store the forces.
  */
 void BosonicExchangeBase::exteriorSpringForce(dVec& f) {
-    if (bead_num == nbeads - 1) {
-        springForceLastBead(f);
-    } else {
+    if (sim.this_bead == 0) {
         springForceFirstBead(f);
+    } else {
+        springForceLastBead(f);
     }
 }
 
@@ -89,7 +85,7 @@ void BosonicExchangeBase::exteriorSpringForce(dVec& f) {
  * @param[out] x_last_bead The coordinates of the particles in the last time-slice.
  */
 void BosonicExchangeBase::assignFirstLast(dVec& x_first_bead, dVec& x_last_bead) const {
-    if (bead_num == 0) {
+    if (sim.this_bead == 0) {
         x_first_bead = x;
         x_last_bead = x_prev;
     } else {

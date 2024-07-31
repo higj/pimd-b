@@ -1,14 +1,20 @@
-#include "bosonic_exchange.h"
+#include <array>
+#include <fstream>
+#include <cmath>
 
-BosonicExchange::BosonicExchange(int nbosons_, int np_, int bead_num_, double beta_, double spring_constant_,
-                                 const dVec& x_, const dVec& x_prev_, const dVec& x_next_, bool pbc_, bool mic_, double size_)
-    : BosonicExchangeBase(nbosons_, np_, bead_num_, beta_, spring_constant_, x_, x_prev_, x_next_, pbc_, mic_, size_),
-      E_kn(nbosons_ * (nbosons_ + 1) / 2),
-      V(nbosons_ + 1),
-      V_backwards(nbosons_ + 1),
-      connection_probabilities(nbosons_ * nbosons_),
-      temp_nbosons_array(nbosons_),
-      prim_est(nbosons_ + 1) {
+#include "bosonic_exchange.h"
+#include "simulation.h"
+
+BosonicExchange::BosonicExchange(const Simulation& _sim) : BosonicExchangeBase(_sim),
+      E_kn(nbosons * (nbosons + 1) / 2),
+      A_kn(nbosons * (nbosons + 1) / 2),
+      V(nbosons + 1),
+      V_backwards(nbosons + 1),
+      connection_probabilities(static_cast<int>(nbosons * nbosons)),
+      temp_nbosons_array(nbosons),
+      a_temp_nbosons_array(nbosons),
+      prim_est(nbosons + 1),
+      log_n_factorial(std::lgamma(nbosons + 1)) {
     evaluateBosonicEnergies();
 }
 
@@ -33,25 +39,61 @@ void BosonicExchange::evaluateCycleEnergies() {
 
     assignFirstLast(x_first_bead, x_last_bead);
 
-    for (int i = 0; i < nbosons; i++) {
-        // temp_nbosons_array[i] is E^[i,i]
-        temp_nbosons_array[i] = getBeadsSeparationSquared(x_first_bead, i, x_last_bead, i);
-    }
+    if (sim.include_wind_corr) {
+        for (int i = 0; i < nbosons; i++) {
+            temp_nbosons_array[i] = (-1.0 / beta) * log(sim.getWindingWeight(x_last_bead, i, x_first_bead, i));
+            a_temp_nbosons_array[i] = sim.getWindingEnergyExpectation(x_last_bead, i, x_first_bead, i);
+        }
 
-    for (int v = 0; v < nbosons; v++) {
-        setEnk(v + 1, 1, 0.5 * spring_constant * temp_nbosons_array[v]);
+        for (int v = 0; v < nbosons; v++) {
+            setEnk(v + 1, 1, temp_nbosons_array[v]);
+            setAnk(v + 1, 1, a_temp_nbosons_array[v]);
 
-        for (int u = v - 1; u >= 0; u--) {
-            double val = getEnk(v + 1, v - u) +
-                0.5 * spring_constant * (
+            for (int u = v - 1; u >= 0; u--) {
+                const double e_val = getEnk(v + 1, v - u) + 
+                    (1.0 / beta) * (
+                        // connect u to u+1
+                        - log(sim.getWindingWeight(x_last_bead, u, x_first_bead, u + 1))
+                        // break cycle [u+1,v]
+                        + log(sim.getWindingWeight(x_last_bead, v, x_first_bead, u + 1))
+                        // close cycle from v to u
+                        - log(sim.getWindingWeight(x_last_bead, v, x_first_bead, u))
+                        );
+
+                const double a_val = getAnk(v + 1, v - u) +
                     // connect u to u+1
-                    + getBeadsSeparationSquared(x_last_bead, u, x_first_bead, u + 1)
+                    + sim.getWindingEnergyExpectation(x_last_bead, u, x_first_bead, u + 1)
                     // break cycle [u+1,v]
-                    - getBeadsSeparationSquared(x_first_bead, u + 1, x_last_bead, v)
+                    - sim.getWindingEnergyExpectation(x_last_bead, v, x_first_bead, u + 1)
                     // close cycle from v to u
-                    + getBeadsSeparationSquared(x_first_bead, u, x_last_bead, v));
+                    + sim.getWindingEnergyExpectation(x_last_bead, v, x_first_bead, u);
 
-            setEnk(v + 1, v - u + 1, val);
+                setEnk(v + 1, v - u + 1, e_val);
+                setAnk(v + 1, v - u + 1, a_val);
+            }
+        }
+    } else {
+        for (int i = 0; i < nbosons; i++) {
+            // temp_nbosons_array[i] is E^[i,i]
+            temp_nbosons_array[i] = getBeadsSeparationSquared(x_first_bead, i, x_last_bead, i);
+        }
+
+        for (int v = 0; v < nbosons; v++) {
+            double v_spring_energy = 0.5 * spring_constant * temp_nbosons_array[v];
+            setEnk(v + 1, 1, v_spring_energy);
+
+            for (int u = v - 1; u >= 0; u--) {
+                double val = getEnk(v + 1, v - u) +
+                    0.5 * spring_constant * (
+                        // connect u to u+1
+                        + getBeadsSeparationSquared(x_last_bead, u, x_first_bead, u + 1)
+                        // break cycle [u+1,v]
+                        - getBeadsSeparationSquared(x_first_bead, u + 1, x_last_bead, v)
+                        // close cycle from v to u
+                        + getBeadsSeparationSquared(x_first_bead, u, x_last_bead, v));
+
+                setEnk(v + 1, v - u + 1, val);
+            }
         }
     }
 }
@@ -64,6 +106,16 @@ double BosonicExchange::getEnk(int m, int k) const {
 void BosonicExchange::setEnk(int m, int k, double val) {
     int end_of_m = m * (m + 1) / 2;
     E_kn[end_of_m - k] = val;
+}
+
+double BosonicExchange::getAnk(int m, int k) const {
+    int end_of_m = m * (m + 1) / 2;
+    return A_kn[end_of_m - k];
+}
+
+void BosonicExchange::setAnk(int m, int k, double val) {
+    int end_of_m = m * (m + 1) / 2;
+    A_kn[end_of_m - k] = val;
 }
 
 void BosonicExchange::evaluateVBn() {
@@ -154,7 +206,7 @@ void BosonicExchange::evaluateConnectionProbabilities() {
 
 void BosonicExchange::springForceLastBead(dVec& f) {
     for (int l = 0; l < nbosons; l++) {
-        std::vector<double> sums(NDIM, 0.0);
+        std::array<double, NDIM> sums = {};
 
         for (int next_l = 0; next_l <= l + 1 && next_l < nbosons; next_l++) {
             double diff_next[NDIM];
@@ -165,6 +217,18 @@ void BosonicExchange::springForceLastBead(dVec& f) {
 
             for (int axis = 0; axis < NDIM; ++axis) {
                 sums[axis] += prob * diff_next[axis];
+
+                if (sim.include_wind_corr) {
+                    // Zero winding does not contribute to the force
+                    double winding_contribution = 0.0;
+
+                    for (int wind_idx = 1; wind_idx <= sim.max_wind; ++wind_idx) {
+                        winding_contribution += wind_idx * sim.getWindingProbability(diff_next[axis], wind_idx);
+                        winding_contribution -= wind_idx * sim.getWindingProbability(diff_next[axis], -wind_idx);
+                    }
+
+                    sums[axis] += prob * winding_contribution * sim.size;
+                }
             }
         }
 
@@ -173,9 +237,19 @@ void BosonicExchange::springForceLastBead(dVec& f) {
 
         for (int axis = 0; axis < NDIM; ++axis) {
             sums[axis] += diff_prev[axis];
-        }
 
-        for (int axis = 0; axis < NDIM; ++axis) {
+            if (sim.include_wind_corr) {
+                // Zero winding does not contribute to the force
+                double winding_contribution = 0.0;
+
+                for (int wind_idx = 1; wind_idx <= sim.max_wind; ++wind_idx) {
+                    winding_contribution += wind_idx * sim.getWindingProbability(diff_prev[axis], wind_idx);
+                    winding_contribution -= wind_idx * sim.getWindingProbability(diff_prev[axis], -wind_idx);
+                }
+
+                sums[axis] += winding_contribution * sim.size;
+            }
+
             f(l, axis) = sums[axis] * spring_constant;
         }
     }
@@ -183,7 +257,7 @@ void BosonicExchange::springForceLastBead(dVec& f) {
 
 void BosonicExchange::springForceFirstBead(dVec& f) {
     for (int l = 0; l < nbosons; l++) {
-        std::vector<double> sums(NDIM, 0.0);
+        std::array<double, NDIM> sums = {};
 
         for (int prev_l = std::max(0, l - 1); prev_l < nbosons; prev_l++) {
             double diff_prev[NDIM];
@@ -194,6 +268,18 @@ void BosonicExchange::springForceFirstBead(dVec& f) {
 
             for (int axis = 0; axis < NDIM; ++axis) {
                 sums[axis] += prob * diff_prev[axis];
+
+                if (sim.include_wind_corr) {
+                    // Zero winding does not contribute to the force
+                    double winding_contribution = 0.0;
+
+                    for (int wind_idx = 1; wind_idx <= sim.max_wind; ++wind_idx) {
+                        winding_contribution += wind_idx * sim.getWindingProbability(diff_prev[axis], wind_idx);
+                        winding_contribution -= wind_idx * sim.getWindingProbability(diff_prev[axis], -wind_idx);
+                    }
+
+                    sums[axis] += prob * winding_contribution * sim.size;
+                }
             }
         }
 
@@ -202,16 +288,52 @@ void BosonicExchange::springForceFirstBead(dVec& f) {
 
         for (int axis = 0; axis < NDIM; ++axis) {
             sums[axis] += diff_next[axis];
-        }
 
-        for (int axis = 0; axis < NDIM; ++axis) {
+            if (sim.include_wind_corr) {
+                // Zero winding does not contribute to the force
+                double winding_contribution = 0.0;
+
+                for (int wind_idx = 1; wind_idx <= sim.max_wind; ++wind_idx) {
+                    winding_contribution += wind_idx * sim.getWindingProbability(diff_next[axis], wind_idx);
+                    winding_contribution -= wind_idx * sim.getWindingProbability(diff_next[axis], -wind_idx);
+                }
+
+                sums[axis] += winding_contribution * sim.size;
+            }
+
             f(l, axis) = sums[axis] * spring_constant;
         }
     }
 }
 
 /**
- * Primitive kinetic energy estimator for bosons.
+ * Evaluate the probability of the configuration where all the particles are separate.
+ *
+ * @return Probability of a configuration corresponding to the identity permutation.
+ */
+double BosonicExchange::getDistinctProbability() {
+    double cycle_energy_sum = 0.0;
+    for (int m = 1; m < nbosons + 1; ++m) {
+        cycle_energy_sum += getEnk(m, m);
+    }
+
+    return exp(-beta * (cycle_energy_sum - V[nbosons]) - log_n_factorial);
+}
+
+/**
+ * Evaluate the probability of a configuration where all the particles are connected,
+ * divided by 1/N. Notice that there are (N-1)! permutations of this topology
+ * (all represented by the cycle 0,1,...,N-1,0); this cancels the division by 1/N.
+ *
+ * @return Probability of a configuration where all the particles are connected.
+ */
+double BosonicExchange::getLongestProbability() {
+    return exp(-beta * (getEnk(nbosons, 1) - V[nbosons]));
+}
+
+/**
+ * Evaluates the partial derivative of (beta*V_B) with respect to beta.
+ * This is used to calculate the primitive kinetic energy estimator for bosons.
  * Corresponds to Eqns. (4)-(5) in SI of pnas.1913365116, 
  * excluding the constant factor of d*N*P/(2*beta).
  * 
@@ -233,7 +355,11 @@ double BosonicExchange::primEstimator() {
         for (int k = m; k > 0; --k) {
             const double e_kn_val = getEnk(m, k);
 
-            sig += (prim_est[m - k] - e_kn_val) * exp(-beta * (e_kn_val + V[m - k] - e_shift));
+            if (sim.include_wind_corr) {
+                sig += (prim_est[m - k] - getAnk(m, k)) * exp(-beta * (e_kn_val + V[m - k] - e_shift));
+            } else {
+                sig += (prim_est[m - k] - e_kn_val) * exp(-beta * (e_kn_val + V[m - k] - e_shift));
+            }
         }
 
         const double sig_denom_m = m * exp(-beta * (V[m] - e_shift));
@@ -246,4 +372,43 @@ double BosonicExchange::primEstimator() {
 #else
     return prim_est[nbosons];
 #endif
+}
+
+void BosonicExchange::printBosonicDebug() {
+    if (sim.this_bead == 0) {
+        std::ofstream debug;
+        debug.open(std::format("{}/bosonic_debug.log", Output::FOLDER_NAME), std::ios::out | std::ios::app);
+
+        debug << "Step " << sim.getStep() << '\n';
+
+        debug << "Bosonic energies:\n";
+        for (int m = 1; m < nbosons + 1; ++m) {
+            debug << "V[" << m << "] = " << V[m] << '\n';
+        }
+
+        debug << "----\n";
+
+        debug << "Connection probabilities:\n";
+        for (int l = 0; l < nbosons; ++l) {
+            for (int u = 0; u < nbosons; ++u) {
+                //debug << "P[" << l << "," << u << "] = " << connection_probabilities[nbosons * l + u] << '\n';
+                debug << std::format("P[l={}, u={}] = {}\n", l, u, connection_probabilities[nbosons * l + u]);
+            }
+        }
+
+        debug << "----\n";
+
+        debug << "getEnk(0, 0) = " << getEnk(0, 0) << '\n';
+
+        for (int m = 1; m < nbosons + 1; ++m) {
+            for (int k = m; k > 0; --k) {
+                //debug << "m = " << m << ", k = " << k << ", getEnk = " << getEnk(m, k) << "\n";
+                debug << std::format("getEnk(m = {}, k = {}) = {}\n", m, k, getEnk(m, k));
+            }
+        }
+
+        debug << "===========\n";
+
+        debug.close();
+    }    
 }

@@ -2,6 +2,7 @@
 
 #include "common.h"
 
+class Simulation; // Forward declaration
 
 /**
  * @class BosonicExchangeBase
@@ -14,8 +15,7 @@
  */
 class BosonicExchangeBase {
 public:
-    BosonicExchangeBase(int nbosons_, int np_, int bead_num_, double beta_, double spring_constant_,
-                        const dVec& x_, const dVec& x_prev_, const dVec& x_next_, bool pbc_, bool mic_, double size_);
+    BosonicExchangeBase(const Simulation& _sim);
     virtual ~BosonicExchangeBase() = default;
     BosonicExchangeBase(const BosonicExchangeBase&) = delete;
     BosonicExchangeBase& operator=(const BosonicExchangeBase&) = delete;
@@ -26,18 +26,24 @@ public:
     virtual double effectivePotential() = 0;
     virtual double primEstimator() = 0;
 
+    virtual double getDistinctProbability() = 0;
+    virtual double getLongestProbability() = 0;
+
+    virtual void printBosonicDebug() = 0;
+
 protected:
+    void assignFirstLast(dVec& x_first_bead, dVec& x_last_bead) const;
     void getBeadsSeparation(const dVec& x1, int l1, const dVec& x2, int l2, double diff[NDIM]) const;
     [[nodiscard]] double getBeadsSeparationSquared(const dVec& x1, int l1, const dVec& x2, int l2) const;
-    void assignFirstLast(dVec& x_first_bead, dVec& x_last_bead) const;
 
     // Pure virtual functions (must be implemented by derived classes)
     virtual void springForceFirstBead(dVec& f) = 0;
     virtual void springForceLastBead(dVec& f) = 0;
 
+    const Simulation& sim; // Reference to the simulation object
+
     const int nbosons;
     const int nbeads;
-    const int bead_num;
 
     double spring_constant;
     double beta;
@@ -45,8 +51,4 @@ protected:
     const dVec& x;
     const dVec& x_prev;
     const dVec& x_next;
-
-    bool pbc;
-    bool mic;
-    double size; // Linear size of the system
 };

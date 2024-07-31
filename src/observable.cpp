@@ -11,11 +11,11 @@ Observable::Observable(const Simulation& _sim, int _freq, const std::string& _ou
 /**
  * Initializes observables with the given labels.
  * 
- * @param _labels Labels of the quantities to be calculated
+ * @param labels Labels of the quantities to be calculated
  */
-void Observable::initialize(const std::vector<std::string>& _labels) {
-    for (const std::string& _label : _labels) {
-        quantities.insert({ _label, 0.0 });
+void Observable::initialize(const std::vector<std::string>& labels) {
+    for (const std::string& label : labels) {
+        quantities.insert({ label, 0.0 });
     }
 }
 
@@ -46,6 +46,8 @@ std::unique_ptr<Observable> ObservableFactory::createQuantity(const std::string&
         return std::make_unique<EnergyObservable>(_sim, _freq, _out_unit);
     } else if (observable_type == "classical") {
         return std::make_unique<ClassicalObservable>(_sim, _freq, _out_unit);
+    } else if (observable_type == "bosonic") {
+        return std::make_unique<BosonicObservable>(_sim, _freq, _out_unit);
     } else {
         throw std::invalid_argument("Unknown observable type.");
     }
@@ -56,7 +58,8 @@ std::unique_ptr<Observable> ObservableFactory::createQuantity(const std::string&
  */
 EnergyObservable::EnergyObservable(const Simulation& _sim, int _freq, const std::string& _out_unit) :
     Observable(_sim, _freq, _out_unit) {
-    initialize({ "kinetic", "kinetic_wind", "potential", "ext_pot", "int_pot", "virial" });
+    //initialize({ "kinetic", "kinetic_wind", "potential", "ext_pot", "int_pot", "virial" });
+    initialize({ "kinetic", "potential", "ext_pot", "int_pot", "virial" });
 }
 
 void EnergyObservable::calculate() {
@@ -75,7 +78,7 @@ void EnergyObservable::calculateKinetic() {
     // Then, subtract the spring energies. In the case of bosons, the exterior
     // spring energy requires separate treatment.
     if (sim.this_bead == 0 && sim.bosonic) {
-            quantities["kinetic"] += sim.bosonic_exchange->primEstimator();
+        quantities["kinetic"] += sim.bosonic_exchange->primEstimator();
     } else {
         double spring_energy = sim.classicalSpringEnergy();
 #if IPI_CONVENTION
@@ -86,66 +89,6 @@ void EnergyObservable::calculateKinetic() {
     }
 
     quantities["kinetic"] = Units::convertToUser("energy", out_unit, quantities["kinetic"]);
-
-    if (sim.pbc && sim.apply_wind)
-        quantities["kinetic_wind"] = Units::convertToUser("energy", out_unit, windingCorrection());
-}
-
-double EnergyObservable::windingCorrection() const {
-    // For the energy, we only care about the winding time-slice
-    /// @todo Ensure that windingCorrection is only called for the correct time-slice
-    if (sim.this_bead != sim.winding_timeslice)
-        return 0.0;
-
-    double result = 0.0;
-
-    double beta_ = sim.beta;
-
-#if IPI_CONVENTION
-    beta_ /= sim.nbeads;
-#endif
-
-    // Loop over all the particles at the current time-slice
-    for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
-        double w_shift = sim.windingShift(ptcl_idx);
-
-        double numer = 0.0;
-        double denom = 0.0;
-
-        // For each particle, take into account the contribution of all the winding vectors
-        for (int wind_idx = 0; wind_idx < sim.wind.len(); ++wind_idx) {
-            double diff_bare_squared = 0.0;
-            double diff_plus_wind_squared = 0.0;
-
-            for (int axis = 0; axis < NDIM; ++axis) {
-                double diff = sim.coord(ptcl_idx, axis) - sim.next_coord(ptcl_idx, axis);
-                double diff_plus_wind = diff + sim.wind(wind_idx, axis) * sim.size;
-                diff_plus_wind_squared += diff_plus_wind * diff_plus_wind;
-                diff_bare_squared += diff * diff;
-            }
-
-            double sp_energy = 0.5 * sim.spring_constant * diff_plus_wind_squared;
-            double full_weight = exp(-beta_ * (sp_energy - w_shift));
-
-            // Add f(w_j) * exp(-beta*k*..) to the numerator, and just the weight to the denominator
-            numer += 0.5 * sim.spring_constant * (diff_plus_wind_squared - diff_bare_squared) * full_weight;
-            denom += full_weight;
-
-        }
-
-        // Accumulate the winding contributions for all particles
-        result += numer / denom;
-    }
-
-    // Remember to multiply by the spring constant, because this is the winding spring energy.
-    // The negative sign is due to the fact that the spring terms are negative in the thermodynamic energy estimator.
-    result *= (-1.0) * sim.spring_constant;
-
-#if IPI_CONVENTION
-    result /= sim.nbeads;
-#endif
-
-    return result;
 }
 
 /**
@@ -238,6 +181,9 @@ void ClassicalObservable::calculateKineticEnergy() {
     double dof = NDIM * sim.natoms * sim.nbeads;
     double temperature = 2.0 * kinetic_energy / (dof * Constants::kB);
 
+    // In the i-Pi convention, the ring-polymer simulation is performed at a temperature that is P times higher
+    // than the actual (quantum) temperature. Therefore, to ensure the quantum temperature is calculated correctly,
+    // one must divide the classical temperature by the number of beads.
 #if IPI_CONVENTION
     temperature /= sim.nbeads;
 #endif
@@ -261,4 +207,22 @@ void ClassicalObservable::calculateSpringEnergy() {
     }
 
     quantities["cl_spring"] = Units::convertToUser("energy", out_unit, spring_energy);
+}
+
+/**
+ * @brief Bosonic observable class constructor.
+ */
+BosonicObservable::BosonicObservable(const Simulation& _sim, int _freq, const std::string& _out_unit) :
+    Observable(_sim, _freq, _out_unit) {
+    initialize({ "exchange_dist_prob", "exchange_all_prob" });
+}
+
+/**
+ * @brief Calculates quantities pertaining to bosonic exchange.
+ */
+void BosonicObservable::calculate() {
+    if (sim.this_bead == 0 && sim.bosonic) {
+        quantities["exchange_dist_prob"] = sim.bosonic_exchange->getDistinctProbability();
+        quantities["exchange_all_prob"] = sim.bosonic_exchange->getLongestProbability();
+    }
 }

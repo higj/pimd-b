@@ -85,7 +85,7 @@ void loadTrajectories(const std::string& xyz_filename, dVec& destination) {
         // TODO: Add a check that the number of dimensions in the .xyz file matches NDIM
         for (int j = 0; j < NDIM; ++j) {
             inputFile >> destination(i, j);
-            destination(i, j) = Units::convertToInternal("length", "angstrom", destination(i, j));
+            //destination(i, j) = Units::convertToInternal("length", "angstrom", destination(i, j));
         }
     }
 
@@ -125,10 +125,10 @@ void loadMomenta(const std::string& vel_filename, double mass, dVec& destination
         for (int j = 0; j < NDIM; ++j) {
             inputFile >> destination(i, j);
             // For LAMMPS velocity files
-            destination(i, j) = mass * Units::convertToInternal("velocity", "angstrom/ps", destination(i, j));
+            //destination(i, j) = mass * Units::convertToInternal("velocity", "angstrom/ps", destination(i, j));
 
             // For i-Pi velocity files
-            //destination(i, j) = mass * destination(i, j);
+            destination(i, j) = mass * destination(i, j);
         }
     }
 
