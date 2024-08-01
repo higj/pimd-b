@@ -1039,7 +1039,7 @@ void Simulation::initializeMomenta(dVec& momentum_arr, const VariantMap& sim_par
 }
 
 /**
- * Returns the sum of Boltzmann exponents over all the winding vectors for a pair of beads.
+ * Returns the natural logarithm of the sum of Boltzmann exponents over all the winding vectors for a pair of beads.
  *
  * @param left_x Coordinate vectors of left time-slice (e.g., P).
  * @param left_idx Particle index at the left time-slice.
@@ -1047,20 +1047,21 @@ void Simulation::initializeMomenta(dVec& momentum_arr, const VariantMap& sim_par
  * @param right_idx Particle index at the right time-slice.
  * @return Sum of Boltzmann exponents.
  */
-double Simulation::getWindingWeight(const dVec& left_x, int left_idx, const dVec& right_x, int right_idx) const {
-    double result = 1.0;
+double Simulation::getLogWindingWeight(const dVec& left_x, int left_idx, const dVec& right_x, int right_idx) const {
+    double result = 0.0;
 
     for (int axis = 0; axis < NDIM; ++axis) {
         const double diff = left_x(left_idx, axis) - right_x(right_idx, axis);
-        double weight = exp(-beta_half_k * diff * diff); // Zero winding contribution
+        const double shift = getWindingShift(diff);
+        double weight = exp(-beta_half_k * (diff * diff - shift)); // Zero winding contribution
 
         for (int wind_num = 1; wind_num <= max_wind; ++wind_num) {
             const double diff_plus = diff + wind_num * size;
             const double diff_minus = diff - wind_num * size;
-            weight += exp(-beta_half_k * diff_plus * diff_plus) + exp(-beta_half_k * diff_minus * diff_minus);
+            weight += exp(-beta_half_k * (diff_plus * diff_plus - shift)) + exp(-beta_half_k * (diff_minus * diff_minus - shift));
         }
 
-        result *= weight;
+        result += log(weight) - beta_half_k * shift;
     }
 
     return result;

@@ -41,7 +41,7 @@ void BosonicExchange::evaluateCycleEnergies() {
 
     if (sim.include_wind_corr) {
         for (int i = 0; i < nbosons; i++) {
-            temp_nbosons_array[i] = (-1.0 / beta) * log(sim.getWindingWeight(x_last_bead, i, x_first_bead, i));
+            temp_nbosons_array[i] = (-1.0 / beta) * sim.getLogWindingWeight(x_last_bead, i, x_first_bead, i);
             a_temp_nbosons_array[i] = sim.getWindingEnergyExpectation(x_last_bead, i, x_first_bead, i);
         }
 
@@ -53,11 +53,11 @@ void BosonicExchange::evaluateCycleEnergies() {
                 const double e_val = getEnk(v + 1, v - u) + 
                     (1.0 / beta) * (
                         // connect u to u+1
-                        - log(sim.getWindingWeight(x_last_bead, u, x_first_bead, u + 1))
+                        - sim.getLogWindingWeight(x_last_bead, u, x_first_bead, u + 1)
                         // break cycle [u+1,v]
-                        + log(sim.getWindingWeight(x_last_bead, v, x_first_bead, u + 1))
+                        + sim.getLogWindingWeight(x_last_bead, v, x_first_bead, u + 1)
                         // close cycle from v to u
-                        - log(sim.getWindingWeight(x_last_bead, v, x_first_bead, u))
+                        - sim.getLogWindingWeight(x_last_bead, v, x_first_bead, u)
                         );
 
                 const double a_val = getAnk(v + 1, v - u) +
@@ -314,7 +314,7 @@ void BosonicExchange::springForceFirstBead(dVec& f) {
 double BosonicExchange::getDistinctProbability() {
     double cycle_energy_sum = 0.0;
     for (int m = 1; m < nbosons + 1; ++m) {
-        cycle_energy_sum += getEnk(m, m);
+        cycle_energy_sum += getEnk(m, 1);
     }
 
     return exp(-beta * (cycle_energy_sum - V[nbosons]) - log_n_factorial);
@@ -328,7 +328,7 @@ double BosonicExchange::getDistinctProbability() {
  * @return Probability of a configuration where all the particles are connected.
  */
 double BosonicExchange::getLongestProbability() {
-    return exp(-beta * (getEnk(nbosons, 1) - V[nbosons]));
+    return exp(-beta * (getEnk(nbosons, nbosons) - V[nbosons]));
 }
 
 /**
@@ -391,7 +391,6 @@ void BosonicExchange::printBosonicDebug() {
         debug << "Connection probabilities:\n";
         for (int l = 0; l < nbosons; ++l) {
             for (int u = 0; u < nbosons; ++u) {
-                //debug << "P[" << l << "," << u << "] = " << connection_probabilities[nbosons * l + u] << '\n';
                 debug << std::format("P[l={}, u={}] = {}\n", l, u, connection_probabilities[nbosons * l + u]);
             }
         }
@@ -402,7 +401,6 @@ void BosonicExchange::printBosonicDebug() {
 
         for (int m = 1; m < nbosons + 1; ++m) {
             for (int k = m; k > 0; --k) {
-                //debug << "m = " << m << ", k = " << k << ", getEnk = " << getEnk(m, k) << "\n";
                 debug << std::format("getEnk(m = {}, k = {}) = {}\n", m, k, getEnk(m, k));
             }
         }

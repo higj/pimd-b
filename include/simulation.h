@@ -67,7 +67,7 @@ public:
     int max_wind;                           // Winding number cutoff
     bool include_wind_corr;                 // Include the winding correction in the simulation?
 
-    [[nodiscard]] double getWindingWeight(const dVec& left_x, int left_idx, const dVec& right_x, int right_idx) const;
+    [[nodiscard]] double getLogWindingWeight(const dVec& left_x, int left_idx, const dVec& right_x, int right_idx) const;
     [[nodiscard]] double getWindingEnergyExpectation(const dVec& left_x, int left_idx, const dVec& right_x, int right_idx) const;
     [[nodiscard]] double getWindingShift(double diff) const;
     [[nodiscard]] double getWindingProbability(double diff, int winding_number) const;
