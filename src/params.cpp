@@ -223,7 +223,7 @@ Params::Params(const std::string& filename, const int& rank) : reader(filename) 
     out["forces"] = reader.GetBoolean(Sections::OUTPUT, "forces", false);
     out["wind_prob"] = reader.GetBoolean(Sections::OUTPUT, "wind_prob", false);
 
-    /****** Output ******/
+    /****** Observables ******/
     observables["energy"] = reader.Get(Sections::OBSERVABLES, "energy", "kelvin");
     observables["classical"] = reader.Get(Sections::OBSERVABLES, "classical", "off");
     observables["bosonic"] = reader.Get(Sections::OBSERVABLES, "bosonic", "off");
