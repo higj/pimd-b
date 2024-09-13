@@ -6,16 +6,17 @@
  * @brief Generic observable class constructor
  */
 Observable::Observable(const Simulation& _sim, int _freq, const std::string& _out_unit) :
-    sim(_sim), freq(_freq), out_unit(_out_unit) {}
+    sim(_sim), freq(_freq), out_unit(_out_unit) {
+}
 
 /**
  * Initializes observables with the given labels.
- * 
- * @param _labels Labels of the quantities to be calculated
+ *
+ * @param labels Labels of the quantities to be calculated
  */
-void Observable::initialize(const std::vector<std::string>& _labels) {
-    for (const std::string& _label : _labels) {
-        quantities.insert({ _label, 0.0 });
+void Observable::initialize(const std::vector<std::string>& labels) {
+    for (const std::string& label : labels) {
+        quantities.insert({ label, 0.0 });
     }
 }
 
@@ -40,12 +41,14 @@ void Observable::resetValues() {
  * @throw std::invalid_argument If the observable type is unknown
  */
 std::unique_ptr<Observable> ObservableFactory::createQuantity(const std::string& observable_type,
-                                                              const Simulation& _sim, int _freq,
-                                                              const std::string& _out_unit) {
+    const Simulation& _sim, int _freq,
+    const std::string& _out_unit) {
     if (observable_type == "energy") {
         return std::make_unique<EnergyObservable>(_sim, _freq, _out_unit);
     } else if (observable_type == "classical") {
         return std::make_unique<ClassicalObservable>(_sim, _freq, _out_unit);
+    } else if (observable_type == "bosonic") {
+        return std::make_unique<BosonicObservable>(_sim, _freq, _out_unit);
     } else {
         throw std::invalid_argument("Unknown observable type.");
     }
@@ -75,7 +78,7 @@ void EnergyObservable::calculateKinetic() {
     // Then, subtract the spring energies. In the case of bosons, the exterior
     // spring energy requires separate treatment.
     if (sim.this_bead == 0 && sim.bosonic) {
-            quantities["kinetic"] += sim.bosonic_exchange->primEstimator();
+        quantities["kinetic"] += sim.bosonic_exchange->primEstimator();
     } else {
         double spring_energy = sim.classicalSpringEnergy();
 #if IPI_CONVENTION
@@ -85,12 +88,12 @@ void EnergyObservable::calculateKinetic() {
         quantities["kinetic"] -= spring_energy;
     }
 
-    quantities["kinetic"] = Units::convertToUser("energy", out_unit, quantities["kinetic"]);  
+    quantities["kinetic"] = Units::convertToUser("energy", out_unit, quantities["kinetic"]);
 }
 
 /**
  * @brief Calculates the quantum potential energy of the system, based on the potential energy estimator.
- * The potential energy is the sum of the external potential energy and the interaction potential energy 
+ * The potential energy is the sum of the external potential energy and the interaction potential energy
  * across all time-slices, divided by the number of beads. In addition, the method calculates the virial
  * kinetic energy of the system.
  */
@@ -114,7 +117,7 @@ void EnergyObservable::calculatePotential() {
     if (sim.int_pot_cutoff != 0.0) {
         for (int ptcl_one = 0; ptcl_one < sim.natoms; ++ptcl_one) {
             for (int ptcl_two = ptcl_one + 1; ptcl_two < sim.natoms; ++ptcl_two) {
-                dVec diff = sim.getSeparation(ptcl_one, ptcl_two, true);  // Vectorial distance
+                dVec diff = sim.getSeparation(ptcl_one, ptcl_two, MINIM);  // Vectorial distance
 
                 if (const double distance = diff.norm(); distance < sim.int_pot_cutoff || sim.int_pot_cutoff < 0.0) {
                     dVec force_on_one = (-1.0) * sim.int_potential->gradV(diff);
@@ -178,6 +181,9 @@ void ClassicalObservable::calculateKineticEnergy() {
     double dof = NDIM * sim.natoms * sim.nbeads;
     double temperature = 2.0 * kinetic_energy / (dof * Constants::kB);
 
+    // In the i-Pi convention, the ring-polymer simulation is performed at a temperature that is P times higher
+    // than the actual (quantum) temperature. Therefore, to ensure the quantum temperature is calculated correctly,
+    // one must divide the classical temperature by the number of beads.
 #if IPI_CONVENTION
     temperature /= sim.nbeads;
 #endif
@@ -201,4 +207,22 @@ void ClassicalObservable::calculateSpringEnergy() {
     }
 
     quantities["cl_spring"] = Units::convertToUser("energy", out_unit, spring_energy);
+}
+
+/**
+ * @brief Bosonic observable class constructor.
+ */
+BosonicObservable::BosonicObservable(const Simulation& _sim, int _freq, const std::string& _out_unit) :
+    Observable(_sim, _freq, _out_unit) {
+    initialize({ "P(dist)", "P(all)" });
+}
+
+/**
+ * @brief Calculates quantities pertaining to bosonic exchange.
+ */
+void BosonicObservable::calculate() {
+    if (sim.this_bead == 0 && sim.bosonic) {
+        quantities["P(dist)"] = sim.bosonic_exchange->getDistinctProbability();
+        quantities["P(all)"] = sim.bosonic_exchange->getLongestProbability();
+    }
 }

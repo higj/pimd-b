@@ -1,14 +1,18 @@
-#include "bosonic_exchange.h"
+#include <array>
+#include <fstream>
+#include <cmath>
 
-BosonicExchange::BosonicExchange(int nbosons_, int np_, int bead_num_, double beta_, double spring_constant_,
-                                 const dVec& x_, const dVec& x_prev_, const dVec& x_next_, bool pbc_, double size_)
-    : BosonicExchangeBase(nbosons_, np_, bead_num_, beta_, spring_constant_, x_, x_prev_, x_next_, pbc_, size_),
-      E_kn(nbosons_ * (nbosons_ + 1) / 2),
-      V(nbosons_ + 1),
-      V_backwards(nbosons_ + 1),
-      connection_probabilities(nbosons_ * nbosons_),
-      temp_nbosons_array(nbosons_),
-      prim_est(nbosons_ + 1) {
+#include "bosonic_exchange.h"
+#include "simulation.h"
+
+BosonicExchange::BosonicExchange(const Simulation& _sim) : BosonicExchangeBase(_sim),
+    E_kn(nbosons* (nbosons + 1) / 2),
+    V(nbosons + 1),
+    V_backwards(nbosons + 1),
+    connection_probabilities(static_cast<int>(nbosons* nbosons)),
+    temp_nbosons_array(nbosons),
+    prim_est(nbosons + 1),
+    log_n_factorial(std::lgamma(nbosons + 1)) {
     evaluateBosonicEnergies();
 }
 
@@ -154,7 +158,7 @@ void BosonicExchange::evaluateConnectionProbabilities() {
 
 void BosonicExchange::springForceLastBead(dVec& f) {
     for (int l = 0; l < nbosons; l++) {
-        std::vector<double> sums(NDIM, 0.0);
+        std::array<double, NDIM> sums = {};
 
         for (int next_l = 0; next_l <= l + 1 && next_l < nbosons; next_l++) {
             double diff_next[NDIM];
@@ -183,7 +187,7 @@ void BosonicExchange::springForceLastBead(dVec& f) {
 
 void BosonicExchange::springForceFirstBead(dVec& f) {
     for (int l = 0; l < nbosons; l++) {
-        std::vector<double> sums(NDIM, 0.0);
+        std::array<double, NDIM> sums = {};
 
         for (int prev_l = std::max(0, l - 1); prev_l < nbosons; prev_l++) {
             double diff_prev[NDIM];
@@ -211,10 +215,37 @@ void BosonicExchange::springForceFirstBead(dVec& f) {
 }
 
 /**
- * Primitive kinetic energy estimator for bosons.
- * Corresponds to Eqns. (4)-(5) in SI of pnas.1913365116, 
+ * Evaluate the probability of the configuration where all the particles are separate.
+ *
+ * @return Probability of a configuration corresponding to the identity permutation.
+ */
+double BosonicExchange::getDistinctProbability() {
+    double cycle_energy_sum = 0.0;
+    for (int m = 1; m < nbosons + 1; ++m) {
+        cycle_energy_sum += getEnk(m, 1);
+    }
+
+    return exp(-beta * (cycle_energy_sum - V[nbosons]) - log_n_factorial);
+}
+
+/**
+ * Evaluate the probability of a configuration where all the particles are connected,
+ * divided by 1/N. Notice that there are (N-1)! permutations of this topology
+ * (all represented by the cycle 0,1,...,N-1,0); this cancels the division by 1/N.
+ *
+ * @return Probability of a configuration where all the particles are connected.
+ */
+double BosonicExchange::getLongestProbability() {
+    return exp(-beta * (getEnk(nbosons, nbosons) - V[nbosons]));
+}
+
+
+/**
+ * Evaluates the partial derivative of (beta*V_B) with respect to beta.
+ * This is used to calculate the primitive kinetic energy estimator for bosons.
+ * Corresponds to Eqns. (4)-(5) in SI of pnas.1913365116,
  * excluding the constant factor of d*N*P/(2*beta).
- * 
+ *
  * @return The exterior spring contribution to the overall kinetic energy.
  */
 double BosonicExchange::primEstimator() {
@@ -246,4 +277,41 @@ double BosonicExchange::primEstimator() {
 #else
     return prim_est[nbosons];
 #endif
+}
+
+void BosonicExchange::printBosonicDebug() {
+    if (sim.this_bead == 0) {
+        std::ofstream debug;
+        debug.open(std::format("{}/bosonic_debug.log", Output::FOLDER_NAME), std::ios::out | std::ios::app);
+
+        debug << "Step " << sim.getStep() << '\n';
+
+        debug << "Bosonic energies:\n";
+        for (int m = 1; m < nbosons + 1; ++m) {
+            debug << "V[" << m << "] = " << V[m] << '\n';
+        }
+
+        debug << "----\n";
+
+        debug << "Connection probabilities:\n";
+        for (int l = 0; l < nbosons; ++l) {
+            for (int u = 0; u < nbosons; ++u) {
+                debug << std::format("P[l={}, u={}] = {}\n", l, u, connection_probabilities[nbosons * l + u]);
+            }
+        }
+
+        debug << "----\n";
+
+        debug << "getEnk(0, 0) = " << getEnk(0, 0) << '\n';
+
+        for (int m = 1; m < nbosons + 1; ++m) {
+            for (int k = m; k > 0; --k) {
+                debug << std::format("getEnk(m = {}, k = {}) = {}\n", m, k, getEnk(m, k));
+            }
+        }
+
+        debug << "===========\n";
+
+        debug.close();
+    }
 }

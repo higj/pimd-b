@@ -4,7 +4,6 @@
 #include <random>
 #include <ctime>
 #include <memory>
-#include "mpi.h"
 
 #include "random_mars.h"
 #include "common.h"
@@ -40,6 +39,7 @@ public:
     bool out_vel;       // Output velocities?
     bool out_force;     // Output forces?
 
+    bool is_bosonic_bead; // Is the current simulation bosonic and the time-slice is either 1 or P?
     std::unique_ptr<BosonicExchangeBase> bosonic_exchange;
 
     std::vector<std::unique_ptr<Observable>> observables;
@@ -53,17 +53,24 @@ public:
     dVec coord, momenta, forces;
     dVec prev_coord, next_coord;
 
+    int getStep() const;
+    void setStep(int step);
+
     double mass;
     double spring_constant;  // k=m*omega_p^2 (where omega_p depends on the convention)
     double omega_p;          // Angular frequency of the ring polymer
+    double beta_half_k;      // Pre-factor of beta*0.5*k
 
     void genRandomPositions(dVec& pos_arr);
+    void uniformParticleGrid(dVec& pos_arr) const;
     void genMomentum(dVec& momenta_arr);
 
     void zeroMomentum();
 
     void initializePositions(dVec& coord_arr, const VariantMap& sim_params);
     void initializeMomenta(dVec& momentum_arr, const VariantMap& sim_params);
+    void addObservableIfEnabled(const StringMap& sim_params, const std::string& param_key, const std::string& observable_name);
+    void initializeObservables(const StringMap& sim_params);
     std::unique_ptr<Potential> initializePotential(const std::string& potential_name,
                                                    const VariantMap& potential_options);
 
@@ -98,7 +105,9 @@ public:
     unsigned int params_seed;
 
 private:
-    void printReport(std::ofstream& out_file) const;
+    int md_step;
+
+    void printReport(std::ofstream& out_file, double wall_time) const;
 
     std::string init_pos_type;
     std::string init_vel_type;
@@ -106,5 +115,5 @@ private:
     std::string external_potential_name;
     std::string interaction_potential_name;
 
-    void printDebug(const std::string& text) const;
+    void printDebug(const std::string& text, int target_bead = 0) const;
 };

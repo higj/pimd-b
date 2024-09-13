@@ -111,6 +111,7 @@ namespace Units {
             {"automatic", 1.00},
             {"atomic_unit", 1.00},
             {"dalton", 1.00 * Constants::amu},
+            {"amu", 1.00 * Constants::amu},
             {"electronmass", 1.00},
         }},
         {"pressure", {

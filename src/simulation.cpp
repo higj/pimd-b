@@ -1,6 +1,10 @@
 #include <ranges>
 #include <fstream>
 #include <filesystem>
+#include <chrono>
+#include <array>
+#include <cassert>
+#include "mpi.h"
 
 #include "observable.h"
 #include "simulation.h"
@@ -52,6 +56,12 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
 
     spring_constant = mass * omega_p * omega_p;
 
+    beta_half_k = beta * 0.5 * spring_constant;
+
+#if IPI_CONVENTION
+    beta_half_k /= nbeads;
+#endif
+
     // Get the seed from the config file
     getVariant(param_obj.sim["seed"], params_seed);
 
@@ -79,37 +89,44 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
 
     // For cubic cells with PBC, the cutoff distance must be no greater than L/2 for consistency with
     // the minimum image convention (see 1.6.3 in Allen & Tildesley).
-    if (pbc)
+    if (pbc) {
         int_pot_cutoff = std::min(int_pot_cutoff, 0.5 * size);
+    }
 
     ext_potential = initializePotential(external_potential_name, param_obj.external_pot);
     int_potential = initializePotential(interaction_potential_name, param_obj.interaction_pot);
 
-    // Observables
-    /// @todo Add the ability to specify the observables in the input file
-    observables.push_back(ObservableFactory::createQuantity("energy", *this, sfreq, "kelvin"));
-    observables.push_back(ObservableFactory::createQuantity("classical", *this, sfreq, "kelvin"));
-
     // Update the coordinate arrays of neighboring particles
     updateNeighboringCoordinates();
 
-    if (bosonic && (this_bead == 0 || this_bead == nbeads - 1)) {
+    bosonic = bosonic && (nbeads > 1); // Bosonic exchange is only possible for P>1
+    is_bosonic_bead = bosonic && (this_bead == 0 || this_bead == nbeads - 1);
+
+    if (is_bosonic_bead) {
 #if OLD_BOSONIC_ALGORITHM
-        bosonic_exchange = std::make_unique<OldBosonicExchange>(natoms, nbeads, this_bead, beta, spring_constant, coord, 
-                                                                prev_coord, next_coord, pbc, size);
+        bosonic_exchange = std::make_unique<OldBosonicExchange>(*this);
 #else
-        bosonic_exchange = std::make_unique<BosonicExchange>(natoms, nbeads, this_bead, beta, spring_constant, coord,
-                                                             prev_coord, next_coord, pbc, size);
+        bosonic_exchange = std::make_unique<BosonicExchange>(*this);
 #endif
     }
+
+    initializeObservables(param_obj.observables);
 }
 
 Simulation::~Simulation() = default;
 
+int Simulation::getStep() const {
+    return md_step;
+}
+
+void Simulation::setStep(int step) {
+    md_step = step;
+}
+
 /**
  * Generates random positions in the interval [-L/2, L/2] for each particle along each axis.
  * 
- * @param pos_arr Array to store the generated positions.
+ * @param[out] pos_arr Array to store the generated positions.
  */
 void Simulation::genRandomPositions(dVec& pos_arr) {
     /// @todo Add ability to generate non-random positions (e.g., lattice)
@@ -118,6 +135,74 @@ void Simulation::genRandomPositions(dVec& pos_arr) {
     for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
             pos_arr(ptcl_idx, axis) = u_dist(rand_gen);
+        }
+    }
+}
+
+/**
+ * Places particles in a uniform grid according to the specified box size.
+ *
+ * @param[out] pos_arr Array to store the generated positions.
+ */
+void Simulation::uniformParticleGrid(dVec& pos_arr) const {
+    const double volume = std::pow(size, NDIM);
+
+    // Get the linear size per particle, and the number of particles
+    const double init_side = std::pow((1.0 * natoms / volume), -1.0 / (1.0 * NDIM));
+
+    // Determine the number and the size of initial grid boxes in each dimension
+    int tot_num_grid_boxes = 1;
+    iVec num_nn_grid;
+    dVec size_nn_grid;
+
+    for (int i = 0; i < NDIM; i++) {
+        num_nn_grid(0, i) = static_cast<int>(std::ceil((size / init_side) - EPS));
+
+        // Make sure we have at least one grid box
+        if (num_nn_grid(0, i) < 1)
+            num_nn_grid(0, i) = 1;
+
+        // Compute the actual size of the grid
+        size_nn_grid(0, i) = size / (1.0 * num_nn_grid(0, i));
+
+        // Determine the total number of grid boxes
+        tot_num_grid_boxes *= num_nn_grid(0, i);
+    }
+
+    // Place the particles at the middle of each box
+    if (tot_num_grid_boxes < natoms) {
+        throw std::runtime_error("Number of grid boxes is less than the number of particles");
+    }
+
+    dVec pos;
+    for (int n = 0; n < tot_num_grid_boxes; n++) {
+        iVec grid_index;
+
+        for (int i = 0; i < NDIM; i++) {
+            int scale = 1;
+            for (int j = i + 1; j < NDIM; j++)
+                scale *= num_nn_grid(0, j);
+
+            grid_index(0, i) = (n / scale) % num_nn_grid(0, i);
+        }
+
+        for (int axis = 0; axis < NDIM; ++axis) {
+            pos(0, axis) = (grid_index(0, axis) + 0.5) * size_nn_grid(0, axis) - 0.5 * size;
+        }
+
+        /// @todo If wrapping should be applied regardless of PBC, then it can be moved to the previous loop
+        if (pbc) {
+            for (int axis = 0; axis < NDIM; ++axis) {
+                applyMinimumImage(pos(0, axis), size);
+            }
+        }
+
+        if (n >= natoms) {
+            break;
+        }
+
+        for (int axis = 0; axis < NDIM; axis++) {
+            pos_arr(n, axis) = pos(0, axis);
         }
     }
 }
@@ -258,6 +343,11 @@ void Simulation::velocityVerletStep() {
  * @brief Perform a molecular dynamics run using the OBABO scheme.
  */
 void Simulation::run() {
+    printStatus("Running the simulation", this_bead);
+
+    MPI_Barrier(MPI_COMM_WORLD);
+    const double sim_exec_time_start = MPI_Wtime();
+
     std::filesystem::create_directory(Output::FOLDER_NAME);
     std::ofstream out_file;
 
@@ -278,53 +368,71 @@ void Simulation::run() {
 
     // Main loop performing molecular dynamics steps
     for (int step = 0; step <= steps; ++step) {
+        setStep(step);
+
         for (const auto& observable : observables) {
             observable->resetValues();
-        }
+    }
 
         if (step % sfreq == 0) {
-            if (out_pos)
+            if (out_pos) {
                 outputTrajectories(step);
-            if (out_vel)
+            }
+            if (out_vel) {
                 outputVelocities(step);
-            if (out_force)
+            }
+            if (out_force) {
                 outputForces(step);
+            }
         }
 
         // "O" step
-        if (enable_t)
+        if (enable_t) {
             langevinStep();
+        }
 
         // If fixcom=true, the center of mass of the ring polymers is fixed during the simulation
-        if (fixcom)
+        if (fixcom) {
             zeroMomentum();
+        }
 
         velocityVerletStep();
 
         // "O" step
-        if (enable_t)
+        if (enable_t) {
             langevinStep();
+        }
 
         // Zero momentum after every Langevin step (if needed)
-        if (fixcom)
+        if (fixcom) {
             zeroMomentum();
+        }
+
 
 #if PROGRESS
-            printProgress(step, steps, this_bead);
+        printProgress(step, steps, this_bead);
 #endif
 
         // If we have not reached the thermalization threshold, skip to the next step (thermalization stage)
-        if (step < threshold)
+        if (step < threshold) {
             continue;
+        }
 
         // Calculate and print the observables (production stage)
         for (const auto& observable : observables) {
             observable->calculate();
         }
 
+        /*
+        if (is_bosonic_bead) {
+            bosonic_exchange->printBosonicDebug();
+        }
+        */
+
         if (step % sfreq == 0) {
-            if (this_bead == 0)
+            if (this_bead == 0) {
                 out_file << std::format("{:^16.8e}", static_cast<double>(step));
+            }
 
             for (const auto& observable : observables) {
                 // The inner loop is necessary because some observable classes can calculate
@@ -336,25 +444,35 @@ void Simulation::run() {
                     // Sum the results from all processes (beads)
                     MPI_Allreduce(&local_quantity_value, &quantity_value, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
-                    if (this_bead == 0)
+                    if (this_bead == 0) {
                         out_file << std::format(" {:^16.8e}", quantity_value);
+                    }
                 }
             }
 
-            if (this_bead == 0)
-                out_file << "\n";
+            if (this_bead == 0) {
+                out_file << '\n';
+            }
         }
-    }
+}
+
+    MPI_Barrier(MPI_COMM_WORLD);
+    const double sim_exec_time_end = MPI_Wtime();
+
+    const double wall_time = sim_exec_time_end - sim_exec_time_start;
+
+    printStatus(std::format("Simulation finished running successfully (Runtime = {:.3} sec)", wall_time), this_bead);
 
     if (this_bead == 0) {
         out_file.close();
 
         std::ofstream report_file;
         report_file.open(std::format("{}/report.txt", Output::FOLDER_NAME), std::ios::out | std::ios::app);
-        printReport(report_file);
+        printReport(report_file, wall_time);
         report_file.close();
     }
 }
+
 
 /**
  * Obtains the coordinates from the previous timeslice.
@@ -456,23 +574,29 @@ void Simulation::updateNeighboringCoordinates() {
  * @param spring_force_arr Vector to store the spring forces.
  */
 void Simulation::updateSpringForces(dVec& spring_force_arr) const {
-    if (bosonic && (this_bead == 0 || this_bead == nbeads - 1)) {
+    if (is_bosonic_bead) {
+        // If the simulation is bosonic and the current bead is either 1 or P, we calculate
+        // the exterior spring forces in the appropriate bosonic class.
+        // Any winding effects that pertain to the exterior springs are taken into account
+        // inside the bosonic exchange class.
         bosonic_exchange->prepare();
         bosonic_exchange->exteriorSpringForce(spring_force_arr);
     } else {
+        // If particles are distinguishable, or if the current bead is an interior bead,
+        // the force is calculated based on the standard expression for distinguishable particles.
         for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
             for (int axis = 0; axis < NDIM; ++axis) {
-                double d_prev = prev_coord(ptcl_idx, axis) - coord(ptcl_idx, axis);
-                double d_next = next_coord(ptcl_idx, axis) - coord(ptcl_idx, axis);
+                double diff_prev = prev_coord(ptcl_idx, axis) - coord(ptcl_idx, axis);
+                double diff_next = next_coord(ptcl_idx, axis) - coord(ptcl_idx, axis);
 
 #if MINIM
                 if (pbc) {
-                    applyMinimumImage(d_prev, size);
-                    applyMinimumImage(d_next, size);
+                    applyMinimumImage(diff_prev, size);
+                    applyMinimumImage(diff_next, size);
                 }
 #endif
 
-                spring_force_arr(ptcl_idx, axis) = spring_constant * (d_prev + d_next);
+                spring_force_arr(ptcl_idx, axis) = spring_constant * (diff_prev + diff_next);
             }
         }
     }
@@ -493,7 +617,7 @@ void Simulation::updatePhysicalForces(dVec& physical_force_arr) const {
             for (int ptcl_two = ptcl_one + 1; ptcl_two < natoms; ++ptcl_two) {
                 // Get the vector distance between the two particles.
                 // Here "diff" contains just one vector of dimension NDIM.
-                dVec diff = getSeparation(ptcl_one, ptcl_two, true);
+                dVec diff = getSeparation(ptcl_one, ptcl_two, MINIM);
 
                 /// @todo Add minimum image convention here (and also in the observable calculations)
 
@@ -523,14 +647,20 @@ void Simulation::updatePhysicalForces(dVec& physical_force_arr) const {
  * @return Classical spring energy contribution of the current and the previous time-slice.
  */
 double Simulation::classicalSpringEnergy() const {
-    if (bosonic && this_bead == 0)
-        throw std::runtime_error("classicalSpringEnergy() cannot be called at the first time-slice in the bosonic case.");
+    assert(!bosonic || (bosonic && this_bead != 0));
 
     double interior_spring_energy = 0.0;
 
     for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
-            const double diff = coord(ptcl_idx, axis) - prev_coord(ptcl_idx, axis);
+            double diff = prev_coord(ptcl_idx, axis) - coord(ptcl_idx, axis);
+
+#if MINIM
+            if (pbc) {
+                applyMinimumImage(diff, size);
+            }
+#endif
+
             interior_spring_energy += diff * diff;
         }
     }
@@ -569,7 +699,7 @@ dVec Simulation::getSeparation(int first_ptcl, int second_ptcl, bool minimum_ima
 /**
  * @brief Prints a summary of the simulation parameters at the end of the simulation.
  */
-void Simulation::printReport(std::ofstream& out_file) const {
+void Simulation::printReport(std::ofstream& out_file, double wall_time) const {
     out_file << "---------\nParameters\n---------\n";
 
     if (bosonic) {
@@ -585,7 +715,7 @@ void Simulation::printReport(std::ofstream& out_file) const {
         out_file << formattedReportLine("Statistics", "Boltzmannonic");
     }
 
-    out_file << formattedReportLine("PBC", pbc);
+    out_file << formattedReportLine("Periodic boundary conditions", pbc);
     out_file << formattedReportLine("Dimension", NDIM);
     out_file << formattedReportLine("Seed", params_seed);
     out_file << formattedReportLine("Coordinate initialization method", init_pos_type);
@@ -610,6 +740,11 @@ void Simulation::printReport(std::ofstream& out_file) const {
     out_file << formattedReportLine("Wrapping of coordinates", WRAP);
     out_file << formattedReportLine("Polymer recentering", RECENTER);
     out_file << formattedReportLine("Using i-Pi convention", IPI_CONVENTION);
+
+    out_file << "---------\n";
+    out_file << formattedReportLine("Wall time", std::format("{:%T}",
+        std::chrono::duration<double>(wall_time)
+    ));
 }
 
 /**
@@ -627,9 +762,10 @@ void Simulation::outputTrajectories(int step) {
     for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
         xyz_file << "1";
 
-        for (int axis = 0; axis < NDIM; ++axis)
+        for (int axis = 0; axis < NDIM; ++axis) {
             /// @todo Make the units configurable
             xyz_file << std::format(" {:^20.12e}", Units::convertToUser("length", "angstrom", coord(ptcl_idx, axis)));
+        }
 #if NDIM == 1
         xyz_file << " 0.0 0.0";
 #elif NDIM == 2
@@ -656,10 +792,11 @@ void Simulation::outputVelocities(int step) {
     for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
         vel_file << (ptcl_idx + 1) << " 1";
 
-        for (int axis = 0; axis < NDIM; ++axis)
+        for (int axis = 0; axis < NDIM; ++axis) {
             /// @todo Make the units configurable
             vel_file << std::format(" {:^20.12e}",
-                                    Units::convertToUser("velocity", "angstrom/ps", momenta(ptcl_idx, axis) / mass));
+                Units::convertToUser("velocity", "angstrom/ps", momenta(ptcl_idx, axis) / mass));
+        }
 #if NDIM == 1
         vel_file << " 0.0 0.0";
 #elif NDIM == 2
@@ -686,8 +823,9 @@ void Simulation::outputForces(int step) {
     for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
         force_file << (ptcl_idx + 1) << " 1";
 
-        for (int axis = 0; axis < NDIM; ++axis)
+        for (int axis = 0; axis < NDIM; ++axis) {
             force_file << std::format(" {:^20.12e}", Units::convertToUser("force", "ev/ang", forces(ptcl_idx, axis)));
+        }
 #if NDIM == 1
         force_file << " 0.0 0.0";
 #elif NDIM == 2
@@ -759,6 +897,12 @@ std::unique_ptr<Potential> Simulation::initializePotential(const std::string& po
         return std::make_unique<DipolePotential>(strength);
     }
 
+    if (potential_name == "cosine") {
+        double amplitude = std::get<double>(potential_options.at("amplitude"));
+        double phase = std::get<double>(potential_options.at("phase"));
+        return std::make_unique<CosinePotential>(amplitude, size, phase);
+    }
+
     if (potential_name == "aziz") {
         return std::make_unique<AzizPotential>();
     }
@@ -770,7 +914,7 @@ std::unique_ptr<Potential> Simulation::initializePotential(const std::string& po
  * Initializes the positions of the particles based on the input parameters.
  *
  * @param[out] coord_arr Array to store the generated positions.
- * @param sim_params Simulation parameters object containing information about the init trajectories file. 
+ * @param sim_params Simulation parameters object containing information about the init trajectories file.
  */
 void Simulation::initializePositions(dVec& coord_arr, const VariantMap& sim_params) {
     if (init_pos_type == "xyz") {
@@ -783,8 +927,11 @@ void Simulation::initializePositions(dVec& coord_arr, const VariantMap& sim_para
     } else if (init_pos_type == "xyz_formatted") {
         const std::string xyz_filename_format = std::get<std::string>(sim_params.at("init_pos_xyz_filename_format"));
         const int arg = this_bead + std::get<int>(sim_params.at("init_pos_first_index"));
-        
+
         loadTrajectories(std::vformat(xyz_filename_format, std::make_format_args(arg)), coord_arr);
+    } else if (init_pos_type == "grid") {
+        // Generate a grid of particles
+        uniformParticleGrid(coord_arr);
     } else {
         // Sample positions from a uniform distribution
         genRandomPositions(coord_arr);
@@ -817,12 +964,45 @@ void Simulation::initializeMomenta(dVec& momentum_arr, const VariantMap& sim_par
 }
 
 /**
- * Prints information for debugging purposes.
- * 
- * @param text Text to print.
+ * Initializes an observable based on the input parameters. Initialization occurs only if the
+ * observable is enabled (the units are not set to "off").
+ *
+ * @param sim_params Simulation parameters object containing information about the observables.
+ * @param param_key Key of the parameter in the simulation parameters object.
+ * @param observable_name Name of the observable.
  */
-void Simulation::printDebug(const std::string& text) const {
-    if (this_bead == 0) {
+void Simulation::addObservableIfEnabled(const StringMap& sim_params, const std::string& param_key, const std::string& observable_name) {
+    if (const std::string& units = sim_params.at(param_key); units != "off") {
+        if (units == "none") {
+            observables.push_back(ObservableFactory::createQuantity(observable_name, *this, sfreq, ""));
+        } else {
+            observables.push_back(ObservableFactory::createQuantity(observable_name, *this, sfreq, units));
+        }
+    }
+}
+
+/**
+ * Method for initializing all the requested observables.
+ *
+ * @param sim_params Simulation parameters object containing information about the observables.
+ */
+void Simulation::initializeObservables(const StringMap& sim_params) {
+    addObservableIfEnabled(sim_params, "energy", "energy");
+    addObservableIfEnabled(sim_params, "classical", "classical");
+
+    if (bosonic) {
+        addObservableIfEnabled(sim_params, "bosonic", "bosonic");
+    }
+}
+
+/**
+ * Prints information for debugging purposes.
+ *
+ * @param text Text to print.
+ * @param target_bead Bead for which the text should be printed.
+ */
+void Simulation::printDebug(const std::string& text, int target_bead) const {
+    if (this_bead == target_bead) {
         std::ofstream debug;
         debug.open(std::format("{}/debug.log", Output::FOLDER_NAME), std::ios::out | std::ios::app);
         debug << text;

@@ -5,7 +5,9 @@
 #include <format>
 #include <filesystem>
 
-Params::Params(const std::string& filename) : reader(filename) {
+Params::Params(const std::string& filename, const int& rank) : reader(filename) {
+    printStatus("Initializing the simulation parameters", rank);
+
     if (reader.ParseError() < 0)
         throw std::invalid_argument(std::format("Unable to read the configuration file {}", filename));
 
@@ -14,7 +16,7 @@ Params::Params(const std::string& filename) : reader(filename) {
     sim["threshold"] = reader.GetReal(Sections::SIMULATION, "threshold", 0.1);
     sim["gamma"] = reader.GetReal(Sections::SIMULATION, "gamma", -1.0);
 
-    if (std::get<double>(sim["gamma"]) == -1.0)
+    if (std::get<double>(sim["gamma"]) < 0)
         sim["gamma"] = 1 / (100.0 * std::get<double>(sim["dt"]));
 
     sim["steps"] = static_cast<long>(
@@ -23,8 +25,8 @@ Params::Params(const std::string& filename) : reader(filename) {
     sim["enable_t"] = reader.GetBoolean(Sections::SIMULATION, "enable_thermostat", true);
     sim["nbeads"] = reader.GetInteger(Sections::SIMULATION, "nbeads", 4);
 
-    if (int nbeads = std::get<int>(sim["nbeads"]); nbeads < 2)
-        throw std::invalid_argument(std::format("The specified number of beads ({}) is less than two!", nbeads));
+    if (int nbeads = std::get<int>(sim["nbeads"]); nbeads < 1)
+        throw std::invalid_argument(std::format("The specified number of beads ({}) is less than one!", nbeads));
 
     sim["seed"] = static_cast<unsigned int>(std::stod(reader.Get(Sections::SIMULATION, "seed", "1234")));
 
@@ -43,7 +45,7 @@ Params::Params(const std::string& filename) : reader(filename) {
         throw std::invalid_argument("The coordinate initialization method format is invalid!");
     }
 
-    allowed_coord_init_methods = { "random", "xyz" }; /// @todo Add "cell" option
+    allowed_coord_init_methods = { "random", "xyz", "grid" }; /// @todo Add "cell" option
 
     if (!labelInArray(init_pos_type, allowed_coord_init_methods))
         throw std::invalid_argument(std::format("The specified coordinate initialization method ({}) is not supported!",
@@ -147,7 +149,7 @@ Params::Params(const std::string& filename) : reader(filename) {
         throw std::invalid_argument(std::format("The provided system size ({0:4.3f}) is unphysical!", size));
 
     allowed_int_potential_names = { "aziz", "free", "harmonic", "dipole" };
-    allowed_ext_potential_names = { "free", "harmonic", "double_well" };
+    allowed_ext_potential_names = { "free", "harmonic", "double_well", "cosine" };
 
     /****** Interaction potential ******/
 
@@ -196,6 +198,10 @@ Params::Params(const std::string& filename) : reader(filename) {
             "energy", reader.Get(Sections::EXT_POTENTIAL, "strength", "1.0 millielectronvolt"));
         external_pot["location"] = getQuantity(
             "length", reader.Get(Sections::EXT_POTENTIAL, "location", "1.0 angstrom"));
+    } else if (external_name == "cosine") {
+        external_pot["amplitude"] = getQuantity(
+            "energy", reader.Get(Sections::EXT_POTENTIAL, "amplitude", "1.0 millielectronvolt"));
+        external_pot["phase"] = reader.GetReal(Sections::EXT_POTENTIAL, "phase", 1.0);
     }
 
     /****** Output ******/
@@ -203,6 +209,11 @@ Params::Params(const std::string& filename) : reader(filename) {
     out["positions"] = reader.GetBoolean(Sections::OUTPUT, "positions", false);
     out["velocities"] = reader.GetBoolean(Sections::OUTPUT, "velocities", false);
     out["forces"] = reader.GetBoolean(Sections::OUTPUT, "forces", false);
+
+    /****** Observables ******/
+    observables["energy"] = reader.Get(Sections::OBSERVABLES, "energy", "kelvin");
+    observables["classical"] = reader.Get(Sections::OBSERVABLES, "classical", "off");
+    observables["bosonic"] = reader.Get(Sections::OBSERVABLES, "bosonic", "off");
 }
 
 bool Params::labelInArray(const std::string& label, const StringsList& arr) {

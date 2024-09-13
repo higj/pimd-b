@@ -133,6 +133,16 @@ name = free
 [external_potential]
 name = harmonic
 omega = 3.0 millielectronvolt
+
+[output]
+positions = false
+velocities = false
+forces = false
+
+[observables]
+energy = kelvin
+classical = off
+bosonic = off
 ```
 
 Currently, the following potentials are available:
@@ -159,6 +169,16 @@ Similarly, the `initial_velocity` option gives the user the ability to initializ
 * `manual(<filename_format>)`: similar behavior to `xyz(<filename_format>)`.
 
 The `size` option defines the linear size of the system. Currently, only cube geometry is supported. In the absence of periodic boundary conditions, `size` only affects the way initial positions are generated. However, if periodic boundary conditions are enabled, the system size also affects the cutoff distance for interactions, as well as the estimators. Also, the coordinates may be wrapped in this case, and minimum image convention can potentially be employed, if such functionality is desired.
+
+In the `[output]` section, the user can request the output of trajectories, velocities or forces of the beads.
+
+In the `[observables]` section, the user can specify which physical observables should be evaluated and printed in `simulation.out`. The format in this section is `observable_name = observable_unit`. The key (`observable_name`) must match the name of supported observables. In place of the value (`observable_unit`), the user may specify the units to which the results must be converted (assuming the observable is not a dimensionless quantity), or use `off` if the observable should not be calculated at all (which is the default setting for all observables but `energy`). In case of dimensionless estimators, the user may either leave the value empty or specify `none` as the unit.
+
+Currently, only three observable *types* are supported:
+
+* `energy`: Calculates the quantum energy of the system using different estimators. Currently thermodynamic (primitive), virial and the potential energy estimators are supported
+* `classical`: Calculates observables associated with the classical ring-polymer system such as the kinetic energy (due to the fictitious momenta), spring energies and the temperature
+* `bosonic`: Calculates probabilities of two types of topologies: where all the particles are separate and where all the particles are connected (Dimensionless estimator)
 
 Internally, the simulation uses atomic units. However, the input parameters may be provided in the units of your choosing (e.g., electron-volts for energy).
 
