@@ -244,6 +244,9 @@ using iVec = VectorArray<int, NDIM>;
 // Define a map of variant types
 using VariantMap = std::unordered_map<std::string, std::variant<int, unsigned int, long, double, bool, std::string>>;
 
+// Define a map of strings
+using StringMap = std::unordered_map<std::string, std::string>;
+
 // Define a list of strings
 using StringsList = std::vector<std::string>;
 

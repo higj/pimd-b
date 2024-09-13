@@ -107,12 +107,6 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     ext_potential = initializePotential(external_potential_name, param_obj.external_pot);
     int_potential = initializePotential(interaction_potential_name, param_obj.interaction_pot);
 
-    // Observables
-    /// @todo Add the ability to specify the observables in the input file
-    observables.push_back(ObservableFactory::createQuantity("energy", *this, sfreq, "kelvin"));
-    observables.push_back(ObservableFactory::createQuantity("classical", *this, sfreq, "kelvin"));
-    observables.push_back(ObservableFactory::createQuantity("bosonic", *this, sfreq, ""));
-
     // Update the coordinate arrays of neighboring particles
     updateNeighboringCoordinates();
 
@@ -126,6 +120,8 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
         bosonic_exchange = std::make_unique<BosonicExchange>(*this);
 #endif
     }
+
+    initializeObservables(param_obj.observables);
 }
 
 Simulation::~Simulation() = default;
@@ -677,6 +673,7 @@ void Simulation::updateSpringForces(dVec& spring_force_arr) const {
  */
 void Simulation::updatePhysicalForces(dVec& physical_force_arr) const {
     // Calculate the external forces acting on the particles
+    /// @todo Think if MIC is appropriate when the external potential is periodic
     physical_force_arr = (-1.0) * ext_potential->gradV(coord);
 
     if (int_pot_cutoff != 0.0) {
@@ -978,6 +975,12 @@ std::unique_ptr<Potential> Simulation::initializePotential(const std::string& po
         return std::make_unique<DipolePotential>(strength);
     }
 
+    if (potential_name == "cosine") {
+        double amplitude = std::get<double>(potential_options.at("amplitude"));
+        double phase = std::get<double>(potential_options.at("phase"));
+        return std::make_unique<CosinePotential>(amplitude, size, phase);
+    }
+
     if (potential_name == "aziz") {
         return std::make_unique<AzizPotential>();
     }
@@ -1039,13 +1042,45 @@ void Simulation::initializeMomenta(dVec& momentum_arr, const VariantMap& sim_par
 }
 
 /**
+ * Initializes an observable based on the input parameters. Initialization occurs only if the
+ * observable is enabled (the units are not set to "off").
+ *
+ * @param sim_params Simulation parameters object containing information about the observables.
+ * @param param_key Key of the parameter in the simulation parameters object.
+ * @param observable_name Name of the observable.
+ */
+void Simulation::addObservableIfEnabled(const StringMap& sim_params, const std::string& param_key, const std::string& observable_name) {
+    if (const std::string& units = sim_params.at(param_key); units != "off") {
+        if (units == "none") {
+            observables.push_back(ObservableFactory::createQuantity(observable_name, *this, sfreq, ""));
+        } else {
+            observables.push_back(ObservableFactory::createQuantity(observable_name, *this, sfreq, units));
+        }
+    }
+}
+
+/**
+ * Method for initializing all the requested observables.
+ *
+ * @param sim_params Simulation parameters object containing information about the observables.
+ */
+void Simulation::initializeObservables(const StringMap& sim_params) {
+    addObservableIfEnabled(sim_params, "energy", "energy");
+    addObservableIfEnabled(sim_params, "classical", "classical");
+
+    if (bosonic) {
+        addObservableIfEnabled(sim_params, "bosonic", "bosonic");
+    }
+}
+
+/**
  * Returns the natural logarithm of the sum of Boltzmann exponents over all the winding vectors for a pair of beads.
  *
  * @param left_x Coordinate vectors of left time-slice (e.g., P).
  * @param left_idx Particle index at the left time-slice.
  * @param right_x Coordinate vectors of right time-slice (e.g., 1).
  * @param right_idx Particle index at the right time-slice.
- * @return Sum of Boltzmann exponents.
+ * @return Log of sum of Boltzmann exponents.
  */
 double Simulation::getLogWindingWeight(const dVec& left_x, int left_idx, const dVec& right_x, int right_idx) const {
     double result = 0.0;

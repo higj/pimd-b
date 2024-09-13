@@ -161,7 +161,7 @@ Params::Params(const std::string& filename, const int& rank) : reader(filename) 
         throw std::invalid_argument(std::format("The provided system size ({0:4.3f}) is unphysical!", size));
 
     allowed_int_potential_names = { "aziz", "free", "harmonic", "dipole" };
-    allowed_ext_potential_names = { "free", "harmonic", "double_well" };
+    allowed_ext_potential_names = { "free", "harmonic", "double_well", "cosine" };
 
     /****** Interaction potential ******/
 
@@ -210,6 +210,10 @@ Params::Params(const std::string& filename, const int& rank) : reader(filename) 
             "energy", reader.Get(Sections::EXT_POTENTIAL, "strength", "1.0 millielectronvolt"));
         external_pot["location"] = getQuantity(
             "length", reader.Get(Sections::EXT_POTENTIAL, "location", "1.0 angstrom"));
+    } else if (external_name == "cosine") {
+        external_pot["amplitude"] = getQuantity(
+            "energy", reader.Get(Sections::EXT_POTENTIAL, "amplitude", "1.0 millielectronvolt"));
+        external_pot["phase"] = reader.GetReal(Sections::EXT_POTENTIAL, "phase", 1.0);
     }
 
     /****** Output ******/
@@ -218,6 +222,11 @@ Params::Params(const std::string& filename, const int& rank) : reader(filename) 
     out["velocities"] = reader.GetBoolean(Sections::OUTPUT, "velocities", false);
     out["forces"] = reader.GetBoolean(Sections::OUTPUT, "forces", false);
     out["wind_prob"] = reader.GetBoolean(Sections::OUTPUT, "wind_prob", false);
+
+    /****** Output ******/
+    observables["energy"] = reader.Get(Sections::OBSERVABLES, "energy", "kelvin");
+    observables["classical"] = reader.Get(Sections::OBSERVABLES, "classical", "off");
+    observables["bosonic"] = reader.Get(Sections::OBSERVABLES, "bosonic", "off");
 }
 
 bool Params::labelInArray(const std::string& label, const StringsList& arr) {

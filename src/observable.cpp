@@ -214,7 +214,7 @@ void ClassicalObservable::calculateSpringEnergy() {
  */
 BosonicObservable::BosonicObservable(const Simulation& _sim, int _freq, const std::string& _out_unit) :
     Observable(_sim, _freq, _out_unit) {
-    initialize({ "exchange_dist_prob", "exchange_all_prob" });
+    initialize({ "P(dist)", "P(all)" });
 }
 
 /**
@@ -222,7 +222,7 @@ BosonicObservable::BosonicObservable(const Simulation& _sim, int _freq, const st
  */
 void BosonicObservable::calculate() {
     if (sim.this_bead == 0 && sim.bosonic) {
-        quantities["exchange_dist_prob"] = sim.bosonic_exchange->getDistinctProbability();
-        quantities["exchange_all_prob"] = sim.bosonic_exchange->getLongestProbability();
+        quantities["P(dist)"] = sim.bosonic_exchange->getDistinctProbability();
+        quantities["P(all)"] = sim.bosonic_exchange->getLongestProbability();
     }
 }
