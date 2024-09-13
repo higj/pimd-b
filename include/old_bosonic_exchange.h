@@ -12,6 +12,10 @@ public:
     void prepare() override;
     double primEstimator() override;
 
+    double getDistinctProbability() override;
+    double getLongestProbability() override;
+
+    void printBosonicDebug() override;
 protected:
     void springForceFirstBead(dVec& f) override;
     void springForceLastBead(dVec& f) override;

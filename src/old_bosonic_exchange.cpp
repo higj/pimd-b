@@ -230,6 +230,28 @@ void OldBosonicExchange::springForceFirstBead(dVec& f) {
 }
 
 /**
+ * Evaluate the probability of the configuration where all the particles are separate.
+ *
+ * @return Probability of a configuration corresponding to the identity permutation.
+ */
+double OldBosonicExchange::getDistinctProbability() {
+    /// @todo Currently not implemented
+    return 0.0;
+}
+
+/**
+ * Evaluate the probability of a configuration where all the particles are connected,
+ * divided by 1/N. Notice that there are (N-1)! permutations of this topology
+ * (all represented by the cycle 0,1,...,N-1,0); this cancels the division by 1/N.
+ *
+ * @return Probability of a configuration where all the particles are connected.
+ */
+double OldBosonicExchange::getLongestProbability() {
+    /// @todo Currently not implemented
+    return 0.0;
+}
+
+/**
  * Calculates the contribution of the exterior beads to the primitive kinetic energy estimator.
  *
  * @return Weighted average of exterior spring energies over all permutations. 
@@ -268,4 +290,9 @@ double OldBosonicExchange::primEstimator() {
 #endif
 
     return (-1.0) * bosonic_spring_energy;
+}
+
+void OldBosonicExchange::printBosonicDebug() {
+    /// @todo Currently not implemented
+    return;
 }

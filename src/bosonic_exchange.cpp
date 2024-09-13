@@ -239,7 +239,6 @@ double BosonicExchange::getLongestProbability() {
     return exp(-beta * (getEnk(nbosons, nbosons) - V[nbosons]));
 }
 
-
 /**
  * Evaluates the partial derivative of (beta*V_B) with respect to beta.
  * This is used to calculate the primitive kinetic energy estimator for bosons.
