@@ -839,8 +839,8 @@ void Simulation::outputTrajectories(int step) {
 
         for (int axis = 0; axis < NDIM; ++axis) {
             /// @todo Make the units configurable
-            //xyz_file << std::format(" {:^20.12e}", Units::convertToUser("length", "angstrom", coord(ptcl_idx, axis)));
-            xyz_file << std::format(" {:^20.12e}", coord(ptcl_idx, axis));
+            xyz_file << std::format(" {:^20.12e}", Units::convertToUser("length", "angstrom", coord(ptcl_idx, axis)));
+            //xyz_file << std::format(" {:^20.12e}", coord(ptcl_idx, axis));
         }
 #if NDIM == 1
         xyz_file << " 0.0 0.0";
@@ -870,9 +870,9 @@ void Simulation::outputVelocities(int step) {
 
         for (int axis = 0; axis < NDIM; ++axis) {
             /// @todo Make the units configurable
-            //vel_file << std::format(" {:^20.12e}",
-            //    Units::convertToUser("velocity", "angstrom/ps", momenta(ptcl_idx, axis) / mass));
-            vel_file << std::format(" {:^20.12e}", momenta(ptcl_idx, axis) / mass);
+            vel_file << std::format(" {:^20.12e}",
+                Units::convertToUser("velocity", "angstrom/ps", momenta(ptcl_idx, axis) / mass));
+            //vel_file << std::format(" {:^20.12e}", momenta(ptcl_idx, axis) / mass);
         }
 #if NDIM == 1
         vel_file << " 0.0 0.0";
@@ -901,8 +901,8 @@ void Simulation::outputForces(int step) {
         force_file << (ptcl_idx + 1) << " 1";
 
         for (int axis = 0; axis < NDIM; ++axis) {
-            //force_file << std::format(" {:^20.12e}", Units::convertToUser("force", "ev/ang", forces(ptcl_idx, axis)));
-            force_file << std::format(" {:^20.12e}", forces(ptcl_idx, axis));
+            force_file << std::format(" {:^20.12e}", Units::convertToUser("force", "ev/ang", forces(ptcl_idx, axis)));
+            //force_file << std::format(" {:^20.12e}", forces(ptcl_idx, axis));
         }
 #if NDIM == 1
         force_file << " 0.0 0.0";
