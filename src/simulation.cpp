@@ -368,22 +368,7 @@ void Simulation::run() {
     const double sim_exec_time_start = MPI_Wtime();
 
     std::filesystem::create_directory(Output::FOLDER_NAME);
-    std::ofstream out_file;
-
-    if (this_bead == 0) {
-        out_file.open(std::format("{}/{}", Output::FOLDER_NAME, Output::MAIN_FILENAME), std::ios::out | std::ios::app);
-
-        // Header of the output file
-        out_file << std::format("{:^16s}", "step");
-
-        for (const auto& observable : observables) {
-            for (const auto& key : observable->quantities | std::views::keys) {
-                out_file << std::vformat(" {:^16s}", std::make_format_args(key));
-            }
-        }
-
-        out_file << "\n";
-    }
+    ObservablesLogger obs_logger(Output::MAIN_FILENAME, this_bead, observables);
 
     for (const auto& state : states) {
         state->initialize();
@@ -445,29 +430,7 @@ void Simulation::run() {
         */
 
         if (step % sfreq == 0) {
-            if (this_bead == 0) {
-                out_file << std::format("{:^16.8e}", static_cast<double>(step));
-            }
-
-            for (const auto& observable : observables) {
-                // The inner loop is necessary because some observable classes can calculate
-                // more than one observable (e.g., "energy" calculates both the kinetic and potential energies).
-                for (const double& val : observable->quantities | std::views::values) {
-                    double quantity_value = 0.0;
-                    double local_quantity_value = val;
-
-                    // Sum the results from all processes (beads)
-                    MPI_Allreduce(&local_quantity_value, &quantity_value, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-
-                    if (this_bead == 0) {
-                        out_file << std::format(" {:^16.8e}", quantity_value);
-                    }
-                }
-            }
-
-            if (this_bead == 0) {
-                out_file << '\n';
-            }
+            obs_logger.log(step);
         }
     }
 
@@ -482,14 +445,7 @@ void Simulation::run() {
         state->finalize();
     }
 
-    if (this_bead == 0) {
-        out_file.close();
-
-        std::ofstream report_file;
-        report_file.open(std::format("{}/report.txt", Output::FOLDER_NAME), std::ios::out | std::ios::app);
-        printReport(report_file, wall_time);
-        report_file.close();
-    }
+    printReport(wall_time);
 }
 
 /**
@@ -733,62 +689,70 @@ dVec Simulation::getSeparation(int first_ptcl, int second_ptcl, bool minimum_ima
 /**
  * @brief Prints a summary of the simulation parameters at the end of the simulation.
  */
-void Simulation::printReport(std::ofstream& out_file, double wall_time) const {
-    out_file << "---------\nParameters\n---------\n";
+void Simulation::printReport(double wall_time) const {
+    if (this_bead != 0)
+        return;
+
+    std::ofstream report_file;
+    report_file.open(std::format("{}/report.txt", Output::FOLDER_NAME), std::ios::out | std::ios::app);   
+
+    report_file << "---------\nParameters\n---------\n";
 
     if (bosonic) {
-        out_file << formattedReportLine("Statistics", "Bosonic");
+        report_file << formattedReportLine("Statistics", "Bosonic");
         std::string bosonic_alg_name = "Feldman-Hirshberg [O(N^2) scaling]";
 
 #if OLD_BOSONIC_ALGORITHM
         bosonic_alg_name = "Primitive [O(N!) scaling]";
 #endif
 
-        out_file << formattedReportLine("Bosonic algorithm", bosonic_alg_name);
+        report_file << formattedReportLine("Bosonic algorithm", bosonic_alg_name);
     } else {
-        out_file << formattedReportLine("Statistics", "Boltzmannonic");
+        report_file << formattedReportLine("Statistics", "Boltzmannonic");
     }
 
-    out_file << formattedReportLine("Periodic boundary conditions", pbc);
+    report_file << formattedReportLine("Periodic boundary conditions", pbc);
     if (pbc) {
-        out_file << formattedReportLine("Winding cutoff", max_wind);
+        report_file << formattedReportLine("Winding cutoff", max_wind);
     }
-    out_file << formattedReportLine("Dimension", NDIM);
-    out_file << formattedReportLine("Seed", params_seed);
-    out_file << formattedReportLine("Coordinate initialization method", init_pos_type);
-    out_file << formattedReportLine("Number of atoms", natoms);
-    out_file << formattedReportLine("Number of beads", nbeads);
+    report_file << formattedReportLine("Dimension", NDIM);
+    report_file << formattedReportLine("Seed", params_seed);
+    report_file << formattedReportLine("Coordinate initialization method", init_pos_type);
+    report_file << formattedReportLine("Number of atoms", natoms);
+    report_file << formattedReportLine("Number of beads", nbeads);
 
     double out_temperature = Units::convertToUser("temperature", "kelvin", temperature);
-    out_file << formattedReportLine("Temperature", std::format("{} kelvin", out_temperature));
+    report_file << formattedReportLine("Temperature", std::format("{} kelvin", out_temperature));
 
     double out_sys_size = Units::convertToUser("length", "angstrom", size);
-    out_file << formattedReportLine("Linear size of the system", std::format("{} angstroms", out_sys_size));
+    report_file << formattedReportLine("Linear size of the system", std::format("{} angstroms", out_sys_size));
 
     double out_mass = Units::convertToUser("mass", "dalton", mass);
-    out_file << formattedReportLine("Mass", std::format("{} amu", out_mass));
+    report_file << formattedReportLine("Mass", std::format("{} amu", out_mass));
 
-    out_file << formattedReportLine("Total number of MD steps", steps);
-    out_file << formattedReportLine("Interaction potential name", interaction_potential_name);
-    out_file << formattedReportLine("External potential name", external_potential_name);
+    report_file << formattedReportLine("Total number of MD steps", steps);
+    report_file << formattedReportLine("Interaction potential name", interaction_potential_name);
+    report_file << formattedReportLine("External potential name", external_potential_name);
 
-    out_file << "---------\nFeatures\n---------\n";
-    //out_file << formattedReportLine("Minimum image convention", MINIM);
-    //out_file << formattedReportLine("Wrapping of coordinates", WRAP);
-    //out_file << formattedReportLine("Wrapping of the first time-slice", WRAP_FIRST);
-    out_file << formattedReportLine("Minimum image convention (springs)", apply_mic_spring);
-    out_file << formattedReportLine("Minimum image convention (potential)", apply_mic_potential);
-    out_file << formattedReportLine("Coordinate wrap (all time-slices)", apply_wrap);
-    out_file << formattedReportLine("Coordinate wrap (1st time-slice only)", apply_wrap_first);
-    out_file << formattedReportLine("Winding effects", apply_wind);
+    report_file << "---------\nFeatures\n---------\n";
+    //report_file << formattedReportLine("Minimum image convention", MINIM);
+    //report_file << formattedReportLine("Wrapping of coordinates", WRAP);
+    //report_file << formattedReportLine("Wrapping of the first time-slice", WRAP_FIRST);
+    report_file << formattedReportLine("Minimum image convention (springs)", apply_mic_spring);
+    report_file << formattedReportLine("Minimum image convention (potential)", apply_mic_potential);
+    report_file << formattedReportLine("Coordinate wrap (all time-slices)", apply_wrap);
+    report_file << formattedReportLine("Coordinate wrap (1st time-slice only)", apply_wrap_first);
+    report_file << formattedReportLine("Winding effects", apply_wind);
 
-    out_file << formattedReportLine("Polymer recentering", RECENTER);
-    out_file << formattedReportLine("Using i-Pi convention", IPI_CONVENTION);
+    report_file << formattedReportLine("Polymer recentering", RECENTER);
+    report_file << formattedReportLine("Using i-Pi convention", IPI_CONVENTION);
 
-    out_file << "---------\n";
-    out_file << formattedReportLine("Wall time", std::format("{:%T}", 
+    report_file << "---------\n";
+    report_file << formattedReportLine("Wall time", std::format("{:%T}",
         std::chrono::duration<double>(wall_time)
     ));
+
+    report_file.close();
 }
 
 /**
