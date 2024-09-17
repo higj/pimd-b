@@ -5,7 +5,7 @@
 #include <sstream>
 
 /**
- * @brief Generic observable class constructor
+ * @brief Generic state class constructor
  */
 State::State(const Simulation& _sim, int _freq, const std::string& _out_unit) :
     sim(_sim), freq(_freq), out_unit(_out_unit) {

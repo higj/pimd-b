@@ -3,6 +3,7 @@
 #include <string>
 #include <memory>
 #include <vector>
+#include <fstream>
 
 #include "ordered_map.h"
 
@@ -33,6 +34,21 @@ class ObservableFactory {
 public:
     static std::unique_ptr<Observable> createQuantity(const std::string& observable_type, const Simulation& _sim, int _freq,
         const std::string& _out_unit);
+};
+
+/* -------------------------------- */
+
+class ObservablesLogger {
+public:
+    ObservablesLogger(const std::string& filename, int _bead, const std::vector<std::unique_ptr<Observable>>& _observables);
+    ~ObservablesLogger();
+
+    void log(int step);
+
+private:
+    std::ofstream file;
+    int bead;
+    const std::vector<std::unique_ptr<Observable>>& observables;
 };
 
 /* -------------------------------- */

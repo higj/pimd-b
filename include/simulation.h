@@ -107,7 +107,7 @@ public:
 private:
     int md_step;
 
-    void printReport(std::ofstream& out_file, double wall_time) const;
+    void printReport(double wall_time) const;
 
     std::string init_pos_type;
     std::string init_vel_type;
