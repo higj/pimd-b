@@ -25,7 +25,7 @@ cmake -DCMAKE_BUILD_TYPE=Release -D NDIM=1 ..
 Note that in this example, we compile a binary for 1D systems. Change `NDIM` to the desired dimension. Currently, the following CMake cache entries are available:
 
 * `-D NDIM=<DIM>` sets the number of spatial dimensions
-* `-D OLD_BOSONIC_ALGORITHM=1` to build with the original bosonic PIMD algorithm that scales as $\mathcal{O}(N!)$. By default, the program uses the [Feldman-Hirshberg](https://arxiv.org/abs/2305.18025) algorithm that scales as $\mathcal{O}(N^2+PN)$.
+* `-D OLD_BOSONIC_ALGORITHM=1` to build with the naive bosonic PIMD algorithm, which scales as $\mathcal{O}(N!)$. By default, the program uses the [Feldman-Hirshberg](https://arxiv.org/abs/2305.18025) algorithm, which scales as $\mathcal{O}(N^2+PN)$.
 
 Finally, to compile the binaries, use
 ```bash
@@ -87,7 +87,7 @@ bosonic = off
 
 Currently, the following potentials are available:
 
-* **External potentials**: `free`, `harmonic` and `double_well` 
+* **External potentials**: `free`, `harmonic`, `double_well` and `cosine`
 * **Pair interaction potentials**: `free`, `harmonic`, `dipole` and `aziz`
 
 Each potential comes with its own parameters that must be provided in the configuration file. For example, the harmonic potential 
@@ -116,6 +116,14 @@ The value (`state_unit`) specifies the unit to which the output must be converte
 will not be printed. By default, all states are set to `false`. If set to `true` (or, equivalently, `on`), the state will be printed in default (atomic) units, assuming the quantity is not dimensionless. Otherwise, the user 
 must specify the desired unit.
 
+Currently, four state *types* are supported:
+
+* `positions`: Prints the instantaneous coordinates of the beads.
+* `velocities`: Prints the instantaneous velocities of the beads.
+* `forces`: Prints the instantaneous forces acting on the beads.
+* `wind_prob`: Prints the probabilities of different winding vectors for each spring (dimensionless quantity).
+
+
 In the `[observables]` section, users can specify which physical observables should be evaluated and printed in `simulation.out`. The format for this section is `observable_name = observable_unit`. The key (`observable_name`) must correspond to a name of a supported observable. For the value (`observable_unit`), users can indicate the units to which the results should be converted (if the observable is not dimensionless), or use `off` if the observable should not be calculated at all (this is the default setting for all observables except `energy`). For dimensionless estimators, users may leave the value empty or specify `none` as the unit.
 
 Currently, three observable *types* are supported:
@@ -126,7 +134,7 @@ Currently, three observable *types* are supported:
 
 Internally, the simulation uses atomic units. However, the input parameters may be provided in the units of your choosing (e.g., electron-volts for energy).
 
-The following options are available in the `[simulation]`, `[system]` and `[output]` sections of the configuration file:
+The following options are available in the `[simulation]` and `[system]` sections of the configuration file:
 
 | Option | Description |
 | :-----------: | ----------- |
@@ -147,9 +155,6 @@ The following options are available in the `[simulation]`, `[system]` and `[outp
 |`natoms`     |  Number of particles in the quantum system |
 |`size`     |  Linear size of the system (units of length) |
 |`mass`     |  Mass of the particles (units of mass) |
-|`positions`     | Set to `true` to output the trajectories (Default: `false`) |
-|`velocities`     | Set to `true` to output the velocities (Default: `false`) |
-|`forces`     | Set to `true` to output the forces (Default: `false`) |
 
 On Windows, run the program using:
 
