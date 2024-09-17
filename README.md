@@ -46,7 +46,7 @@ Program was compiled for 1-dimensional systems.
 
 To run a simulation, you will need to create a `config.ini` file. A typical config file will have the following structure:
 
-```
+```ini
 ; Configuration file for the PIMD simulation
 
 [simulation]
@@ -110,8 +110,11 @@ Similarly, the `initial_velocity` option gives the user the ability to initializ
 
 The `size` option defines the linear size of the system. Currently, only cube geometry is supported. In the absence of periodic boundary conditions, `size` only affects the way initial positions are generated. However, if periodic boundary conditions are enabled, the system size also affects the cutoff distance for interactions, as well as the estimators. Also, the coordinates may be wrapped in this case, and minimum image convention can potentially be employed, if such functionality is desired.
 
-In the `[output]` section, the user can request the output of trajectories, velocities or forces of the beads.
-
+In the `[output]` section, users can request the output of various quantities related to the state of the system (such as positions, velocities, etc.) 
+The format for this section is `state_name = state_unit`. The key (`state_name`) must correspond to a name of a supported state. 
+The value (`state_unit`) specifies the unit to which the output must be converted. If set to `false` (or, equivalently, `off`), the state 
+will not be printed. By default, all states are set to `false`. If set to `true` (or, equivalently, `on`), the state will be printed in default (atomic) units, assuming the quantity is not dimensionless. Otherwise, the user 
+must specify the desired unit.
 
 In the `[observables]` section, users can specify which physical observables should be evaluated and printed in `simulation.out`. The format for this section is `observable_name = observable_unit`. The key (`observable_name`) must correspond to a name of a supported observable. For the value (`observable_unit`), users can indicate the units to which the results should be converted (if the observable is not dimensionless), or use `off` if the observable should not be calculated at all (this is the default setting for all observables except `energy`). For dimensionless estimators, users may leave the value empty or specify `none` as the unit.
 

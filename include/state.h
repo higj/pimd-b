@@ -3,7 +3,6 @@
 #include <string>
 #include <memory>
 #include <fstream>
-#include <vector>
 
 class Simulation; // Forward declaration
 
