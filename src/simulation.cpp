@@ -368,6 +368,10 @@ void Simulation::run() {
         out_file << "\n";
     }
 
+    for (const auto& state : states) {
+        state->initialize();
+    }
+
     // Main loop performing molecular dynamics steps
     for (int step = 0; step <= steps; ++step) {
         setStep(step);

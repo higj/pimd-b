@@ -2,6 +2,8 @@
 #include "simulation.h"
 #include "units.h"
 
+#include <sstream>
+
 /**
  * @brief Generic observable class constructor
  */
@@ -10,21 +12,23 @@ State::State(const Simulation& _sim, int _freq, const std::string& _out_unit) :
 }
 
 /**
- * @brief Performs cleanup (closing the output file).
+ * @brief Performs cleanup (e.g. closing the output file).
  */
 void State::finalize() {
-    out_file.close();
+    if (out_file.is_open()) {
+        out_file.close();
+    }
 }
 
 /**
- * @brief Creates an observable object based on the observable type.
+ * @brief Creates a state object based on the state type.
  *
- * @param observable_type Type of observable to create
+ * @param state_type Type of state to create
  * @param _sim Simulation object
- * @param _freq Frequency at which the observable is calculated
- * @param _out_unit Output unit of the observable
- * @return std::unique_ptr<Observable> Pointer to the created observable object
- * @throw std::invalid_argument If the observable type is unknown
+ * @param _freq Frequency at which the state is recorded
+ * @param _out_unit Output unit of the state
+ * @return std::unique_ptr<State> Pointer to the created state object
+ * @throw std::invalid_argument If the state type is unknown
  */
 std::unique_ptr<State> StateFactory::createQuantity(const std::string& state_type,
     const Simulation& _sim,
@@ -36,6 +40,8 @@ std::unique_ptr<State> StateFactory::createQuantity(const std::string& state_typ
         return std::make_unique<VelocityState>(_sim, _freq, _out_unit);
     } else if (state_type == "force") {
         return std::make_unique<ForceState>(_sim, _freq, _out_unit);
+    } else if (state_type == "wind_prob") {
+        return std::make_unique<WindingProbabilityState>(_sim, _freq, _out_unit);
     } else {
         throw std::invalid_argument("Unknown state type.");
     }
@@ -55,7 +61,7 @@ PositionState::PositionState(const Simulation& _sim, int _freq, const std::strin
 }
 
 /**
- * @brief Initializes the coordinates file.
+ * @brief Initializes the coordinates xyz file.
  */
 void PositionState::initialize() {
     out_file.open(std::format("{}/position_{}.xyz", Output::FOLDER_NAME, sim.this_bead), std::ios::out | std::ios::app);
@@ -63,7 +69,7 @@ void PositionState::initialize() {
 }
 
 /**
- * Outputs the trajectories of the particles to a xyz file.
+ * Outputs the trajectories.
  *
  * @param step Current step of the simulation.
  */
@@ -72,7 +78,7 @@ void PositionState::output(int step) {
         return;
 
     out_file << std::format("{}\n", sim.natoms);
-    //out_file << std::format(" Atoms. MD step: {}\n", sim.getStep());
+    //out_file << std::format(" Atoms. MD step: {}\n", step);
     out_file << std::format("Step {}\n", step);
 
     for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
@@ -104,7 +110,7 @@ VelocityState::VelocityState(const Simulation& _sim, int _freq, const std::strin
 }
 
 /**
- * @brief Initializes the coordinates file.
+ * @brief Initializes the velocities dat file.
  */
 void VelocityState::initialize() {
     out_file.open(std::format("{}/velocity_{}.dat", Output::FOLDER_NAME, sim.this_bead), std::ios::out | std::ios::app);
@@ -112,7 +118,7 @@ void VelocityState::initialize() {
 }
 
 /**
- * Outputs the velocities of the particles to a dat file.
+ * Outputs the velocities.
  *
  * @param step Current step of the simulation.
  */
@@ -152,7 +158,7 @@ ForceState::ForceState(const Simulation& _sim, int _freq, const std::string& _ou
 }
 
 /**
- * @brief Initializes the coordinates file.
+ * @brief Initializes the forces dat file.
  */
 void ForceState::initialize() {
     out_file.open(std::format("{}/force_{}.dat", Output::FOLDER_NAME, sim.this_bead), std::ios::out | std::ios::app);
@@ -160,7 +166,7 @@ void ForceState::initialize() {
 }
 
 /**
- * Outputs the forces acting on the particles to a dat file.
+ * Outputs the forces.
  *
  * @param step Current step of the simulation.
  */
@@ -184,4 +190,65 @@ void ForceState::output(int step) {
 #endif
         out_file << "\n";
     }
+}
+
+/**
+ * @brief Winding probability state class constructor.
+ */
+WindingProbabilityState::WindingProbabilityState(const Simulation& _sim, int _freq, const std::string& _out_unit) :
+    State(_sim, _freq, _out_unit) {
+}
+
+/**
+ * @brief Initializes the winding probabilities log file.
+ */
+void WindingProbabilityState::initialize() {
+    if (!sim.pbc || !sim.apply_wind)
+        return;
+
+    out_file.open(std::format("{}/wind-prob-{}.log", Output::FOLDER_NAME, sim.this_bead), std::ios::out | std::ios::app);
+    out_file << std::format("{:^16s}", "step");
+    out_file << std::format(" {:^8s}", "ptcl");
+
+    for (int wind_idx = 0; wind_idx < sim.wind.len(); ++wind_idx) {
+        std::ostringstream wind_ss;
+        wind_ss << "(";
+        for (int axis = 0; axis < NDIM; ++axis) {
+            wind_ss << sim.wind(wind_idx, axis);
+            if (axis != NDIM - 1) {
+                wind_ss << ",";
+            }
+        }
+        wind_ss << ")";
+        std::string wind_str = wind_ss.str();
+        out_file << std::format(" {:^16s}", wind_str);
+    }
+
+    out_file << '\n';
+}
+
+/**
+ * Outputs the winding probabilities.
+ *
+ * @param step Current step of the simulation.
+ */
+void WindingProbabilityState::output(int step) {
+    if (step % freq != 0 || !sim.pbc || !sim.apply_wind)
+        return;
+
+    for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
+        out_file << std::format("{:^16.8e}", static_cast<double>(step));
+        out_file << std::format(" {:^8d} ", ptcl_idx + 1);
+        for (int wind_idx = 0; wind_idx < sim.wind.len(); ++wind_idx) {
+            double prob = 1.0;
+
+            for (int axis = 0; axis < NDIM; ++axis) {
+                prob *= sim.getWindingProbability(sim.coord(ptcl_idx, axis) - sim.next_coord(ptcl_idx, axis), sim.wind(wind_idx, axis));
+            }
+
+            out_file << std::format(" {:^16.8e}", prob);
+        }
+        out_file << '\n';
+    }
+    out_file << '\n';
 }
