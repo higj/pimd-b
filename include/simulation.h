@@ -12,6 +12,7 @@
 #include "bosonic_exchange_base.h"
 
 
+class State;
 class Observable;
 
 class Simulation
@@ -50,6 +51,7 @@ public:
     std::unique_ptr<BosonicExchangeBase> bosonic_exchange;
 
     std::vector<std::unique_ptr<Observable>> observables;
+    std::vector<std::unique_ptr<State>> states;
 
     std::mt19937 rand_gen;
     std::unique_ptr<RanMars> mars_gen;
@@ -87,6 +89,8 @@ public:
 
     void initializePositions(dVec& coord_arr, const VariantMap& sim_params);
     void initializeMomenta(dVec& momentum_arr, const VariantMap& sim_params);
+    void addStateIfEnabled(const StringMap& sim_params, const std::string& param_key, const std::string& state_name);
+    void initializeStates(const StringMap& sim_params);
     void addObservableIfEnabled(const StringMap& sim_params, const std::string& param_key, const std::string& observable_name);
     void initializeObservables(const StringMap& sim_params);
     std::unique_ptr<Potential> initializePotential(const std::string& potential_name,
@@ -111,10 +115,6 @@ public:
     void getNextCoords(dVec& next);
     void getPrevCoords(dVec& prev);
     void updateNeighboringCoordinates();
-
-    void outputTrajectories(int step);
-    void outputVelocities(int step);
-    void outputForces(int step);
 
     dVec getSeparation(int first_ptcl, int second_ptcl, bool minimum_image = false) const;
 

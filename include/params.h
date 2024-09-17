@@ -30,7 +30,7 @@ public:
     // Map holding the interaction potential parameters
     VariantMap external_pot;
     // Map holding the output parameters
-    std::unordered_map<std::string, std::variant<int, double, bool>> out;
+    StringMap states;
     // Map holding the observable settings
     StringMap observables;
 

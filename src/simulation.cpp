@@ -6,6 +6,7 @@
 #include <cassert>
 #include "mpi.h"
 
+#include "state.h"
 #include "observable.h"
 #include "simulation.h"
 
@@ -41,10 +42,10 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     getVariant(param_obj.sim["apply_wrap_first"], apply_wrap_first);
     getVariant(param_obj.sim["apply_wind"], apply_wind);
 
-    getVariant(param_obj.out["positions"], out_pos);
+    /*getVariant(param_obj.out["positions"], out_pos);
     getVariant(param_obj.out["velocities"], out_vel);
     getVariant(param_obj.out["forces"], out_force);
-    getVariant(param_obj.out["wind_prob"], out_wind_prob);
+    getVariant(param_obj.out["wind_prob"], out_wind_prob);*/
 
     getVariant(param_obj.sys["temperature"], temperature);
     getVariant(param_obj.sys["natoms"], natoms);
@@ -121,6 +122,7 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
 #endif
     }
 
+    initializeStates(param_obj.states);
     initializeObservables(param_obj.observables);
 }
 
@@ -408,6 +410,10 @@ void Simulation::run() {
         wind_file << '\n';
     }
 
+    for (const auto& state : states) {
+        state->initialize();
+    }
+
     // Main loop performing molecular dynamics steps
     for (int step = 0; step <= steps; ++step) {
         setStep(step);
@@ -416,7 +422,7 @@ void Simulation::run() {
             observable->resetValues();
         }
 
-        if (step % sfreq == 0) {
+        /*if (step % sfreq == 0) {
             if (out_pos) {
                 outputTrajectories(step);
             }
@@ -426,6 +432,9 @@ void Simulation::run() {
             if (out_force) {
                 outputForces(step);
             }
+        }*/
+        for (const auto& state : states) {
+            state->output(step);
         }
 
         // "O" step
@@ -508,6 +517,10 @@ void Simulation::run() {
     const double wall_time = sim_exec_time_end - sim_exec_time_start;
 
     printStatus(std::format("Simulation finished running successfully (Runtime = {:.3} sec)", wall_time), this_bead);
+
+    for (const auto& state : states) {
+        state->finalize();
+    }
 
     if (this_bead == 0) {
         out_file.close();
@@ -823,99 +836,6 @@ void Simulation::printReport(std::ofstream& out_file, double wall_time) const {
 }
 
 /**
- * Outputs the trajectories of the particles to a xyz file.
- * 
- * @param step Current step of the simulation.
- */
-void Simulation::outputTrajectories(int step) {
-    std::ofstream xyz_file;
-    xyz_file.open(std::format("{}/position_{}.xyz", Output::FOLDER_NAME, this_bead), std::ios::out | std::ios::app);
-
-    xyz_file << std::format("{}\n", natoms);
-    xyz_file << std::format(" Atoms. MD step: {}\n", step);
-
-    for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
-        xyz_file << "1";
-
-        for (int axis = 0; axis < NDIM; ++axis) {
-            /// @todo Make the units configurable
-            xyz_file << std::format(" {:^20.12e}", Units::convertToUser("length", "angstrom", coord(ptcl_idx, axis)));
-            //xyz_file << std::format(" {:^20.12e}", coord(ptcl_idx, axis));
-        }
-#if NDIM == 1
-        xyz_file << " 0.0 0.0";
-#elif NDIM == 2
-        xyz_file << " 0.0";
-#endif
-        xyz_file << "\n";
-    }
-
-    xyz_file.close();
-}
-
-/**
- * Outputs the velocities of the particles to a dat file.
- * 
- * @param step Current step of the simulation.
- */
-void Simulation::outputVelocities(int step) {
-    std::ofstream vel_file;
-    vel_file.open(std::format("{}/velocity_{}.dat", Output::FOLDER_NAME, this_bead), std::ios::out | std::ios::app);
-
-    vel_file << std::format("{}\n", natoms);
-    vel_file << std::format(" Atoms. Timestep: {}\n", step);
-
-    for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
-        vel_file << (ptcl_idx + 1) << " 1";
-
-        for (int axis = 0; axis < NDIM; ++axis) {
-            /// @todo Make the units configurable
-            vel_file << std::format(" {:^20.12e}",
-                Units::convertToUser("velocity", "angstrom/ps", momenta(ptcl_idx, axis) / mass));
-            //vel_file << std::format(" {:^20.12e}", momenta(ptcl_idx, axis) / mass);
-        }
-#if NDIM == 1
-        vel_file << " 0.0 0.0";
-#elif NDIM == 2
-        vel_file << " 0.0";
-#endif
-        vel_file << "\n";
-    }
-
-    vel_file.close();
-}
-
-/**
- * Outputs the forces acting on the particles to a dat file.
- *
- * @param step Current step of the simulation.
- */
-void Simulation::outputForces(int step) {
-    std::ofstream force_file;
-    force_file.open(std::format("{}/force_{}.dat", Output::FOLDER_NAME, this_bead), std::ios::out | std::ios::app);
-
-    force_file << std::format("{}\n", natoms);
-    force_file << std::format(" Atoms. Timestep: {}\n", step);
-
-    for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
-        force_file << (ptcl_idx + 1) << " 1";
-
-        for (int axis = 0; axis < NDIM; ++axis) {
-            force_file << std::format(" {:^20.12e}", Units::convertToUser("force", "ev/ang", forces(ptcl_idx, axis)));
-            //force_file << std::format(" {:^20.12e}", forces(ptcl_idx, axis));
-        }
-#if NDIM == 1
-        force_file << " 0.0 0.0";
-#elif NDIM == 2
-        force_file << " 0.0";
-#endif
-        force_file << "\n";
-    }
-
-    force_file.close();
-}
-
-/**
  * @brief Zero the linear momentum of a group of atoms by subtracting the velocity
  * of the center of mass from the velocity of each atom.
  * The calculation assumes that all atoms have the same mass, in which case the
@@ -1039,6 +959,39 @@ void Simulation::initializeMomenta(dVec& momentum_arr, const VariantMap& sim_par
         genMomentum(momentum_arr);
         zeroMomentum();
     }
+}
+
+/**
+ * Initializes a state based on the input parameters. Initialization occurs only if the
+ * state is enabled, i.e., if the units are not set to "off" or "false".
+ *
+ * @param sim_params Simulation parameters object containing information about the states.
+ * @param param_key Key of the parameter in the simulation parameters object.
+ * @param state_name Name of the state.
+ */
+void Simulation::addStateIfEnabled(const StringMap& sim_params, const std::string& param_key, const std::string& state_name) {
+    if (const std::string& units = sim_params.at(param_key); units != "off" && units != "false") {
+        if (units == "none") {
+            states.push_back(StateFactory::createQuantity(state_name, *this, sfreq, ""));
+        } else if (units == "on" || units == "true" || units == "auto") {
+            /// @todo What if the state corresponds to dimensionless quantity? Shouldn't auto be the same as none?
+            states.push_back(StateFactory::createQuantity(state_name, *this, sfreq, "atomic_unit"));
+        } else {
+            states.push_back(StateFactory::createQuantity(state_name, *this, sfreq, units));
+        }
+    }
+}
+
+/**
+ * Method for initializing all the requested states.
+ *
+ * @param sim_params Simulation parameters object containing information about the states.
+ */
+void Simulation::initializeStates(const StringMap& sim_params) {
+    addStateIfEnabled(sim_params, "positions", "position");
+    addStateIfEnabled(sim_params, "velocities", "velocity");
+    addStateIfEnabled(sim_params, "forces", "force");
+    addStateIfEnabled(sim_params, "wind_prob", "wind_prob");
 }
 
 /**

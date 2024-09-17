@@ -217,11 +217,10 @@ Params::Params(const std::string& filename, const int& rank) : reader(filename) 
     }
 
     /****** Output ******/
-
-    out["positions"] = reader.GetBoolean(Sections::OUTPUT, "positions", false);
-    out["velocities"] = reader.GetBoolean(Sections::OUTPUT, "velocities", false);
-    out["forces"] = reader.GetBoolean(Sections::OUTPUT, "forces", false);
-    out["wind_prob"] = reader.GetBoolean(Sections::OUTPUT, "wind_prob", false);
+    states["positions"] = reader.Get(Sections::OUTPUT, "positions", "off");
+    states["velocities"] = reader.Get(Sections::OUTPUT, "velocities", "off");
+    states["forces"] = reader.Get(Sections::OUTPUT, "forces", "off");
+    states["wind_prob"] = reader.Get(Sections::OUTPUT, "wind_prob", "off");
 
     /****** Observables ******/
     observables["energy"] = reader.Get(Sections::OBSERVABLES, "energy", "kelvin");
