@@ -397,17 +397,6 @@ void Simulation::run() {
             observable->resetValues();
         }
 
-        /*if (step % sfreq == 0) {
-            if (out_pos) {
-                outputTrajectories(step);
-            }
-            if (out_vel) {
-                outputVelocities(step);
-            }
-            if (out_force) {
-                outputForces(step);
-            }
-        }*/
         for (const auto& state : states) {
             state->output(step);
         }
