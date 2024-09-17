@@ -74,7 +74,6 @@ public:
     [[nodiscard]] double getWindingShift(double diff) const;
     [[nodiscard]] double getWindingProbability(double diff, int winding_number) const;
     static void initializeWindingVectors(iVec& wind_arr, int wind_cutoff);
-    void printWindingInfo(std::ofstream& wind_file) const;
 
     double mass;
     double spring_constant;  // k=m*omega_p^2 (where omega_p depends on the convention)

@@ -385,31 +385,6 @@ void Simulation::run() {
         out_file << "\n";
     }
 
-    // Winding report
-    std::ofstream wind_file;
-
-    if (pbc && apply_wind && out_wind_prob) {
-        wind_file.open(std::format("{}/wind-prob-{}.log", Output::FOLDER_NAME, this_bead), std::ios::out | std::ios::app);
-        wind_file << std::format("{:^16s}", "step");
-        wind_file << std::format(" {:^8s}", "ptcl");
-
-        for (int wind_idx = 0; wind_idx < wind.len(); ++wind_idx) {
-            std::ostringstream wind_ss;
-            wind_ss << "(";
-            for (int axis = 0; axis < NDIM; ++axis) {
-                wind_ss << wind(wind_idx, axis);
-                if (axis != NDIM - 1) {
-                    wind_ss << ",";
-                }
-            }
-            wind_ss << ")";
-            std::string wind_str = wind_ss.str();
-            wind_file << std::format(" {:^16s}", wind_str);
-        }
-
-        wind_file << '\n';
-    }
-
     for (const auto& state : states) {
         state->initialize();
     }
@@ -504,10 +479,6 @@ void Simulation::run() {
             if (this_bead == 0) {
                 out_file << '\n';
             }
-
-            if (pbc && apply_wind && out_wind_prob) {
-                printWindingInfo(wind_file);
-            }
         }
     }
 
@@ -529,10 +500,6 @@ void Simulation::run() {
         report_file.open(std::format("{}/report.txt", Output::FOLDER_NAME), std::ios::out | std::ios::app);
         printReport(report_file, wall_time);
         report_file.close();
-    }
-
-    if (pbc && apply_wind && out_wind_prob) {
-        wind_file.close();
     }
 }
 
@@ -1169,24 +1136,6 @@ void Simulation::initializeWindingVectors(iVec& wind_arr, int wind_cutoff) {
 
         current[index]++;
     }
-}
-
-void Simulation::printWindingInfo(std::ofstream& wind_file) const {
-    for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
-        wind_file << std::format("{:^16.8e}", static_cast<double>(getStep()));
-        wind_file << std::format(" {:^8d} ", ptcl_idx + 1);
-        for (int wind_idx = 0; wind_idx < wind.len(); ++wind_idx) {
-            double prob = 1.0;
-
-            for (int axis = 0; axis < NDIM; ++axis) {
-                prob *= getWindingProbability(coord(ptcl_idx, axis) - next_coord(ptcl_idx, axis), wind(wind_idx, axis));
-            }
-
-            wind_file << std::format(" {:^16.8e}", prob);
-        }
-        wind_file << '\n';
-    }
-    wind_file << '\n';
 }
 
 /**
