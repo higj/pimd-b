@@ -35,10 +35,6 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     getVariant(param_obj.sim["fixcom"], fixcom);
     getVariant(param_obj.sim["pbc"], pbc);
 
-    getVariant(param_obj.out["positions"], out_pos);
-    getVariant(param_obj.out["velocities"], out_vel);
-    getVariant(param_obj.out["forces"], out_force);
-
     getVariant(param_obj.sys["temperature"], temperature);
     getVariant(param_obj.sys["natoms"], natoms);
     getVariant(param_obj.sys["size"], size);
@@ -682,9 +678,6 @@ void Simulation::printReport(double wall_time) const {
     }
 
     report_file << formattedReportLine("Periodic boundary conditions", pbc);
-    if (pbc) {
-        report_file << formattedReportLine("Winding cutoff", max_wind);
-    }
     report_file << formattedReportLine("Dimension", NDIM);
     report_file << formattedReportLine("Seed", params_seed);
     report_file << formattedReportLine("Coordinate initialization method", init_pos_type);

@@ -40,8 +40,6 @@ std::unique_ptr<State> StateFactory::createQuantity(const std::string& state_typ
         return std::make_unique<VelocityState>(_sim, _freq, _out_unit);
     } else if (state_type == "force") {
         return std::make_unique<ForceState>(_sim, _freq, _out_unit);
-    } else if (state_type == "wind_prob") {
-        return std::make_unique<WindingProbabilityState>(_sim, _freq, _out_unit);
     } else {
         throw std::invalid_argument("Unknown state type.");
     }
@@ -190,65 +188,4 @@ void ForceState::output(int step) {
 #endif
         out_file << "\n";
     }
-}
-
-/**
- * @brief Winding probability state class constructor.
- */
-WindingProbabilityState::WindingProbabilityState(const Simulation& _sim, int _freq, const std::string& _out_unit) :
-    State(_sim, _freq, _out_unit) {
-}
-
-/**
- * @brief Initializes the winding probabilities log file.
- */
-void WindingProbabilityState::initialize() {
-    if (!sim.pbc || !sim.apply_wind)
-        return;
-
-    out_file.open(std::format("{}/wind-prob-{}.log", Output::FOLDER_NAME, sim.this_bead), std::ios::out | std::ios::app);
-    out_file << std::format("{:^16s}", "step");
-    out_file << std::format(" {:^8s}", "ptcl");
-
-    for (int wind_idx = 0; wind_idx < sim.wind.len(); ++wind_idx) {
-        std::ostringstream wind_ss;
-        wind_ss << "(";
-        for (int axis = 0; axis < NDIM; ++axis) {
-            wind_ss << sim.wind(wind_idx, axis);
-            if (axis != NDIM - 1) {
-                wind_ss << ",";
-            }
-        }
-        wind_ss << ")";
-        std::string wind_str = wind_ss.str();
-        out_file << std::format(" {:^16s}", wind_str);
-    }
-
-    out_file << '\n';
-}
-
-/**
- * Outputs the winding probabilities.
- *
- * @param step Current step of the simulation.
- */
-void WindingProbabilityState::output(int step) {
-    if (step % freq != 0 || !sim.pbc || !sim.apply_wind)
-        return;
-
-    for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
-        out_file << std::format("{:^16.8e}", static_cast<double>(step));
-        out_file << std::format(" {:^8d} ", ptcl_idx + 1);
-        for (int wind_idx = 0; wind_idx < sim.wind.len(); ++wind_idx) {
-            double prob = 1.0;
-
-            for (int axis = 0; axis < NDIM; ++axis) {
-                prob *= sim.getWindingProbability(sim.coord(ptcl_idx, axis) - sim.next_coord(ptcl_idx, axis), sim.wind(wind_idx, axis));
-            }
-
-            out_file << std::format(" {:^16.8e}", prob);
-        }
-        out_file << '\n';
-    }
-    out_file << '\n';
 }

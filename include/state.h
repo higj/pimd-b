@@ -61,13 +61,3 @@ public:
     void initialize() override;
     void output(int step) override;
 };
-
-/* -------------------------------- */
-
-class WindingProbabilityState : public State {
-public:
-    WindingProbabilityState(const Simulation& _sim, int _freq, const std::string& _out_unit);
-
-    void initialize() override;
-    void output(int step) override;
-};
