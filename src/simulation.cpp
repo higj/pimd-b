@@ -285,44 +285,6 @@ void Simulation::velocityVerletStep() {
     }
 #endif
 
-#if RECENTER
-    // Recentering should be attempted only in the case of periodic boundary conditions.
-    // Also, with the current implementation, it can only work for distinguishable particles.
-    if (pbc && !bosonic) {
-        // If the initial bead has moved outside the fundamental cell,
-        // then rigidly translate the whole polymer such that
-        // the polymer will start in the fundamental cell.
-
-        // Vector that stores by how much the polymers should be translated (same as Delta(w)*L)
-        dVec shift(natoms);
-
-        if (this_bead == 0) {
-            // In the distinguishable case, the outer loop is the loop over all the ring polymers.
-            for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
-                for (int axis = 0; axis < NDIM; ++axis) {
-                    shift(ptcl_idx, axis) = std::nearbyint(coord(ptcl_idx, axis) / size);
-                    // Shift the initial bead back to the fundamental cell
-                    coord(ptcl_idx, axis) -= size * shift(ptcl_idx, axis);
-                }
-            }
-        }
-
-        // Broadcast the shift vector from process 0 (first bead) to all other processes
-        const int shift_vec_size = shift.size();
-        MPI_Bcast(shift.data(), shift_vec_size, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-
-        // For other time-slices, we receive info from the first bead and make a decision whether to move the polymer
-        if (this_bead != 0) {
-            for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
-                for (int axis = 0; axis < NDIM; ++axis) {
-                    // Shift the current bead according to the shift of the initial bead
-                    coord(ptcl_idx, axis) -= size * shift(ptcl_idx, axis);
-                }
-            }
-        }
-    }
-#endif
-
     // Remember to update the neighboring coordinates after every coordinate propagation
     updateNeighboringCoordinates();
 
@@ -359,7 +321,7 @@ void Simulation::run() {
 
         for (const auto& observable : observables) {
             observable->resetValues();
-    }
+        }
 
         for (const auto& state : states) {
             state->output(step);
@@ -397,17 +359,12 @@ void Simulation::run() {
             continue;
         }
 
-        // Calculate and print the observables (production stage)
+        // Calculate and the observables (production stage)
         for (const auto& observable : observables) {
             observable->calculate();
         }
 
-        /*
-        if (is_bosonic_bead) {
-            bosonic_exchange->printBosonicDebug();
-        }
-        */
-
+        // Save the observables at the specified frequency
         if (step % sfreq == 0) {
             obs_logger.log(step);
         }
@@ -700,7 +657,6 @@ void Simulation::printReport(double wall_time) const {
     report_file << "---------\nFeatures\n---------\n";
     report_file << formattedReportLine("Minimum image convention", MINIM);
     report_file << formattedReportLine("Wrapping of coordinates", WRAP);
-    report_file << formattedReportLine("Polymer recentering", RECENTER);
     report_file << formattedReportLine("Using i-Pi convention", IPI_CONVENTION);
 
     report_file << "---------\n";
