@@ -867,7 +867,6 @@ void Simulation::initializeStates(const StringMap& sim_params) {
     addStateIfEnabled(sim_params, "positions", "position");
     addStateIfEnabled(sim_params, "velocities", "velocity");
     addStateIfEnabled(sim_params, "forces", "force");
-    addStateIfEnabled(sim_params, "wind_prob", "wind_prob");
 }
 
 /**
