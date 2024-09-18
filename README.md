@@ -115,7 +115,7 @@ The value (`state_unit`) specifies the unit to which the output must be converte
 will not be printed. By default, all states are set to `false`. If set to `true` (or, equivalently, `on`), the state will be printed in default (atomic) units, assuming the quantity is not dimensionless. Otherwise, the user 
 must specify the desired unit.
 
-Currently, four state *types* are supported:
+Currently, three state *types* are supported:
 
 * `positions`: Prints the instantaneous coordinates of the beads.
 * `velocities`: Prints the instantaneous velocities of the beads.
