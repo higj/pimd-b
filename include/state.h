@@ -11,10 +11,9 @@ class Simulation; // Forward declaration
 class State {
 public:
     explicit State(const Simulation& _sim, int _freq, const std::string& _out_unit);
-    virtual ~State() = default;
+    ~State();
 
     virtual void initialize() = 0;
-    virtual void finalize();
     virtual void output(int step) = 0;   
 
 protected:

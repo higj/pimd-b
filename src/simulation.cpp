@@ -436,10 +436,6 @@ void Simulation::run() {
 
     printStatus(std::format("Simulation finished running successfully (Runtime = {:.3} sec)", wall_time), this_bead);
 
-    for (const auto& state : states) {
-        state->finalize();
-    }
-
     printReport(wall_time);
 }
 
@@ -697,10 +693,10 @@ void Simulation::printReport(double wall_time) const {
 
     if (bosonic) {
         report_file << formattedReportLine("Statistics", "Bosonic");
-        std::string bosonic_alg_name = "Feldman-Hirshberg [O(N^2) scaling]";
+        std::string bosonic_alg_name = "Feldman-Hirshberg";
 
 #if OLD_BOSONIC_ALGORITHM
-        bosonic_alg_name = "Primitive [O(N!) scaling]";
+        bosonic_alg_name = "Naive";
 #endif
 
         report_file << formattedReportLine("Bosonic algorithm", bosonic_alg_name);

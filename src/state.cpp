@@ -12,9 +12,9 @@ State::State(const Simulation& _sim, int _freq, const std::string& _out_unit) :
 }
 
 /**
- * @brief Performs cleanup (e.g. closing the output file).
+ * @brief Close the file upon destruction.
  */
-void State::finalize() {
+State::~State() {
     if (out_file.is_open()) {
         out_file.close();
     }
