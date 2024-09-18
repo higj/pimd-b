@@ -418,17 +418,12 @@ void Simulation::run() {
             continue;
         }
 
-        // Calculate and print the observables (production stage)
+        // Calculate the observables (production stage)
         for (const auto& observable : observables) {
             observable->calculate();
         }
 
-        /*
-        if (is_bosonic_bead) {
-            bosonic_exchange->printBosonicDebug();
-        }
-        */
-
+        // Save the observables at the specified frequency
         if (step % sfreq == 0) {
             obs_logger.log(step);
         }
