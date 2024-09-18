@@ -120,7 +120,13 @@ void ObservablesLogger::log(int step) {
  */
 EnergyObservable::EnergyObservable(const Simulation& _sim, int _freq, const std::string& _out_unit) :
     Observable(_sim, _freq, _out_unit) {
-    initialize({ "kinetic", "potential", "ext_pot", "int_pot", "virial" });
+    if (sim.external_potential_name == "free" && sim.interaction_potential_name == "free") {
+        initialize({ "kinetic" });
+    } else if (sim.external_potential_name == "free" || sim.interaction_potential_name == "free") {
+        initialize({ "kinetic", "potential", "virial" });
+    } else {
+        initialize({ "kinetic", "potential", "ext_pot", "int_pot", "virial" });
+    }
 }
 
 void EnergyObservable::calculate() {
@@ -200,10 +206,15 @@ void EnergyObservable::calculatePotential() {
     ext_pot /= sim.nbeads;
     virial *= 0.5 / sim.nbeads;
 
-    quantities["potential"] = Units::convertToUser("energy", out_unit, potential);
-    quantities["ext_pot"] = Units::convertToUser("energy", out_unit, ext_pot);
-    quantities["int_pot"] = Units::convertToUser("energy", out_unit, int_pot);
-    quantities["virial"] = Units::convertToUser("energy", out_unit, virial);
+    if (sim.external_potential_name != "free" && sim.interaction_potential_name != "free") {
+        quantities["ext_pot"] = Units::convertToUser("energy", out_unit, ext_pot);
+        quantities["int_pot"] = Units::convertToUser("energy", out_unit, int_pot);
+    }
+
+    if (sim.external_potential_name != "free" || sim.interaction_potential_name != "free") {
+        quantities["potential"] = Units::convertToUser("energy", out_unit, potential);
+        quantities["virial"] = Units::convertToUser("energy", out_unit, virial);
+    }
 }
 
 /**
