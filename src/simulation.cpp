@@ -449,7 +449,8 @@ void Simulation::run() {
 }
 
 /**
- * Obtains the coordinates from the previous timeslice.
+ * Receives coordinates from the previous time-slice,
+ * and sends the current coordinates to the next time-slice.
  * 
  * @param prev Vector to store the previous coordinates.
  */
@@ -476,7 +477,8 @@ void Simulation::getPrevCoords(dVec& prev) {
 }
 
 /**
- * Obtains the coordinates from the next timeslice.
+ * Receives coordinates from the next time-slice,
+ * and sends the current coordinates to the previous time-slice.
  * 
  * @param next Vector to store the next coordinates.
  */
