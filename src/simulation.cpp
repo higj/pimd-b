@@ -359,7 +359,7 @@ void Simulation::run() {
             continue;
         }
 
-        // Calculate and the observables (production stage)
+        // Calculate the observables (production stage)
         for (const auto& observable : observables) {
             observable->calculate();
         }
