@@ -1,4 +1,3 @@
-
 # PIMD-B++	
 ![Ubuntu compilation check](https://github.com/higj/pimd-b/actions/workflows/cmake-ubuntu.yml/badge.svg)
 
@@ -121,8 +120,6 @@ Currently, four state *types* are supported:
 * `positions`: Prints the instantaneous coordinates of the beads.
 * `velocities`: Prints the instantaneous velocities of the beads.
 * `forces`: Prints the instantaneous forces acting on the beads.
-* `wind_prob`: Prints the probabilities of different winding vectors for each spring (dimensionless quantity).
-
 
 In the `[observables]` section, users can specify which physical observables should be evaluated and printed in `simulation.out`. The format for this section is `observable_name = observable_unit`. The key (`observable_name`) must correspond to a name of a supported observable. For the value (`observable_unit`), users can indicate the units to which the results should be converted (if the observable is not dimensionless), or use `off` if the observable should not be calculated at all (this is the default setting for all observables except `energy`). For dimensionless estimators, users may leave the value empty or specify `none` as the unit.
 
