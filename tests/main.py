@@ -96,6 +96,8 @@ def compare_output(actual_output, expected_output):
     
     columns = list(data_actual.keys())
     
+    print(f"Comparing columns {columns}")
+    
     # Check if the values of observables match
     for column in columns:
         are_equal, index = compare_arrays(data_actual[column], data_expected[column])
