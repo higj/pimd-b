@@ -129,7 +129,6 @@ void Simulation::setStep(int step) {
  * @param[out] pos_arr Array to store the generated positions.
  */
 void Simulation::genRandomPositions(dVec& pos_arr) {
-    /// @todo Add ability to generate non-random positions (e.g., lattice)
     std::uniform_real_distribution<double> u_dist(-0.5 * size, 0.5 * size);
 
     for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
@@ -529,8 +528,6 @@ void Simulation::updatePhysicalForces(dVec& physical_force_arr) const {
                 // Get the vector distance between the two particles.
                 // Here "diff" contains just one vector of dimension NDIM.
                 dVec diff = getSeparation(ptcl_one, ptcl_two, MINIM);
-
-                /// @todo Add minimum image convention here (and also in the observable calculations)
 
                 // If the distance between the particles exceeds the cutoff length
                 // then we assume the interaction is negligible and do not bother
