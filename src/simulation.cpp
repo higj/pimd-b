@@ -545,17 +545,17 @@ void Simulation::updateSpringForces(dVec& spring_force_arr) const {
     if (is_bosonic_bead) {
         // If the simulation is bosonic and the current bead is either 1 or P, we calculate
         // the exterior spring forces in the appropriate bosonic class.
-        // Any winding effects that pertain to the exterior springs are taken into account
-        // inside the bosonic exchange class.
         bosonic_exchange->prepare();
         bosonic_exchange->exteriorSpringForce(spring_force_arr);
-    } else {
-        // If particles are distinguishable, or if the current bead is an interior bead,
-        // the force is calculated based on the standard expression for distinguishable particles.
-        for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
-            for (int axis = 0; axis < NDIM; ++axis) {
-                double diff_prev = prev_coord(ptcl_idx, axis) - coord(ptcl_idx, axis);
-                double diff_next = next_coord(ptcl_idx, axis) - coord(ptcl_idx, axis);
+        return;
+    }
+
+    // If particles are distinguishable, or if the current bead is an interior bead,
+    // the force is calculated based on the standard expression for distinguishable particles.
+    for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
+        for (int axis = 0; axis < NDIM; ++axis) {
+            double diff_prev = prev_coord(ptcl_idx, axis) - coord(ptcl_idx, axis);
+            double diff_next = next_coord(ptcl_idx, axis) - coord(ptcl_idx, axis);
 
                 if (pbc && apply_mic_spring) {
                     applyMinimumImage(diff_prev, size);
