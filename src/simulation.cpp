@@ -96,6 +96,11 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     interaction_potential_name = std::get<std::string>(param_obj.interaction_pot["name"]);
     int_pot_cutoff = std::get<double>(param_obj.interaction_pot["cutoff"]);
 
+    // If the interaction potential is set to "free", then the cutoff distance is meaningless
+    if (interaction_potential_name == "free") {
+        int_pot_cutoff = 0.0;
+    }
+
     // For cubic cells with PBC, the cutoff distance must be no greater than L/2 for consistency with
     // the minimum image convention (see 1.6.3 in Allen & Tildesley).
     if (pbc) {

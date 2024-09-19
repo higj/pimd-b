@@ -183,7 +183,7 @@ void EnergyObservable::calculatePotential() {
         }
     }
 
-    if (sim.interaction_potential_name != "free" && sim.int_pot_cutoff != 0.0) {
+    if (sim.int_pot_cutoff != 0.0) {
         for (int ptcl_one = 0; ptcl_one < sim.natoms; ++ptcl_one) {
             for (int ptcl_two = ptcl_one + 1; ptcl_two < sim.natoms; ++ptcl_two) {
                 dVec diff = sim.getSeparation(ptcl_one, ptcl_two, sim.apply_mic_potential);  // Vectorial distance
