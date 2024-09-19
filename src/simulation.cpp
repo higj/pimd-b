@@ -886,10 +886,9 @@ void Simulation::initializeMomenta(dVec& momentum_arr, const VariantMap& sim_par
  */
 void Simulation::addStateIfEnabled(const StringMap& sim_params, const std::string& param_key, const std::string& state_name) {
     if (const std::string& units = sim_params.at(param_key); units != "off" && units != "false") {
-        if (units == "none") {
-            states.push_back(StateFactory::createQuantity(state_name, *this, sfreq, ""));
-        } else if (units == "on" || units == "true" || units == "auto") {
-            /// @todo What if the state corresponds to dimensionless quantity? Shouldn't auto be the same as none?
+        if (units == "on" || units == "true" || units == "none") {
+            // In the case of "none", it is expected that the State object quantities will not have units,
+            // and therefore providing "atomic_unit" as the units in this case is simply a placeholder.
             states.push_back(StateFactory::createQuantity(state_name, *this, sfreq, "atomic_unit"));
         } else {
             states.push_back(StateFactory::createQuantity(state_name, *this, sfreq, units));
