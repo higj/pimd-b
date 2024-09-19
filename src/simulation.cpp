@@ -557,27 +557,26 @@ void Simulation::updateSpringForces(dVec& spring_force_arr) const {
             double diff_prev = prev_coord(ptcl_idx, axis) - coord(ptcl_idx, axis);
             double diff_next = next_coord(ptcl_idx, axis) - coord(ptcl_idx, axis);
 
-                if (pbc && apply_mic_spring) {
-                    applyMinimumImage(diff_prev, size);
-                    applyMinimumImage(diff_next, size);
-                }
+            if (pbc && apply_mic_spring) {
+                applyMinimumImage(diff_prev, size);
+                applyMinimumImage(diff_next, size);
+            }
 
-                spring_force_arr(ptcl_idx, axis) = spring_constant * (diff_prev + diff_next);
+            spring_force_arr(ptcl_idx, axis) = spring_constant * (diff_prev + diff_next);
 
-                // Winding effects due to interior neighbors are taken into account for all beads
-                if (include_wind_corr) {
-                    // Only the nonzero winding numbers contribute to the force
-                    for (int wind_idx = 1; wind_idx <= max_wind; ++wind_idx) {
-                        //spring_force_arr(ptcl_idx, axis) -= spring_constant * size * 
-                        //    wind_idx * (getWindingProbability(-diff_next, wind_idx) - getWindingProbability(-diff_next, -wind_idx));
+            // Winding effects due to interior neighbors are taken into account for all beads
+            if (include_wind_corr) {
+                // Only the nonzero winding numbers contribute to the force
+                for (int wind_idx = 1; wind_idx <= max_wind; ++wind_idx) {
+                    //spring_force_arr(ptcl_idx, axis) -= spring_constant * size * 
+                    //    wind_idx * (getWindingProbability(-diff_next, wind_idx) - getWindingProbability(-diff_next, -wind_idx));
 
-                        // This is equivalent to the above because the winding probability satisfies p(-diff, w) = p(diff, -w)
-                        spring_force_arr(ptcl_idx, axis) += spring_constant * size * 
-                                wind_idx * (getWindingProbability(diff_next, wind_idx) - getWindingProbability(diff_next, -wind_idx));
+                    // This is equivalent to the above because the winding probability satisfies p(-diff, w) = p(diff, -w)
+                    spring_force_arr(ptcl_idx, axis) += spring_constant * size * 
+                            wind_idx * (getWindingProbability(diff_next, wind_idx) - getWindingProbability(diff_next, -wind_idx));
 
-                        spring_force_arr(ptcl_idx, axis) += spring_constant * size * 
-                                wind_idx * (getWindingProbability(diff_prev, wind_idx) - getWindingProbability(diff_prev, -wind_idx));
-                    }
+                    spring_force_arr(ptcl_idx, axis) += spring_constant * size * 
+                            wind_idx * (getWindingProbability(diff_prev, wind_idx) - getWindingProbability(diff_prev, -wind_idx));
                 }
             }
         }
