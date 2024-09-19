@@ -12,22 +12,22 @@ import MDAnalysis as mda
 
 
 # Columns of observables to compare
-columns = ["step", "kinetic", "potential", "ext_pot", "int_pot", "virial", "temperature", "cl_kinetic", "cl_spring"]
+#columns = ["step", "kinetic", "potential", "ext_pot", "int_pot", "virial", "temperature", "cl_kinetic", "cl_spring"]
 out_filename = "simulation.out"
 
 
 def read_data(file_path):
     # Read the data from the output file
-    data = np.genfromtxt(file_path, skip_header=1)
+    data = np.genfromtxt(file_path, names=True, skip_header=0)
+    column_names = data.dtype.names
 
     # Extract columns and values
-    values = [data[:, i] for i in range(len(columns))]
+    values = [data[i] for i in column_names]
 
     # Create a dictionary to store the data
-    data_dict = {column: values[i] for i, column in enumerate(columns)}
+    data_dict = {column: values[i] for i, column in enumerate(column_names)}
 
     return data_dict
-
 
 def get_number_of_beads(input_file):
     config = configparser.ConfigParser()
@@ -93,6 +93,10 @@ def compare_output(actual_output, expected_output):
     # Check if the number of steps match
     if len(data_actual['step']) != len(data_expected['step']):
         raise AssertionError("Test failed: Number of steps do not match.")
+    
+    columns = list(data_actual.keys())
+    
+    print(f"Comparing columns {columns}")
     
     # Check if the values of observables match
     for column in columns:

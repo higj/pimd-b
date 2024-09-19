@@ -6,7 +6,7 @@
 #include "simulation.h"
 
 BosonicExchange::BosonicExchange(const Simulation& _sim) : BosonicExchangeBase(_sim),
-    E_kn(nbosons* (nbosons + 1) / 2),
+    E_kn(nbosons * (nbosons + 1) / 2),
     V(nbosons + 1),
     V_backwards(nbosons + 1),
     connection_probabilities(static_cast<int>(nbosons* nbosons)),

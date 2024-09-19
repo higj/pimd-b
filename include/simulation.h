@@ -88,6 +88,9 @@ public:
     std::unique_ptr<Potential> int_potential;
     double int_pot_cutoff;
 
+    std::string external_potential_name;
+    std::string interaction_potential_name;
+
     void updateForces();
     void updateSpringForces(dVec& spring_force_arr) const;
     void updatePhysicalForces(dVec& physical_force_arr) const;
@@ -111,9 +114,6 @@ private:
 
     std::string init_pos_type;
     std::string init_vel_type;
-
-    std::string external_potential_name;
-    std::string interaction_potential_name;
 
     void printDebug(const std::string& text, int target_bead = 0) const;
 };

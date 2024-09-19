@@ -82,7 +82,9 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     // Initialize the potential based on the input
     external_potential_name = std::get<std::string>(param_obj.external_pot["name"]);
     interaction_potential_name = std::get<std::string>(param_obj.interaction_pot["name"]);
-    int_pot_cutoff = std::get<double>(param_obj.interaction_pot["cutoff"]);
+
+    // If the interaction potential is set to "free", then the cutoff distance is meaningless
+    int_pot_cutoff = (interaction_potential_name == "free") ? 0.0 : std::get<double>(param_obj.interaction_pot["cutoff"]);
 
     // For cubic cells with PBC, the cutoff distance must be no greater than L/2 for consistency with
     // the minimum image convention (see 1.6.3 in Allen & Tildesley).
@@ -127,7 +129,6 @@ void Simulation::setStep(int step) {
  * @param[out] pos_arr Array to store the generated positions.
  */
 void Simulation::genRandomPositions(dVec& pos_arr) {
-    /// @todo Add ability to generate non-random positions (e.g., lattice)
     std::uniform_real_distribution<double> u_dist(-0.5 * size, 0.5 * size);
 
     for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
@@ -377,10 +378,6 @@ void Simulation::run() {
 
     printStatus(std::format("Simulation finished running successfully (Runtime = {:.3} sec)", wall_time), this_bead);
 
-    for (const auto& state : states) {
-        state->finalize();
-    }
-
     printReport(wall_time);
 }
 
@@ -490,27 +487,26 @@ void Simulation::updateSpringForces(dVec& spring_force_arr) const {
     if (is_bosonic_bead) {
         // If the simulation is bosonic and the current bead is either 1 or P, we calculate
         // the exterior spring forces in the appropriate bosonic class.
-        // Any winding effects that pertain to the exterior springs are taken into account
-        // inside the bosonic exchange class.
         bosonic_exchange->prepare();
         bosonic_exchange->exteriorSpringForce(spring_force_arr);
-    } else {
-        // If particles are distinguishable, or if the current bead is an interior bead,
-        // the force is calculated based on the standard expression for distinguishable particles.
-        for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
-            for (int axis = 0; axis < NDIM; ++axis) {
-                double diff_prev = prev_coord(ptcl_idx, axis) - coord(ptcl_idx, axis);
-                double diff_next = next_coord(ptcl_idx, axis) - coord(ptcl_idx, axis);
+        return;
+    }
+
+    // If particles are distinguishable, or if the current bead is an interior bead,
+    // the force is calculated based on the standard expression for distinguishable particles.
+    for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
+        for (int axis = 0; axis < NDIM; ++axis) {
+            double diff_prev = prev_coord(ptcl_idx, axis) - coord(ptcl_idx, axis);
+            double diff_next = next_coord(ptcl_idx, axis) - coord(ptcl_idx, axis);
 
 #if MINIM
-                if (pbc) {
-                    applyMinimumImage(diff_prev, size);
-                    applyMinimumImage(diff_next, size);
-                }
+            if (pbc) {
+                applyMinimumImage(diff_prev, size);
+                applyMinimumImage(diff_next, size);
+            }
 #endif
 
-                spring_force_arr(ptcl_idx, axis) = spring_constant * (diff_prev + diff_next);
-            }
+            spring_force_arr(ptcl_idx, axis) = spring_constant * (diff_prev + diff_next);
         }
     }
 }
@@ -531,8 +527,6 @@ void Simulation::updatePhysicalForces(dVec& physical_force_arr) const {
                 // Get the vector distance between the two particles.
                 // Here "diff" contains just one vector of dimension NDIM.
                 dVec diff = getSeparation(ptcl_one, ptcl_two, MINIM);
-
-                /// @todo Add minimum image convention here (and also in the observable calculations)
 
                 // If the distance between the particles exceeds the cutoff length
                 // then we assume the interaction is negligible and do not bother
@@ -623,10 +617,10 @@ void Simulation::printReport(double wall_time) const {
 
     if (bosonic) {
         report_file << formattedReportLine("Statistics", "Bosonic");
-        std::string bosonic_alg_name = "Feldman-Hirshberg [O(N^2) scaling]";
+        std::string bosonic_alg_name = "Feldman-Hirshberg";
 
 #if OLD_BOSONIC_ALGORITHM
-        bosonic_alg_name = "Primitive [O(N!) scaling]";
+        bosonic_alg_name = "Naive";
 #endif
 
         report_file << formattedReportLine("Bosonic algorithm", bosonic_alg_name);
@@ -803,10 +797,9 @@ void Simulation::initializeMomenta(dVec& momentum_arr, const VariantMap& sim_par
  */
 void Simulation::addStateIfEnabled(const StringMap& sim_params, const std::string& param_key, const std::string& state_name) {
     if (const std::string& units = sim_params.at(param_key); units != "off" && units != "false") {
-        if (units == "none") {
-            states.push_back(StateFactory::createQuantity(state_name, *this, sfreq, ""));
-        } else if (units == "on" || units == "true" || units == "auto") {
-            /// @todo What if the state corresponds to dimensionless quantity? Shouldn't auto be the same as none?
+        if (units == "on" || units == "true" || units == "none") {
+            // In the case of "none", it is expected that the State object quantities will not have units,
+            // and therefore providing "atomic_unit" as the units in this case is simply a placeholder.
             states.push_back(StateFactory::createQuantity(state_name, *this, sfreq, "atomic_unit"));
         } else {
             states.push_back(StateFactory::createQuantity(state_name, *this, sfreq, units));
