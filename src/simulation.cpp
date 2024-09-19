@@ -144,7 +144,6 @@ void Simulation::setStep(int step) {
  * @param[out] pos_arr Array to store the generated positions.
  */
 void Simulation::genRandomPositions(dVec& pos_arr) {
-    /// @todo Add ability to generate non-random positions (e.g., lattice)
     std::uniform_real_distribution<double> u_dist(-0.5 * size, 0.5 * size);
 
     for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
@@ -593,7 +592,6 @@ void Simulation::updateSpringForces(dVec& spring_force_arr) const {
  */
 void Simulation::updatePhysicalForces(dVec& physical_force_arr) const {
     // Calculate the external forces acting on the particles
-    /// @todo Think if MIC is appropriate when the external potential is periodic
     physical_force_arr = (-1.0) * ext_potential->gradV(coord);
 
     if (int_pot_cutoff != 0.0) {

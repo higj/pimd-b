@@ -107,7 +107,7 @@ double OldBosonicExchange::effectivePotential() {
             diff2 += getBeadsSeparationSquared(x_first_bead, ptcl_idx, x_last_bead, lastBeadNeighbor(ptcl_idx));
         }
 
-        weights_sum += exp(-beta * 0.5 * spring_constant * diff2);
+        weights_sum += exp(-sim.beta_half_k * diff2);
     } while (std::ranges::next_permutation(labels).found);
 
     return (-1.0 / beta) * log(weights_sum / permutation_counter);
