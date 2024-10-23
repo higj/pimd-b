@@ -130,6 +130,17 @@ Params::Params(const std::string& filename, const int& rank) : reader(filename) 
         sim["init_vel_manual_filename_format"] = init_vel_specification;
     }
     
+    // Implemented time propagators:
+    // "cartesian": gegular Velocity-Verlet algorithm, propagating the plain cartesian coordinates
+    // "normal_modes": a Velocity Verlet algorithm that propagates the normal modes
+    allowed_propagators = { "cartesian", "normal_modes" };
+    std::string propagator_type = reader.GetString(Sections::SIMULATION, "propagator", "cartesian");
+    sim["propagator_type"] = propagator_type;
+    
+    if (!labelInArray(propagator_type, allowed_propagators))
+        throw std::invalid_argument(std::format("The specified time propagator ({}) is not supported!", propagator_type));
+    
+    
     /* System params */
     sys["temperature"] = getQuantity("temperature", reader.Get(Sections::SYSTEM, "temperature", "1.0 kelvin"));
     if (double temp = std::get<double>(sys["temperature"]); temp <= 0.0) {

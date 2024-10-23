@@ -68,7 +68,15 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
 
     init_pos_type = std::get<std::string>(param_obj.sim["init_pos_type"]);
     init_vel_type = std::get<std::string>(param_obj.sim["init_vel_type"]);
-
+    propagator_type = std::get<std::string>(param_obj.sim["propagator_type"]);
+    
+    // Choose time propagation scheme
+    if (propagator_type == "cartesian") {
+        propagator = std::make_unique<VelocityVerletPropagator>(*this);
+    } else if (propagator_type == "normal_modes") {
+        propagator = std::make_unique<NormalModesPropagator>(*this);
+    }
+    
     // Initialize the coordinate, momenta, and force arrays
     coord = dVec(natoms);
     prev_coord = dVec(natoms);
@@ -305,10 +313,10 @@ void Simulation::velocityVerletStep() {
  */
 void Simulation::run() {
     printStatus("Running the simulation", this_bead);
-
+    
     MPI_Barrier(MPI_COMM_WORLD);
     const double sim_exec_time_start = MPI_Wtime();
-
+    
     std::filesystem::create_directory(Output::FOLDER_NAME);
     ObservablesLogger obs_logger(Output::MAIN_FILENAME, this_bead, observables);
 
@@ -338,7 +346,8 @@ void Simulation::run() {
             zeroMomentum();
         }
 
-        velocityVerletStep();
+        //vvStep();
+        propagator->step();
 
         // "O" step
         if (enable_t) {
@@ -627,7 +636,8 @@ void Simulation::printReport(double wall_time) const {
     } else {
         report_file << formattedReportLine("Statistics", "Boltzmannonic");
     }
-
+    
+    report_file << formattedReportLine("Time propagation algorithm", propagator_type);
     report_file << formattedReportLine("Periodic boundary conditions", pbc);
     report_file << formattedReportLine("Dimension", NDIM);
     report_file << formattedReportLine("Seed", params_seed);

@@ -59,6 +59,7 @@ bosonic = true
 pbc = true
 seed = 12345
 initial_position = random
+propagator = cartesian
 
 [system]
 temperature = 1.0 kelvin
@@ -108,6 +109,13 @@ Similarly, the `initial_velocity` option gives the user the ability to initializ
 * `manual(<filename_format>)`: similar behavior to `xyz(<filename_format>)`.
 
 The `size` option defines the linear size of the system. Currently, only cube geometry is supported. In the absence of periodic boundary conditions, `size` only affects the way initial positions are generated. However, if periodic boundary conditions are enabled, the system size also affects the cutoff distance for interactions, as well as the estimators. Also, the coordinates may be wrapped in this case, and minimum image convention can potentially be employed, if such functionality is desired.
+
+The `propagator` option allows one to specify the time propagation scheme to be used during the simulation. Currently, two options are evailable:
+
+* `cartesian` (default): plain old velocity verlet time propagation of the original cartesian coordinates and momenta. Works well for both distinguishable and bosonic systems
+
+* `normal_modes`: propagation of the normal modes of the ring polymers, using the symmetric Trotter expansion. Works exceptionally well for distinguishable particles; bosonic normal mode propagation is still in development
+
 
 In the `[output]` section, users can request the output of various quantities related to the state of the system (such as positions, velocities, etc.) 
 The format for this section is `state_name = state_unit`. The key (`state_name`) must correspond to a name of a supported state. 
