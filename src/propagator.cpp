@@ -24,44 +24,6 @@ void VelocityVerletPropagator::step() {
         }
     }
 
-#if RECENTER
-    // Recentering should be attempted only in the case of periodic boundary conditions.
-    // Also, with the current implementation, it can only work for distinguishable particles.
-    if (sim.pbc && !sim.bosonic) {
-        // If the initial bead has moved outside of the fundamental cell,
-        // then rigidly translate the whole polymer such that
-        // the polymer will start in the fundamental cell.
-
-        // Vector that stores by how much the polymers should be translated (same as Delta(w)*L)
-        dVec shift(sim.natoms);
-
-        if (sim.this_bead == 0) {
-            // In the distinguishable case, the outer loop is the loop over all the ring polymers.
-            for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
-                for (int axis = 0; axis < NDIM; ++axis) {
-                    shift(ptcl_idx, axis) = std::nearbyint(coord(ptcl_idx, axis) / sim.size);
-                    // Shift the initial bead back to the fundamental cell
-                    coord(ptcl_idx, axis) -= sim.size * shift(ptcl_idx, axis);
-                }
-            }
-        }
-
-        // Broadcast the shift vector from process 0 (first bead) to all other processes
-        const int shift_vec_size = shift.size();
-        MPI_Bcast(shift.data(), shift_vec_size, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-
-        // For other time-slices, we receive info from the first bead and make a decision whether to move the polymer
-        if (sim.this_bead != 0) {
-            for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
-                for (int axis = 0; axis < NDIM; ++axis) {
-                    // Shift the current bead according to the shift of the initial bead
-                    sim.coord(ptcl_idx, axis) -= sim.size * shift(ptcl_idx, axis);
-                }
-            }
-        }
-    }
-#endif
-
     // Remember to update the neighboring coordinates after every coordinate propagation
     sim.updateNeighboringCoordinates();
 
