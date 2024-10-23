@@ -23,10 +23,6 @@
 #define WRAP false                   // Wrap coordinates when PBC are used
 #endif
 
-#ifndef RECENTER
-#define RECENTER false               // Recenter polymer when the initial bead moves outside the fundamental cell?
-#endif
-
 #ifndef OLD_BOSONIC_ALGORITHM
 #define OLD_BOSONIC_ALGORITHM false  // Enable the old bosonic algorithm that scales as O(N!)?
 #endif
@@ -234,8 +230,14 @@ VectorArray<T, dim> operator*(const T& lhs_scalar, VectorArray<T, dim> rhs_vec) 
 // Define an array of vectors of doubles of dimension NDIM
 using dVec = VectorArray<double, NDIM>;
 
+// Define an array of vectors of integers of dimension NDIM
+using iVec = VectorArray<int, NDIM>;
+
 // Define a map of variant types
 using VariantMap = std::unordered_map<std::string, std::variant<int, unsigned int, long, double, bool, std::string>>;
+
+// Define a map of strings
+using StringMap = std::unordered_map<std::string, std::string>;
 
 // Define a list of strings
 using StringsList = std::vector<std::string>;

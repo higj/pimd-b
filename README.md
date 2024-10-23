@@ -3,68 +3,7 @@
 
 ## Introduction 
 
-### Bosonic algorithm
-
-#### Old algorithm
-
-In the case of bosons, the partition function must be evaluated in a properly symmetrized basis. As a result, the partition function contains contributions from $N!$ permutations, where $N$ is the number of quantum particles. A naive bosonic PIMD algorithm takes into account all the $N!$ permutations. Labeling the spring energy due to a specific permutation $\sigma$ as
-
-$$
-E^{\sigma}=\frac{1}{2}m\omega_{P}^{2}\sum_{\ell=1}^{N}\sum_{j=1}^{P}\left(\mathbf{r}_ {\ell}^{j}-\mathbf{r}_ {\ell}^{j+1}\right)^{2},\\;\text{where} \\; \mathbf{r}_ {\ell}^{P+1}=\mathbf{r}_ {\sigma\left(\ell\right)}^{1},
-$$
-
-one can define an effective bosonic ring polymer potential as
-
-$$
-V_B =-\frac{1}{\beta}\ln\left[\frac{1}{N!}\sum_{\sigma}e^{-\beta E^{\sigma}}\right].
-$$
-
-The spring force on a given bead $\mathbf{r}_{\ell}^{j}$ is then given by
-
-$$
-\mathbf{f}_ {\ell}^{j}=-\nabla_{\mathbf{r}_ {\ell}^{j}}V_{B}=-\frac{\sum_{\sigma}e^{-\beta E^{\sigma}}\nabla_{\mathbf{r}_ {\ell}^{j}}E^{\sigma}}{\sum_{\sigma}e^{-\beta E^{\sigma}}}.
-$$
-
-It is not actually necessary to evaluate all the terms in $E^{\sigma}$ when calculating the weights. Indeed, let us define $\Delta E^{\sigma}$ as 
-
-$$
-\Delta E^{\sigma}=E^{\sigma}-\frac{1}{2}m\omega_ {P}^{2}\sum_ {\ell=1}^{N}\sum_ {j=1}^{P-1}\left(\mathbf{r}_ {\ell}^{j}-\mathbf{r}_ {\ell}^{j+1}\right)^{2}=\frac{1}{2}m\omega_ {P}^{2}\sum_{\ell=1}^{N}\left(\mathbf{r}_ {\ell}^{P}-\mathbf{r}_ {\sigma\left(\ell\right)}^{1}\right)^{2}.
-$$
-
-Since $E^{\sigma} - \Delta E^{\sigma}$ is the same for all permutations, we can write
-
-$$
-V_{B}=\left(E^{\sigma}-\Delta E^{\sigma}\right)-\frac{1}{\beta}\ln\left[\frac{1}{N!}\sum_{\sigma}e^{-\beta\Delta E^{\sigma}}\right],
-$$
-
-and also
-
-$$
-\mathbf{f}_ {\ell}^{j}=-\frac{\sum_{\sigma}e^{-\beta\Delta E^{\sigma}}\nabla_{\mathbf{r}_ {\ell}^{j}}E^{\sigma}}{\sum_{\sigma}e^{-\beta\Delta E^{\sigma}}}.
-$$
-
-For interior beads, that is, for $j=2,\dots,P-1$, the forces coincide with the ordinary spring forces in systems of distinguishable particles, i.e.,
-
-$$
--\nabla_{\mathbf{r}_ {\ell}^{j}}E^{\sigma}=-m\omega_ {P}^{2}\left(2\mathbf{r}_ {\ell}^{j}-\mathbf{r}_ {\ell}^{j+1}-\mathbf{r}_ {\ell}^{j-1}\right).
-$$
-
-Bosonic exchange affects only the forces acting on the exterior beads ($j=1,P$). Note however that the aforementioned optimizations do not change the scaling of this algorithm which remains $\mathcal{O}(N!)$.
-
-For the primitive kinetic energy estimator, we use the following convenient expression:
-
-$$
-\left\langle K\right\rangle =\frac{dNP}{2\beta}-E_{\mathrm{sp,interior}}-\left\langle \frac{\sum_{\sigma}\Delta E^{\sigma}e^{-\beta\Delta E^{\sigma}}}{\sum_{\sigma}e^{-\beta\Delta E^{\sigma}}}\right\rangle,
-$$
-
-where
-
-$$
-E_{\mathrm{sp,interior}}=\frac{1}{2}m\omega_{P}^{2}\sum_{\ell=1}^{N}\sum_{j=1}^{P-1}\left(\mathbf{r}_ {\ell}^{j}-\mathbf{r}_ {\ell}^{j+1}\right)^{2},
-$$
-
-is the spring energy of the interior beads.
-
+**PIMD-B++** is a lightweight program for performing Boltzmannonic and bosonic path integral molecular dynamics simulations. For the theory behind the bosonic algorithm consult the [Wiki](https://github.com/higj/pimd-b/wiki/Bosonic-algorithm) page.
 
 ## Installation
 
@@ -85,7 +24,7 @@ cmake -DCMAKE_BUILD_TYPE=Release -D NDIM=1 ..
 Note that in this example, we compile a binary for 1D systems. Change `NDIM` to the desired dimension. Currently, the following CMake cache entries are available:
 
 * `-D NDIM=<DIM>` sets the number of spatial dimensions
-* `-D OLD_BOSONIC_ALGORITHM=1` to build with the original bosonic PIMD algorithm that scales as $\mathcal{O}(N!)$. By default, the program uses the [Feldman-Hirshberg](https://arxiv.org/abs/2305.18025) algorithm that scales as $\mathcal{O}(N^2+PN)$.
+* `-D OLD_BOSONIC_ALGORITHM=1` to build with the naive bosonic PIMD algorithm, which scales as $\mathcal{O}(N!)$. By default, the program uses the [Feldman-Hirshberg](https://arxiv.org/abs/2305.18025) algorithm, which scales as $\mathcal{O}(N^2+PN)$.
 
 Finally, to compile the binaries, use
 ```bash
@@ -106,7 +45,7 @@ Program was compiled for 1-dimensional systems.
 
 To run a simulation, you will need to create a `config.ini` file. A typical config file will have the following structure:
 
-```
+```ini
 ; Configuration file for the PIMD simulation
 
 [simulation]
@@ -134,11 +73,21 @@ name = free
 [external_potential]
 name = harmonic
 omega = 3.0 millielectronvolt
+
+[output]
+positions = false
+velocities = false
+forces = false
+
+[observables]
+energy = kelvin
+classical = off
+bosonic = off
 ```
 
 Currently, the following potentials are available:
 
-* **External potentials**: `free`, `harmonic` and `double_well` 
+* **External potentials**: `free`, `harmonic`, `double_well` and `cosine`
 * **Pair interaction potentials**: `free`, `harmonic`, `dipole` and `aziz`
 
 Each potential comes with its own parameters that must be provided in the configuration file. For example, the harmonic potential 
@@ -165,12 +114,32 @@ The `propagator` option allows one to specify the time propagation scheme to be 
 
 * `cartesian` (default): plain old velocity verlet time propagation of the original cartesian coordinates and momenta. Works well for both distinguishable and bosonic systems
 
-* `normal_modes`: propagation of the normal modes of the ring polymers, using the symmetric Trotter expansion. Works fine for distinguishable particles - bosonic normal mode propagation is still in development
+* `normal_modes`: propagation of the normal modes of the ring polymers, using the symmetric Trotter expansion. Works exceptionally well for distinguishable particles; bosonic normal mode propagation is still in development
 
+
+In the `[output]` section, users can request the output of various quantities related to the state of the system (such as positions, velocities, etc.) 
+The format for this section is `state_name = state_unit`. The key (`state_name`) must correspond to a name of a supported state. 
+The value (`state_unit`) specifies the unit to which the output must be converted. If set to `false` (or, equivalently, `off`), the state 
+will not be printed. By default, all states are set to `false`. If set to `true` (or, equivalently, `on`), the state will be printed in default (atomic) units, assuming the quantity is not dimensionless. Otherwise, the user 
+must specify the desired unit.
+
+Currently, three state *types* are supported:
+
+* `positions`: Prints the instantaneous coordinates of the beads.
+* `velocities`: Prints the instantaneous velocities of the beads.
+* `forces`: Prints the instantaneous forces acting on the beads.
+
+In the `[observables]` section, users can specify which physical observables should be evaluated and printed in `simulation.out`. The format for this section is `observable_name = observable_unit`. The key (`observable_name`) must correspond to a name of a supported observable. For the value (`observable_unit`), users can indicate the units to which the results should be converted (if the observable is not dimensionless), or use `off` if the observable should not be calculated at all (this is the default setting for all observables except `energy`). For dimensionless estimators, users may leave the value empty or specify `none` as the unit.
+
+Currently, three observable *types* are supported:
+
+* `energy`: Calculates the quantum energy of the system using different estimators. Currently, the thermodynamic (primitive), virial, and potential energy estimators are supported.
+* `classical`: Calculates observables related to the classical ring-polymer system, such as the kinetic energy (due to the fictitious momenta), spring energies, and temperature.
+* `bosonic`: Calculates the probabilities of two types of topologies: where all particles are separate and where all particles are connected (dimensionless estimator). Printed *only* in bosonic simulations.
 
 Internally, the simulation uses atomic units. However, the input parameters may be provided in the units of your choosing (e.g., electron-volts for energy).
 
-The following options are available in the `[simulation]`, `[system]` and `[output]` sections of the configuration file:
+The following options are available in the `[simulation]` and `[system]` sections of the configuration file:
 
 | Option | Description |
 | :-----------: | ----------- |
@@ -191,9 +160,6 @@ The following options are available in the `[simulation]`, `[system]` and `[outp
 |`natoms`     |  Number of particles in the quantum system |
 |`size`     |  Linear size of the system (units of length) |
 |`mass`     |  Mass of the particles (units of mass) |
-|`positions`     | Set to `true` to output the trajectories (Default: `false`) |
-|`velocities`     | Set to `true` to output the velocities (Default: `false`) |
-|`forces`     | Set to `true` to output the forces (Default: `false`) |
 
 On Windows, run the program using:
 

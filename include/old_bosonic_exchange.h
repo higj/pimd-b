@@ -5,14 +5,17 @@
 
 class OldBosonicExchange final : public BosonicExchangeBase {
 public:
-    OldBosonicExchange(int nbosons_, int np_, int bead_num_, double beta_, double spring_constant_,
-                       const dVec& x_, const dVec& x_prev_, const dVec& x_next_, bool pbc_, double size_);
+    OldBosonicExchange(const Simulation& _sim);
     ~OldBosonicExchange() override = default;
 
     double effectivePotential() override;
     void prepare() override;
     double primEstimator() override;
 
+    double getDistinctProbability() override;
+    double getLongestProbability() override;
+
+    void printBosonicDebug() override;
 protected:
     void springForceFirstBead(dVec& f) override;
     void springForceLastBead(dVec& f) override;

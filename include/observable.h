@@ -3,6 +3,7 @@
 #include <string>
 #include <memory>
 #include <vector>
+#include <fstream>
 
 #include "ordered_map.h"
 
@@ -16,7 +17,7 @@ public:
     virtual void calculate() = 0;
     virtual ~Observable() = default;
 
-    void initialize(const std::vector<std::string>& _labels);
+    void initialize(const std::vector<std::string>& labels);
     void resetValues();
 
     tsl::ordered_map<std::string, double> quantities;
@@ -32,7 +33,22 @@ protected:
 class ObservableFactory {
 public:
     static std::unique_ptr<Observable> createQuantity(const std::string& observable_type, const Simulation& _sim, int _freq,
-                                                      const std::string& _out_unit);
+        const std::string& _out_unit);
+};
+
+/* -------------------------------- */
+
+class ObservablesLogger {
+public:
+    ObservablesLogger(const std::string& filename, int _bead, const std::vector<std::unique_ptr<Observable>>& _observables);
+    ~ObservablesLogger();
+
+    void log(int step);
+
+private:
+    std::ofstream file;
+    int bead;
+    const std::vector<std::unique_ptr<Observable>>& observables;
 };
 
 /* -------------------------------- */
@@ -44,7 +60,6 @@ public:
     void calculate() override;
 
 private:
-    double primitiveKineticDistinguishable() const;
     void calculateKinetic();
     void calculatePotential();
 };
@@ -60,4 +75,14 @@ public:
 private:
     void calculateKineticEnergy();
     void calculateSpringEnergy();
+};
+
+
+/* -------------------------------- */
+
+class BosonicObservable : public Observable {
+public:
+    BosonicObservable(const Simulation& _sim, int _freq, const std::string& _out_unit);
+
+    void calculate() override;
 };

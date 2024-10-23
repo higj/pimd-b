@@ -4,7 +4,6 @@
 #include <random>
 #include <ctime>
 #include <memory>
-#include "mpi.h"
 
 #include "random_mars.h"
 #include "common.h"
@@ -14,6 +13,7 @@
 #include "bosonic_exchange_base.h"
 
 
+class State;
 class Observable;
 
 class Simulation
@@ -41,9 +41,11 @@ public:
     bool out_vel;       // Output velocities?
     bool out_force;     // Output forces?
 
+    bool is_bosonic_bead; // Is the current simulation bosonic and the time-slice is either 1 or P?
     std::unique_ptr<BosonicExchangeBase> bosonic_exchange;
 
     std::vector<std::unique_ptr<Observable>> observables;
+    std::vector<std::unique_ptr<State>> states;
 
     std::mt19937 rand_gen;
     std::unique_ptr<RanMars> mars_gen;
@@ -54,17 +56,26 @@ public:
     dVec coord, momenta, forces;
     dVec prev_coord, next_coord;
 
+    int getStep() const;
+    void setStep(int step);
+
     double mass;
     double spring_constant;  // k=m*omega_p^2 (where omega_p depends on the convention)
     double omega_p;          // Angular frequency of the ring polymer
+    double beta_half_k;      // Pre-factor of beta*0.5*k
 
     void genRandomPositions(dVec& pos_arr);
+    void uniformParticleGrid(dVec& pos_arr) const;
     void genMomentum(dVec& momenta_arr);
 
     void zeroMomentum();
 
     void initializePositions(dVec& coord_arr, const VariantMap& sim_params);
     void initializeMomenta(dVec& momentum_arr, const VariantMap& sim_params);
+    void addStateIfEnabled(const StringMap& sim_params, const std::string& param_key, const std::string& state_name);
+    void initializeStates(const StringMap& sim_params);
+    void addObservableIfEnabled(const StringMap& sim_params, const std::string& param_key, const std::string& observable_name);
+    void initializeObservables(const StringMap& sim_params);
     std::unique_ptr<Potential> initializePotential(const std::string& potential_name,
                                                    const VariantMap& potential_options);
 
@@ -80,6 +91,9 @@ public:
     std::unique_ptr<Potential> int_potential;
     double int_pot_cutoff;
 
+    std::string external_potential_name;
+    std::string interaction_potential_name;
+
     void updateForces();
     void updateSpringForces(dVec& spring_force_arr) const;
     void updatePhysicalForces(dVec& physical_force_arr) const;
@@ -90,10 +104,6 @@ public:
     void getPrevCoords(dVec& prev);
     void updateNeighboringCoordinates();
 
-    void outputTrajectories(int step);
-    void outputVelocities(int step);
-    void outputForces(int step);
-
     dVec getSeparation(int first_ptcl, int second_ptcl, bool minimum_image = false) const;
 
     int this_bead;   // Current process id ("rank" of MPI_Comm_rank)
@@ -101,14 +111,13 @@ public:
     unsigned int params_seed;
 
 private:
-    void printReport(std::ofstream& out_file) const;
+    int md_step;
+
+    void printReport(double wall_time) const;
 
     std::string init_pos_type;
     std::string init_vel_type;
     std::string propagator_type;
 
-    std::string external_potential_name;
-    std::string interaction_potential_name;
-
-    void printDebug(const std::string& text) const;
+    void printDebug(const std::string& text, int target_bead = 0) const;
 };

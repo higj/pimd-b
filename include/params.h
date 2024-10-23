@@ -13,11 +13,12 @@ namespace Sections {
     const std::string EXT_POTENTIAL = "external_potential";
     const std::string INT_POTENTIAL = "interaction_potential";
     const std::string OUTPUT = "output";
+    const std::string OBSERVABLES = "observables";
 }
 
 class Params {
 public:
-    explicit Params(const std::string& filename);
+    explicit Params(const std::string& filename, const int& rank);
     INIReader reader;
 
     // Map holding the simulation parameters
@@ -29,7 +30,9 @@ public:
     // Map holding the interaction potential parameters
     VariantMap external_pot;
     // Map holding the output parameters
-    std::unordered_map<std::string, std::variant<int, double, bool>> out;
+    StringMap states;
+    // Map holding the observable settings
+    StringMap observables;
 
     /// @todo Consider refactoring this method to a more general utility class (maybe to units)?
     static std::pair<double, std::string> parseQuantity(const std::string& input);

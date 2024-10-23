@@ -1,13 +1,11 @@
+#include <array>
 #include <numeric>
 #include <algorithm>
 
 #include "old_bosonic_exchange.h"
+#include "simulation.h"
 
-OldBosonicExchange::OldBosonicExchange(int nbosons_, int np_, int bead_num_, double beta_, double spring_constant_,
-                                       const dVec& x_, const dVec& x_prev_, const dVec& x_next_, bool pbc_,
-                                       double size_) :
-    BosonicExchangeBase(nbosons_, np_, bead_num_, beta_, spring_constant_, x_, x_prev_, x_next_, pbc_, size_),
-    labels(nbosons_) {
+OldBosonicExchange::OldBosonicExchange(const Simulation& _sim) : BosonicExchangeBase(_sim), labels(_sim.natoms) {
     // Fill the labels array with numbers from 0 to nbosons-1
     std::iota(labels.begin(), labels.end(), 0);
 
@@ -16,7 +14,7 @@ OldBosonicExchange::OldBosonicExchange(int nbosons_, int np_, int bead_num_, dou
 }
 
 /**
- * @brief Recalculates the longest exterior spring energy after each coordinate update.
+ * @brief Recalculates the smallest exterior spring energy after each coordinate update.
  */
 void OldBosonicExchange::prepare() {
     e_shift = getMinExteriorSpringEnergy();
@@ -70,7 +68,7 @@ double OldBosonicExchange::getMinExteriorSpringEnergy() {
         double diff2 = 0.0;
 
         for (int l = 0; l < nbosons; ++l) {
-            std::vector<double> sums(NDIM, 0.0);
+            std::array<double, NDIM> sums = {};
 
             // First bead of some particle (depending on the permutation) minus last bead of the l-th particle
             diff2 += getBeadsSeparationSquared(x_first_bead, l, x_last_bead, lastBeadNeighbor(l));
@@ -109,7 +107,7 @@ double OldBosonicExchange::effectivePotential() {
             diff2 += getBeadsSeparationSquared(x_first_bead, ptcl_idx, x_last_bead, lastBeadNeighbor(ptcl_idx));
         }
 
-        weights_sum += exp(-beta * 0.5 * spring_constant * diff2);
+        weights_sum += exp(-sim.beta_half_k * diff2);
     } while (std::ranges::next_permutation(labels).found);
 
     return (-1.0 / beta) * log(weights_sum / permutation_counter);
@@ -131,7 +129,7 @@ void OldBosonicExchange::springForceLastBead(dVec& f) {
         double weight = 0.0;
 
         for (int l = 0; l < nbosons; ++l) {
-            std::vector<double> sums(NDIM, 0.0);
+            std::array<double, NDIM> sums = {};
 
             double diff_next[NDIM];
 
@@ -189,7 +187,7 @@ void OldBosonicExchange::springForceFirstBead(dVec& f) {
         double weight = 0.0;
 
         for (int l = 0; l < nbosons; ++l) {
-            std::vector<double> sums(NDIM, 0.0);
+            std::array<double, NDIM> sums = {};
 
             double diff_prev[NDIM];
 
@@ -232,6 +230,28 @@ void OldBosonicExchange::springForceFirstBead(dVec& f) {
 }
 
 /**
+ * Evaluate the probability of the configuration where all the particles are separate.
+ *
+ * @return Probability of a configuration corresponding to the identity permutation.
+ */
+double OldBosonicExchange::getDistinctProbability() {
+    /// @todo Currently not implemented
+    return 0.0;
+}
+
+/**
+ * Evaluate the probability of a configuration where all the particles are connected,
+ * divided by 1/N. Notice that there are (N-1)! permutations of this topology
+ * (all represented by the cycle 0,1,...,N-1,0); this cancels the division by 1/N.
+ *
+ * @return Probability of a configuration where all the particles are connected.
+ */
+double OldBosonicExchange::getLongestProbability() {
+    /// @todo Currently not implemented
+    return 0.0;
+}
+
+/**
  * Calculates the contribution of the exterior beads to the primitive kinetic energy estimator.
  *
  * @return Weighted average of exterior spring energies over all permutations. 
@@ -270,4 +290,9 @@ double OldBosonicExchange::primEstimator() {
 #endif
 
     return (-1.0) * bosonic_spring_energy;
+}
+
+void OldBosonicExchange::printBosonicDebug() {
+    /// @todo Currently not implemented
+    return;
 }
