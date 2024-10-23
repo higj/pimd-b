@@ -637,7 +637,7 @@ void Simulation::printReport(double wall_time) const {
         report_file << formattedReportLine("Statistics", "Boltzmannonic");
     }
     
-    report_file << formattedReportLine("Time propagation algorithm", propagator);
+    report_file << formattedReportLine("Time propagation algorithm", propagator_type);
     report_file << formattedReportLine("Periodic boundary conditions", pbc);
     report_file << formattedReportLine("Dimension", NDIM);
     report_file << formattedReportLine("Seed", params_seed);
