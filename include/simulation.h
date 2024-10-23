@@ -84,7 +84,6 @@ public:
     std::unique_ptr<Propagator> propagator;
     
     void langevinStep();
-    void velocityVerletStep();
     void run();
 
     std::unique_ptr<Potential> ext_potential;

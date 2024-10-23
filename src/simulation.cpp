@@ -267,48 +267,6 @@ void Simulation::langevinStep() {
 }
 
 /**
- * @brief Velocity-Verlet step for the molecular dynamics simulation.
- */
-void Simulation::velocityVerletStep() {
-    // First step: momenta are propagated by half a step ("B" step)
-    for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
-        for (int axis = 0; axis < NDIM; ++axis) {
-            momenta(ptcl_idx, axis) += 0.5 * dt * forces(ptcl_idx, axis);
-        }
-    }
-
-    // Second step: positions are propagated using the new momenta ("A" step)
-    for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
-        for (int axis = 0; axis < NDIM; ++axis) {
-            coord(ptcl_idx, axis) += dt * momenta(ptcl_idx, axis) / mass;
-        }
-    }
-
-#if WRAP
-    if (pbc) {
-        for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
-            for (int axis = 0; axis < NDIM; ++axis) {
-                periodicWrap(coord(ptcl_idx, axis), size);
-            }
-        }
-    }
-#endif
-
-    // Remember to update the neighboring coordinates after every coordinate propagation
-    updateNeighboringCoordinates();
-
-    // Third step: forces are updated using the new positions
-    updateForces();
-
-    // Fourth step: momenta are propagated once more ("B" step)
-    for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
-        for (int axis = 0; axis < NDIM; ++axis) {
-            momenta(ptcl_idx, axis) += 0.5 * dt * forces(ptcl_idx, axis);
-        }
-    }
-}
-
-/**
  * @brief Perform a molecular dynamics run using the OBABO scheme.
  */
 void Simulation::run() {
@@ -346,7 +304,6 @@ void Simulation::run() {
             zeroMomentum();
         }
 
-        //vvStep();
         propagator->step();
 
         // "O" step
