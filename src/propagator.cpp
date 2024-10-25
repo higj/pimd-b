@@ -1,9 +1,11 @@
 #include "propagator.h"
+
+#include <numbers>
+
 #include "simulation.h"
 #include "common.h"
 
-Propagator::Propagator(Simulation& _sim) :
-    sim(_sim) {
+Propagator::Propagator(Simulation& _sim) : sim(_sim) {
 }
 
 VelocityVerletPropagator::VelocityVerletPropagator(Simulation& _sim) : Propagator(_sim) {
@@ -37,7 +39,6 @@ void VelocityVerletPropagator::step() {
         }
     }
 }
-
 
 NormalModesPropagator::NormalModesPropagator(Simulation& _sim) : 
     Propagator(_sim),
@@ -84,11 +85,11 @@ NormalModesPropagator::NormalModesPropagator(Simulation& _sim) :
     }
     
     // Frequencies
-    freq = 2 * sim.omega_p * sin(sim.this_bead * M_PI / sim.nbeads);
+    freq = 2 * sim.omega_p * sin(sim.this_bead * std::numbers::pi / sim.nbeads);
     
     // Cartesian-to-nm transformation matrix (one row because parallelized)
     double pref;
-    double fund_freq = 2 * M_PI / sim.nbeads * sim.this_bead;
+    double fund_freq = 2 * std::numbers::pi / sim.nbeads * sim.this_bead;
     if (sim.this_bead == 0) {
         pref = 1 / sqrt(sim.nbeads);
         std::fill(cart_to_nm_mat_row.begin(), cart_to_nm_mat_row.end(), pref);
@@ -147,21 +148,21 @@ void NormalModesPropagator::step() {
             for (int axis = 0; axis < NDIM; ++axis)
                 sim.momenta(ptcl_idx, axis) += 0.5 * sim.dt * ext_forces(ptcl_idx, axis);
     }
-    
+
     // Share data with other processes
     for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
-            int glob_idx = _glob_idx_nobead(axis, ptcl_idx);
+            int glob_idx = globIndexAtom(axis, ptcl_idx);
             arr_coord_cartesian[glob_idx + sim.this_bead] = sim.coord(ptcl_idx, axis);
             arr_momenta_cartesian[glob_idx + sim.this_bead] = sim.momenta(ptcl_idx, axis);
         }
     }
-    
+
     // Cartesian-to-nm transformation
     MPI_Barrier(MPI_COMM_WORLD);
     for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
-            int glob_idx = _glob_idx_nobead(axis, ptcl_idx);
+            int glob_idx = globIndexAtom(axis, ptcl_idx);
             // Cartesian-to-nm transformation
             double coord_nm = 0, momentum_nm = 0;
             for (int bead_idx = 0; bead_idx < sim.nbeads; ++bead_idx) {
@@ -178,12 +179,12 @@ void NormalModesPropagator::step() {
             }
         }
     }
-    
+
     // NM-to-Cartesian transformation
     MPI_Barrier(MPI_COMM_WORLD);
     for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
-            int glob_idx = _glob_idx_nobead(axis, ptcl_idx);
+            int glob_idx = globIndexAtom(axis, ptcl_idx);
             double coord_cartesian = 0, momentum_cartesian = 0;
             for (int bead_idx = 0; bead_idx < sim.nbeads; ++bead_idx) {
                 coord_cartesian += nm_to_cart_mat_row[bead_idx] * arr_coord_nm[glob_idx + bead_idx];
@@ -193,12 +194,12 @@ void NormalModesPropagator::step() {
             arr_momenta_cartesian[glob_idx + sim.this_bead] = momentum_cartesian;
         }
     }
-    
+
     // Update forces
     MPI_Barrier(MPI_COMM_WORLD);
     for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
-            int glob_idx = _glob_idx_nobead(axis, ptcl_idx);
+            int glob_idx = globIndexAtom(axis, ptcl_idx);
             sim.coord(ptcl_idx, axis) = arr_coord_cartesian[glob_idx + sim.this_bead];
             sim.momenta(ptcl_idx, axis) = arr_momenta_cartesian[glob_idx + sim.this_bead];
         }
@@ -207,7 +208,7 @@ void NormalModesPropagator::step() {
     sim.updateForces();
     sim.updatePhysicalForces(ext_forces);
     sim.updateSpringForces(spring_forces);
-    
+
     // Propagate momenta under external forces
     if (!sim.bosonic) {
         for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx)
@@ -227,6 +228,3 @@ void NormalModesPropagator::step() {
                 sim.momenta(ptcl_idx, axis) += 0.5 * sim.dt * ext_forces(ptcl_idx, axis);
     }
 }
-
-inline int NormalModesPropagator::_glob_idx(int axis, int atom, int bead) { return axis*axis_stride + atom*atom_stride + bead; }
-inline int NormalModesPropagator::_glob_idx_nobead(int axis, int atom) { return axis*axis_stride + atom*atom_stride; }

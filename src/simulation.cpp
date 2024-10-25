@@ -8,6 +8,7 @@
 
 #include "state.h"
 #include "observable.h"
+#include "propagator.h"
 #include "simulation.h"
 
 #if OLD_BOSONIC_ALGORITHM

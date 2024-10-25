@@ -9,12 +9,12 @@
 #include "common.h"
 #include "params.h"
 #include "potential.h"
-#include "propagator.h"
 #include "bosonic_exchange_base.h"
 
 
 class State;
 class Observable;
+class Propagator;
 
 class Simulation
 {

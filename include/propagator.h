@@ -9,7 +9,7 @@ class Simulation;
 class Propagator {
 public:
     explicit Propagator(Simulation& _sim);
-    ~Propagator() = default;
+    virtual ~Propagator() = default;
     
     virtual void step() = 0;
 protected:
@@ -21,7 +21,8 @@ protected:
 class VelocityVerletPropagator : public Propagator {
 public:
     VelocityVerletPropagator(Simulation& _sim);
-    
+    ~VelocityVerletPropagator() override = default;
+
     void step() override;
 };
 
@@ -30,7 +31,8 @@ public:
 class NormalModesPropagator : public Propagator {
 public:
     NormalModesPropagator(Simulation& _sim);
-    ~NormalModesPropagator();
+    ~NormalModesPropagator() override;
+
     void step() override;
 
 private:
@@ -41,6 +43,6 @@ private:
     std::vector<double> cart_to_nm_mat_row, nm_to_cart_mat_row;
     dVec ext_forces, spring_forces;
     
-    inline int _glob_idx(int axis, int atom, int bead);
-    inline int _glob_idx_nobead(int axis, int atom);
+    int globIndexAtom(const int axis, int atom) const { return axis * axis_stride + atom * atom_stride; }
+    int globIndexBead(int axis, int atom, int bead) const { return globIndexAtom(axis, atom) + bead; }
 };
