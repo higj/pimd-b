@@ -226,6 +226,7 @@ Params::Params(const std::string& filename, const int& rank) : reader(filename) 
     observables["energy"] = reader.Get(Sections::OBSERVABLES, "energy", "kelvin");
     observables["classical"] = reader.Get(Sections::OBSERVABLES, "classical", "off");
     observables["bosonic"] = reader.Get(Sections::OBSERVABLES, "bosonic", "off");
+    observables["winding"] = reader.Get(Sections::OBSERVABLES, "winding", "off");
 }
 
 bool Params::labelInArray(const std::string& label, const StringsList& arr) {

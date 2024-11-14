@@ -25,7 +25,9 @@ public:
     virtual void prepare() = 0;
     virtual double effectivePotential() = 0;
     virtual double primEstimator() = 0;
+    virtual double windingEstimator(int axis) = 0;
 
+    virtual double getConnectionProbability(int ptcl_last, int ptcl_first) = 0;
     virtual double getDistinctProbability() = 0;
     virtual double getLongestProbability() = 0;
 

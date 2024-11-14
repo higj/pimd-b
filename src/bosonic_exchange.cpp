@@ -4,17 +4,18 @@
 
 #include "bosonic_exchange.h"
 #include "simulation.h"
+#include "winding.h"
 
 BosonicExchange::BosonicExchange(const Simulation& _sim) : BosonicExchangeBase(_sim),
-      E_kn(nbosons * (nbosons + 1) / 2),
-      A_kn(nbosons * (nbosons + 1) / 2),
-      V(nbosons + 1),
-      V_backwards(nbosons + 1),
-      connection_probabilities(static_cast<int>(nbosons * nbosons)),
-      temp_nbosons_array(nbosons),
-      a_temp_nbosons_array(nbosons),
-      prim_est(nbosons + 1),
-      log_n_factorial(std::lgamma(nbosons + 1)) {
+                                                           E_kn(nbosons * (nbosons + 1) / 2),
+                                                           A_kn(nbosons * (nbosons + 1) / 2),
+                                                           V(nbosons + 1),
+                                                           V_backwards(nbosons + 1),
+                                                           connection_probabilities(static_cast<int>(nbosons * nbosons)),
+                                                           temp_nbosons_array(nbosons),
+                                                           a_temp_nbosons_array(nbosons),
+                                                           prim_est(nbosons + 1),
+                                                           log_n_factorial(std::lgamma(nbosons + 1)) {
     evaluateBosonicEnergies();
 }
 
@@ -219,15 +220,8 @@ void BosonicExchange::springForceLastBead(dVec& f) {
                 sums[axis] += prob * diff_next[axis];
 
                 if (sim.include_wind_corr) {
-                    // Zero winding does not contribute to the force
-                    double winding_contribution = 0.0;
-
-                    for (int wind_idx = 1; wind_idx <= sim.max_wind; ++wind_idx) {
-                        winding_contribution += wind_idx * sim.getWindingProbability(diff_next[axis], wind_idx);
-                        winding_contribution -= wind_idx * sim.getWindingProbability(diff_next[axis], -wind_idx);
-                    }
-
-                    sums[axis] += prob * winding_contribution * sim.size;
+                    WindingProbability wind_prob(diff_next[axis], sim.max_wind, sim.beta_half_k, sim.size);
+                    sums[axis] += prob * wind_prob.getExpectation() * sim.size;
                 }
             }
         }
@@ -239,15 +233,8 @@ void BosonicExchange::springForceLastBead(dVec& f) {
             sums[axis] += diff_prev[axis];
 
             if (sim.include_wind_corr) {
-                // Zero winding does not contribute to the force
-                double winding_contribution = 0.0;
-
-                for (int wind_idx = 1; wind_idx <= sim.max_wind; ++wind_idx) {
-                    winding_contribution += wind_idx * sim.getWindingProbability(diff_prev[axis], wind_idx);
-                    winding_contribution -= wind_idx * sim.getWindingProbability(diff_prev[axis], -wind_idx);
-                }
-
-                sums[axis] += winding_contribution * sim.size;
+                WindingProbability wind_prob(diff_prev[axis], sim.max_wind, sim.beta_half_k, sim.size);
+                sums[axis] += wind_prob.getExpectation() * sim.size;
             }
 
             f(l, axis) = sums[axis] * spring_constant;
@@ -270,15 +257,8 @@ void BosonicExchange::springForceFirstBead(dVec& f) {
                 sums[axis] += prob * diff_prev[axis];
 
                 if (sim.include_wind_corr) {
-                    // Zero winding does not contribute to the force
-                    double winding_contribution = 0.0;
-
-                    for (int wind_idx = 1; wind_idx <= sim.max_wind; ++wind_idx) {
-                        winding_contribution += wind_idx * sim.getWindingProbability(diff_prev[axis], wind_idx);
-                        winding_contribution -= wind_idx * sim.getWindingProbability(diff_prev[axis], -wind_idx);
-                    }
-
-                    sums[axis] += prob * winding_contribution * sim.size;
+                    WindingProbability wind_prob(diff_prev[axis], sim.max_wind, sim.beta_half_k, sim.size);
+                    sums[axis] += prob * wind_prob.getExpectation() * sim.size;
                 }
             }
         }
@@ -290,20 +270,17 @@ void BosonicExchange::springForceFirstBead(dVec& f) {
             sums[axis] += diff_next[axis];
 
             if (sim.include_wind_corr) {
-                // Zero winding does not contribute to the force
-                double winding_contribution = 0.0;
-
-                for (int wind_idx = 1; wind_idx <= sim.max_wind; ++wind_idx) {
-                    winding_contribution += wind_idx * sim.getWindingProbability(diff_next[axis], wind_idx);
-                    winding_contribution -= wind_idx * sim.getWindingProbability(diff_next[axis], -wind_idx);
-                }
-
-                sums[axis] += winding_contribution * sim.size;
+                WindingProbability wind_prob(diff_next[axis], sim.max_wind, sim.beta_half_k, sim.size);
+                sums[axis] += wind_prob.getExpectation() * sim.size;
             }
 
             f(l, axis) = sums[axis] * spring_constant;
         }
     }
+}
+
+double BosonicExchange::getConnectionProbability(int ptcl_last, int ptcl_first) {
+    return connection_probabilities[nbosons * ptcl_last + ptcl_first];
 }
 
 /**
@@ -372,6 +349,24 @@ double BosonicExchange::primEstimator() {
 #else
     return prim_est[nbosons];
 #endif
+}
+
+double BosonicExchange::windingEstimator(int axis) {
+    double mean_w = 0.0;
+
+    for (int l = 0; l < nbosons; l++) {
+        for (int next_l = 0; next_l <= l + 1 && next_l < nbosons; next_l++) {
+            double diff = x(l, axis) - x_next(next_l, axis);
+            double prob = connection_probabilities[nbosons * l + next_l];
+
+            if (sim.include_wind_corr) {
+                WindingProbability wind_prob(diff, sim.max_wind, sim.beta_half_k, sim.size);
+                mean_w += prob * wind_prob.getExpectation();
+            }
+        }
+    }
+
+    return mean_w;
 }
 
 void BosonicExchange::printBosonicDebug() {

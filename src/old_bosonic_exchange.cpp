@@ -229,6 +229,10 @@ void OldBosonicExchange::springForceFirstBead(dVec& f) {
     }
 }
 
+double OldBosonicExchange::getConnectionProbability(int ptcl_last, int ptcl_first) {
+    return 0.0;
+}
+
 /**
  * Evaluate the probability of the configuration where all the particles are separate.
  *
@@ -290,6 +294,10 @@ double OldBosonicExchange::primEstimator() {
 #endif
 
     return (-1.0) * bosonic_spring_energy;
+}
+
+double OldBosonicExchange::windingEstimator(int axis) {
+    return 0.0;
 }
 
 void OldBosonicExchange::printBosonicDebug() {

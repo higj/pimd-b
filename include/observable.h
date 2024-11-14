@@ -90,3 +90,12 @@ private:
     //void calculateKineticEnergy();
     //void calculateSpringEnergy();
 };
+
+/* -------------------------------- */
+
+class WindingObservable : public Observable {
+public:
+    WindingObservable(const Simulation& _sim, int _freq, const std::string& _out_unit);
+
+    void calculate() override;
+};

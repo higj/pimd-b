@@ -6,6 +6,7 @@
 #include <cassert>
 #include "mpi.h"
 
+#include "winding.h"
 #include "state.h"
 #include "observable.h"
 #include "simulation.h"
@@ -566,18 +567,24 @@ void Simulation::updateSpringForces(dVec& spring_force_arr) const {
 
             // Winding effects due to interior neighbors are taken into account for all beads
             if (include_wind_corr) {
+                WindingProbability wind_prob_next(diff_next, max_wind, beta_half_k, size);
+                WindingProbability wind_prob_prev(diff_prev, max_wind, beta_half_k, size);
+
+                /*
                 // Only the nonzero winding numbers contribute to the force
                 for (int wind_idx = 1; wind_idx <= max_wind; ++wind_idx) {
                     //spring_force_arr(ptcl_idx, axis) -= spring_constant * size * 
                     //    wind_idx * (getWindingProbability(-diff_next, wind_idx) - getWindingProbability(-diff_next, -wind_idx));
 
                     // This is equivalent to the above because the winding probability satisfies p(-diff, w) = p(diff, -w)
-                    spring_force_arr(ptcl_idx, axis) += spring_constant * size * 
-                            wind_idx * (getWindingProbability(diff_next, wind_idx) - getWindingProbability(diff_next, -wind_idx));
+                    spring_force_arr(ptcl_idx, axis) += spring_constant * size * wind_idx * getWindingProbability(diff_next, wind_idx);
+                    spring_force_arr(ptcl_idx, axis) -= spring_constant * size * wind_idx * getWindingProbability(diff_next, -wind_idx);
 
-                    spring_force_arr(ptcl_idx, axis) += spring_constant * size * 
-                            wind_idx * (getWindingProbability(diff_prev, wind_idx) - getWindingProbability(diff_prev, -wind_idx));
-                }
+                    spring_force_arr(ptcl_idx, axis) += spring_constant * size * wind_idx * getWindingProbability(diff_prev, wind_idx);
+                    spring_force_arr(ptcl_idx, axis) -= spring_constant * size * wind_idx * getWindingProbability(diff_prev, -wind_idx);
+                }*/
+
+                spring_force_arr(ptcl_idx, axis) += spring_constant * size * (wind_prob_next.getExpectation() + wind_prob_prev.getExpectation());
             }
         }
     }
@@ -743,6 +750,7 @@ void Simulation::printReport(double wall_time) const {
     report_file << formattedReportLine("Wall time", std::format("{:%T}",
         std::chrono::duration<double>(wall_time)
     ));
+    report_file << formattedReportLine("Wall time per step (sec)", std::format("{:.5e}", wall_time / steps));
 
     report_file.close();
 }
@@ -931,6 +939,7 @@ void Simulation::addObservableIfEnabled(const StringMap& sim_params, const std::
 void Simulation::initializeObservables(const StringMap& sim_params) {
     addObservableIfEnabled(sim_params, "energy", "energy");
     addObservableIfEnabled(sim_params, "classical", "classical");
+    addObservableIfEnabled(sim_params, "winding", "winding");
 
     if (bosonic) {
         addObservableIfEnabled(sim_params, "bosonic", "bosonic");
@@ -949,6 +958,7 @@ void Simulation::initializeObservables(const StringMap& sim_params) {
 double Simulation::getLogWindingWeight(const dVec& left_x, int left_idx, const dVec& right_x, int right_idx) const {
     double result = 0.0;
 
+    /*
     for (int axis = 0; axis < NDIM; ++axis) {
         const double diff = left_x(left_idx, axis) - right_x(right_idx, axis);
         const double shift = getWindingShift(diff);
@@ -961,6 +971,12 @@ double Simulation::getLogWindingWeight(const dVec& left_x, int left_idx, const d
         }
 
         result += log(weight) - beta_half_k * shift;
+    }
+    */
+    for (int axis = 0; axis < NDIM; ++axis) {
+        const double diff = left_x(left_idx, axis) - right_x(right_idx, axis);
+        WindingProbability wind_prob(diff, max_wind, beta_half_k, size);
+        result += wind_prob.getLogWindingWeight();
     }
 
     return result;
@@ -978,6 +994,7 @@ double Simulation::getLogWindingWeight(const dVec& left_x, int left_idx, const d
 double Simulation::getWindingEnergyExpectation(const dVec& left_x, int left_idx, const dVec& right_x, int right_idx) const {
     double total = 0.0;
 
+    /*
     for (int axis = 0; axis < NDIM; ++axis) {
         const double diff = left_x(left_idx, axis) - right_x(right_idx, axis);
         total += diff * diff * getWindingProbability(diff, 0);
@@ -989,6 +1006,13 @@ double Simulation::getWindingEnergyExpectation(const dVec& left_x, int left_idx,
             total += diff_plus * diff_plus * getWindingProbability(diff, wind_num);
             total += diff_minus * diff_minus * getWindingProbability(diff, -wind_num);
         }
+    }
+    */
+    for (int axis = 0; axis < NDIM; ++axis) {
+        const double diff = left_x(left_idx, axis) - right_x(right_idx, axis);
+        WindingProbability wind_prob(diff, max_wind, beta_half_k, size);
+
+        total += wind_prob.getDiffSquaredExpectation();
     }
 
     return 0.5 * spring_constant * total;
@@ -1023,6 +1047,8 @@ double Simulation::getWindingShift(const double diff) const {
  * @return Probability of attaing a configuration with the specified winding number.
  */
 double Simulation::getWindingProbability(const double diff, const int winding_number) const {
+    // Important note: The winding probability will be wrong if winding_number is greater than max_wind
+
     // Shift for numerical stability
     const double shift = getWindingShift(diff);
 
@@ -1045,7 +1071,6 @@ double Simulation::getWindingProbability(const double diff, const int winding_nu
 
 /**
  * Initializes the winding vectors for periodic boundary conditions.
- * Currently used only for debugging purposes.
  *
  * @param[out] wind_arr The array to store the winding vectors.
  * @param wind_cutoff The cutoff for the winding vectors.
@@ -1053,6 +1078,11 @@ double Simulation::getWindingProbability(const double diff, const int winding_nu
 void Simulation::initializeWindingVectors(iVec& wind_arr, int wind_cutoff) {
     // Number of different winding vectors for a given cutoff
     const int num_wind = static_cast<int>(std::pow(2 * wind_cutoff + 1, NDIM));
+
+    if (num_wind > 16000) {
+        throw std::runtime_error("The number of winding vectors is too large.");
+    }
+
     wind_arr = iVec(num_wind);
 
     std::array<int, NDIM> current = {};
