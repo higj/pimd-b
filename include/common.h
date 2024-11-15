@@ -31,6 +31,10 @@
 #define RECENTER false               // Recenter polymer when the initial bead moves outside the fundamental cell?
 #endif
 
+#ifndef DETAILED_WIND_REPORT
+#define DETAILED_WIND_REPORT false   // Print detailed winding number report?
+#endif
+
 #ifndef OLD_BOSONIC_ALGORITHM
 #define OLD_BOSONIC_ALGORITHM false  // Enable the old bosonic algorithm that scales as O(N!)?
 #endif

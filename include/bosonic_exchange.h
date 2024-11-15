@@ -14,7 +14,7 @@ public:
 
     void prepare() override;
     double primEstimator() override;
-    double windingEstimator(int axis) override;
+    double windingEstimator(const int axis) override;
 
     double getConnectionProbability(int ptcl_last, int ptcl_first) override;
     double getDistinctProbability() override;

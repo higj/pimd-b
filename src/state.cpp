@@ -212,9 +212,7 @@ void WindingProbabilityState::initialize() {
         return;
     }
 
-    out_file.open(std::format("{}/wind-prob-{}.log", Output::FOLDER_NAME, sim.this_bead), std::ios::out | std::ios::app);
-
-    /*
+#if DETAILED_WIND_REPORT
     out_file << std::format("{:^16s}", "step");
     out_file << std::format(" {:^8s}", "ptcl");
 
@@ -233,7 +231,9 @@ void WindingProbabilityState::initialize() {
     }
 
     out_file << '\n';
-    */
+#else
+    out_file.open(std::format("{}/wind-prob-{}.log", Output::FOLDER_NAME, sim.this_bead), std::ios::out | std::ios::app);
+#endif
 }
 
 /**
@@ -245,10 +245,29 @@ void WindingProbabilityState::output(int step) {
     /*if (step % freq != 0 || !sim.pbc || !sim.apply_wind) {
         return;
     }*/
+    // For the moment, I want to allow output of the winding probabilities even if the wind is not applied (e.g., for MIC)
     if (step % freq != 0 || !sim.pbc) {
         return;
     }
 
+#if DETAILED_WIND_REPORT
+    for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
+        out_file << std::format("{:^16.8e}", static_cast<double>(step));
+        out_file << std::format(" {:^8d} ", ptcl_idx + 1);
+        for (int wind_idx = 0; wind_idx < sim.wind.len(); ++wind_idx) {
+            double prob = 1.0;
+
+            for (int axis = 0; axis < NDIM; ++axis) {
+                const double diff_next = sim.coord(ptcl_idx, axis) - sim.next_coord(ptcl_idx, axis);
+                WindingProbability wind_prob(diff_next, sim.max_wind, sim.beta_half_k, sim.size);
+                prob *= wind_prob.getProbability(sim.wind(wind_idx, axis));
+            }
+
+            out_file << std::format(" {:^16.8e}", prob);
+        }
+        out_file << '\n';
+}
+#else
     if (sim.is_bosonic_bead && sim.this_bead == sim.nbeads - 1) {
         for (int l = 0; l < sim.natoms; l++) {
             double prob = 0.0;
@@ -257,10 +276,12 @@ void WindingProbabilityState::output(int step) {
                 double prob_next = sim.bosonic_exchange->getConnectionProbability(l, next_l);
                 if (sim.apply_mic_spring) {
                     for (int axis = 0; axis < NDIM; ++axis) {
-                        double diff_next = sim.coord(l, axis) - sim.next_coord(next_l, axis);
-                        int wind_mic = -static_cast<int>(std::floor(diff_next / sim.size + 0.5));
+                        const double diff_next = sim.coord(l, axis) - sim.next_coord(next_l, axis);
+                        /*int wind_mic = -static_cast<int>(std::floor(diff_next / sim.size + 0.5));
                         WindingProbability wind_prob(diff_next, sim.max_wind, sim.beta_half_k, sim.size);
-                        prob_next *= wind_prob.getProbability(wind_mic);
+                        prob_next *= wind_prob.getProbability(wind_mic);*/
+                        WindingProbability wind_prob(diff_next, sim.max_wind, sim.beta_half_k, sim.size);
+                        prob_next *= wind_prob.getProbability(wind_prob.getMinimumImageWindingNumber());
                     }
                 } else if (sim.apply_wind) {
                     for (int wind_idx = 0; wind_idx < sim.wind.len(); ++wind_idx) {
@@ -284,20 +305,14 @@ void WindingProbabilityState::output(int step) {
             if (sim.apply_mic_spring) {
                 double prob = 1.0;
 
-                //out_file << "(";
                 for (int axis = 0; axis < NDIM; ++axis) {
                     double diff_next = sim.coord(ptcl_idx, axis) - sim.next_coord(ptcl_idx, axis);
-                    int wind_mic = -static_cast<int>(std::floor(diff_next / sim.size + 0.5));
+                    /*int wind_mic = -static_cast<int>(std::floor(diff_next / sim.size + 0.5));
                     WindingProbability wind_prob(diff_next, sim.max_wind, sim.beta_half_k, sim.size);
-                    prob *= wind_prob.getProbability(wind_mic);
-
-                    //out_file << std::format("{}", wind_mic);
-
-                    //if (axis != NDIM - 1) {
-                    //    out_file << ' ';
-                    //}
+                    prob *= wind_prob.getProbability(wind_mic);*/
+                    WindingProbability wind_prob(diff_next, sim.max_wind, sim.beta_half_k, sim.size);
+                    prob *= wind_prob.getProbability(wind_prob.getMinimumImageWindingNumber());
                 }
-                //out_file << ") ";
 
                 out_file << std::format("{:^14.8e} ", prob);
             } else if (sim.apply_wind) {
@@ -315,6 +330,7 @@ void WindingProbabilityState::output(int step) {
             }
         }
     }
+#endif
 
     // We will distinguish between different time-step outputs by a newline character.
     out_file << '\n';

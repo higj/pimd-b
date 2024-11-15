@@ -351,22 +351,38 @@ double BosonicExchange::primEstimator() {
 #endif
 }
 
-double BosonicExchange::windingEstimator(int axis) {
-    double mean_w = 0.0;
+//double BosonicExchange::windingEstimator(int axis) {
+//    double mean_w = 0.0;
+//
+//    for (int l = 0; l < nbosons; l++) {
+//        for (int next_l = 0; next_l <= l + 1 && next_l < nbosons; next_l++) {
+//            double diff = x(l, axis) - x_next(next_l, axis);
+//            double prob = connection_probabilities[nbosons * l + next_l];
+//
+//            if (sim.include_wind_corr) {
+//                WindingProbability wind_prob(diff, sim.max_wind, sim.beta_half_k, sim.size);
+//                mean_w += prob * wind_prob.getExpectation();
+//            }
+//        }
+//    }
+//
+//    return mean_w;
+//}
+
+double BosonicExchange::windingEstimator(const int axis) {
+    double wind_squared_mean = 0.0;
 
     for (int l = 0; l < nbosons; l++) {
         for (int next_l = 0; next_l <= l + 1 && next_l < nbosons; next_l++) {
-            double diff = x(l, axis) - x_next(next_l, axis);
-            double prob = connection_probabilities[nbosons * l + next_l];
+            const double diff = x(l, axis) - x_next(next_l, axis);
+            const double prob = connection_probabilities[nbosons * l + next_l];
 
-            if (sim.include_wind_corr) {
-                WindingProbability wind_prob(diff, sim.max_wind, sim.beta_half_k, sim.size);
-                mean_w += prob * wind_prob.getExpectation();
-            }
+            WindingProbability wind_prob(diff, sim.max_wind, sim.beta_half_k, sim.size);
+            wind_squared_mean += prob * wind_prob.getSquaredExpectation();
         }
     }
 
-    return mean_w;
+    return wind_squared_mean;
 }
 
 void BosonicExchange::printBosonicDebug() {

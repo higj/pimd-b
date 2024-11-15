@@ -305,23 +305,89 @@ void BosonicObservable::calculate() {
     }
 }
 
+///**
+// * @brief Winding observable class constructor.
+// */
+//WindingObservable::WindingObservable(const Simulation& _sim, int _freq, const std::string& _out_unit) :
+//    Observable(_sim, _freq, _out_unit) {
+//    // Maybe remove this later, because we might want to be able to compile
+//    // with an arbitrary NDIM and then not use this observable (in which case there
+//    // should be no error). The error should probably be thrown only when trying
+//    // to use the observable with an unsupported NDIM.
+//    static_assert(NDIM <= 3, "NDIM can be at most 3 (for x, y, z)");
+//
+//#if NDIM == 1
+//    initialize({ "W, W2" });
+//#elif NDIM == 2
+//    initialize({ "W_x", "W_y", "W2" });
+//#elif NDIM == 3
+//        initialize({ "W_x", "W_y", "W_z", "W2" });
+//#endif
+//}
+//
+///**
+// * @brief Calculates quantities pertaining to bosonic exchange.
+// */
+//void WindingObservable::calculate() {
+//    int key_axis = 0;
+//
+//    // It is assumed that the iteration is performed in the correct order,
+//    // which depends on the order of the keys in the quantities map.
+//    for (const std::string& key : quantities | std::views::keys | std::views::take(NDIM)) {
+//        quantities[key] = 0.0;
+//
+//        if (sim.this_bead == 0 && sim.bosonic) {
+//            quantities[key] = sim.bosonic_exchange->windingEstimator(key_axis);
+//        } else {
+//            for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
+//                if (sim.include_wind_corr) {
+//                    double diff_next = sim.coord(ptcl_idx, key_axis) - sim.next_coord(ptcl_idx, key_axis);
+//
+//                    WindingProbability wind_prob(diff_next, sim.max_wind, sim.beta_half_k, sim.size);
+//                    quantities[key] -= wind_prob.getExpectation();
+//                }
+//
+//            }
+//        }
+//        ++key_axis;
+//    }
+//
+//    if (!sim.include_wind_corr) {
+//        // This whole estimator doesn't make sense if the winding correction is not included
+//        // Perhaps throw an error here, or in the initialization of the observable?
+//    }
+//
+//    // W2 doesn't work with bosons currently
+//    quantities["W2"] = 0.0;
+//
+//    for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
+//        for (int axis = 0; axis < NDIM; ++axis) {
+//            double diff_next = sim.coord(ptcl_idx, axis) - sim.next_coord(ptcl_idx, axis);
+//            int wind_mic = -static_cast<int>(std::floor(diff_next / sim.size + 0.5));
+//            WindingProbability wind_prob(diff_next, sim.max_wind, sim.beta_half_k, sim.size);
+//
+//            for (int wind_idx = 1; wind_idx <= sim.max_wind; ++wind_idx) {
+//                int wind2 = wind_idx * wind_idx;
+//                quantities["W2"] += wind2 * wind_prob.getProbability(wind_idx);
+//                quantities["W2"] += wind2 * wind_prob.getProbability(-wind_idx);
+//            }
+//
+//            quantities["W2"] -= wind_mic * wind_mic * wind_prob.getProbability(wind_mic);
+//        }
+//    }
+//}
+
 /**
  * @brief Winding observable class constructor.
  */
 WindingObservable::WindingObservable(const Simulation& _sim, int _freq, const std::string& _out_unit) :
     Observable(_sim, _freq, _out_unit) {
-    // Maybe remove this later, because we might want to be able to compile
-    // with an arbitrary NDIM and then not use this observable (in which case there
-    // should be no error). The error should probably be thrown only when trying
-    // to use the observable with an unsupported NDIM.
-    static_assert(NDIM <= 3, "NDIM can be at most 3 (for x, y, z)");
-
 #if NDIM == 1
-    initialize({ "W, W2" });
+    initialize({ "Wx2" });
 #elif NDIM == 2
-    initialize({ "W_x", "W_y", "W2" });
+    initialize({ "Wx2", "Wy2" });
 #elif NDIM == 3
-        initialize({ "W_x", "W_y", "W_z", "W2" });
+        initialize({ "Wx2", "Wy2", "Wz2" });
 #endif
 }
 
@@ -340,39 +406,12 @@ void WindingObservable::calculate() {
             quantities[key] = sim.bosonic_exchange->windingEstimator(key_axis);
         } else {
             for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
-                if (sim.include_wind_corr) {
-                    double diff_next = sim.coord(ptcl_idx, key_axis) - sim.next_coord(ptcl_idx, key_axis);
+                double diff_next = sim.coord(ptcl_idx, key_axis) - sim.next_coord(ptcl_idx, key_axis);
 
-                    WindingProbability wind_prob(diff_next, sim.max_wind, sim.beta_half_k, sim.size);
-                    quantities[key] -= wind_prob.getExpectation();
-                }
-
+                WindingProbability wind_prob(diff_next, sim.max_wind, sim.beta_half_k, sim.size);
+                quantities[key] += wind_prob.getSquaredExpectation();
             }
         }
         ++key_axis;
-    }
-
-    if (!sim.include_wind_corr) {
-        // This whole estimator doesn't make sense if the winding correction is not included
-        // Perhaps throw an error here, or in the initialization of the observable?
-    }
-
-    // W2 doesn't work with bosons currently
-    quantities["W2"] = 0.0;
-
-    for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
-        for (int axis = 0; axis < NDIM; ++axis) {
-            double diff_next = sim.coord(ptcl_idx, axis) - sim.next_coord(ptcl_idx, axis);
-            int wind_mic = -static_cast<int>(std::floor(diff_next / sim.size + 0.5));
-            WindingProbability wind_prob(diff_next, sim.max_wind, sim.beta_half_k, sim.size);
-
-            for (int wind_idx = 1; wind_idx <= sim.max_wind; ++wind_idx) {
-                int wind2 = wind_idx * wind_idx;
-                quantities["W2"] += wind2 * wind_prob.getProbability(wind_idx);
-                quantities["W2"] += wind2 * wind_prob.getProbability(-wind_idx);
-            }
-
-            quantities["W2"] -= wind_mic * wind_mic * wind_prob.getProbability(wind_mic);
-        }
     }
 }

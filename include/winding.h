@@ -9,7 +9,7 @@ public:
         shift(getWindingShift(diff_)), denominator(computeDenominator()) {
     }
 
-    double getWindingShift(const double diff_) const {
+    [[nodiscard]] double getWindingShift(const double diff_) const {
         // Start from the zero winding
         double diff_shift = std::min(std::numeric_limits<double>::max(), diff_ * diff_);
 
@@ -24,7 +24,7 @@ public:
         return diff_shift;
     }
 
-    double getLogWindingWeight() const {
+    [[nodiscard]] double getLogWindingWeight() const {
         double result = 0.0;
         double weight = exp(-beta_half_k * (diff * diff - shift)); // Zero winding contribution
 
@@ -40,13 +40,13 @@ public:
     }
 
     // Get the probability for a specific winding number
-    double getProbability(const int winding) const {
+    [[nodiscard]] double getProbability(const int winding) const {
         // Important note: The winding probability will be wrong if winding_number is greater than max_wind
         const double diff_val = diff + winding * size;
         return exp(-beta_half_k * (diff_val * diff_val - shift)) / denominator;
     }
 
-    double getExpectation() const {
+    [[nodiscard]] double getExpectation() const {
         double wind_mean = 0.0;
 
         for (int wind_idx = 1; wind_idx <= max_wind; ++wind_idx) {
@@ -57,7 +57,19 @@ public:
         return wind_mean;
     }
 
-    double getDiffSquaredExpectation() const {
+    [[nodiscard]] double getSquaredExpectation() const {
+        double wind_squared_mean = 0.0;
+
+        for (int wind_idx = 1; wind_idx <= max_wind; ++wind_idx) {
+            const double wind_squared = wind_idx * wind_idx;
+            wind_squared_mean += wind_squared * getProbability(wind_idx);
+            wind_squared_mean += wind_squared * getProbability(-wind_idx);
+        }
+
+        return wind_squared_mean;
+    }
+
+    [[nodiscard]] double getDiffSquaredExpectation() const {
         double diff_squared_mean = diff * diff * getProbability(0);
 
         for (int wind_idx = 1; wind_idx <= max_wind; ++wind_idx) {
@@ -69,6 +81,10 @@ public:
         }
 
         return diff_squared_mean;
+    }
+
+    [[nodiscard]] int getMinimumImageWindingNumber() const {
+        return -static_cast<int>(std::floor(diff / size + 0.5));
     }
 
 private:
