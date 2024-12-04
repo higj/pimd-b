@@ -9,6 +9,7 @@
 #include "state.h"
 #include "observable.h"
 #include "propagator.h"
+#include "thermostat.h"
 #include "simulation.h"
 
 #if OLD_BOSONIC_ALGORITHM
@@ -26,12 +27,12 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     getVariant(param_obj.sim["dt"], dt);
     getVariant(param_obj.sim["sfreq"], sfreq);
     getVariant(param_obj.sim["steps"], steps);
-    getVariant(param_obj.sim["enable_t"], enable_t);
 
     getVariant(param_obj.sim["threshold"], threshold);
     threshold *= steps;  // Threshold in terms of steps
 
     getVariant(param_obj.sim["gamma"], gamma);
+    getVariant(param_obj.sim["nchains"], nchains);
     getVariant(param_obj.sim["bosonic"], bosonic);
     getVariant(param_obj.sim["fixcom"], fixcom);
     getVariant(param_obj.sim["pbc"], pbc);
@@ -70,6 +71,7 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     init_pos_type = std::get<std::string>(param_obj.sim["init_pos_type"]);
     init_vel_type = std::get<std::string>(param_obj.sim["init_vel_type"]);
     propagator_type = std::get<std::string>(param_obj.sim["propagator_type"]);
+    thermostat_type = std::get<std::string>(param_obj.sim["thermostat_type"]);
     
     // Choose time propagation scheme
     if (propagator_type == "cartesian") {
@@ -77,7 +79,21 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     } else if (propagator_type == "normal_modes") {
         propagator = std::make_unique<NormalModesPropagator>(*this);
     }
-    
+
+    // Choose thermostat
+    if (thermostat_type == "langevin") {
+        thermostat = std::make_unique<LangevinThermostat>(*this);
+    } else if (thermostat_type == "nose_hoover") {
+        thermostat = std::make_unique<NoseHooverThermostat>(*this, nchains);
+    } else if (thermostat_type == "nose_hoover_np") {
+        thermostat = std::make_unique<NoseHooverNpThermostat>(*this, nchains);
+    } else if (thermostat_type == "nose_hoover_np_dim") {
+        thermostat = std::make_unique<NoseHooverNpDimThermostat>(*this, nchains);
+    } else if (thermostat_type == "none") {
+        thermostat = std::make_unique<Thermostat>(*this);
+    }
+
+
     // Initialize the coordinate, momenta, and force arrays
     coord = dVec(natoms);
     prev_coord = dVec(natoms);
@@ -244,30 +260,6 @@ double Simulation::sampleMaxwellBoltzmann() {
 }
 
 /**
- * @brief Perform a single Langevin step for the molecular dynamics simulation.
- */
-void Simulation::langevinStep() {
-    //std::normal_distribution<double> normal; // At the moment we use the Marsaglia generator
-
-    double a = exp(-0.5 * gamma * dt);
-
-#if IPI_CONVENTION
-    double b = sqrt((1 - a * a) * mass * nbeads / beta);
-#else
-    double b = sqrt((1 - a * a) * mass / beta);
-#endif
-
-    for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
-        for (int axis = 0; axis < NDIM; ++axis) {
-            double noise = mars_gen->gaussian(); // LAMMPS pimd/langevin random numbers
-
-            // Perturb the momenta with a Langevin thermostat
-            momenta(ptcl_idx, axis) = a * momenta(ptcl_idx, axis) + b * noise;
-        }
-    }
-}
-
-/**
  * @brief Perform a molecular dynamics run using the OBABO scheme.
  */
 void Simulation::run() {
@@ -295,10 +287,7 @@ void Simulation::run() {
             state->output(step);
         }
 
-        // "O" step
-        if (enable_t) {
-            langevinStep();
-        }
+        thermostat->step();
 
         // If fixcom=true, the center of mass of the ring polymers is fixed during the simulation
         if (fixcom) {
@@ -307,12 +296,9 @@ void Simulation::run() {
 
         propagator->step();
 
-        // "O" step
-        if (enable_t) {
-            langevinStep();
-        }
+        thermostat->step();
 
-        // Zero momentum after every Langevin step (if needed)
+        // Zero momentum after every thermostat step (if needed)
         if (fixcom) {
             zeroMomentum();
         }

@@ -15,6 +15,7 @@
 class State;
 class Observable;
 class Propagator;
+class Thermostat;
 
 class Simulation
 {
@@ -24,6 +25,7 @@ public:
     double dt;          // Timestep
     double size;        // Linear system size (TODO: Add support for Ly, Lz,...)
     double gamma;       // Friction constant of the Langevin thermostat
+    int    nchains;     // Number of Nose-Hoover chains
     double threshold;   // Percentage of steps to throw away (thermalization)
 
     int natoms;         // Number of atoms in the system
@@ -32,7 +34,6 @@ public:
     long sfreq;         // Save frequency (how often the observables are recorded)
     long steps;         // Total number of MD steps
 
-    bool enable_t;      // Enable the thermostat?
     bool bosonic;       // Is the simulation bosonic?
     bool fixcom;        // Fix the center of mass?
     bool pbc;           // Enable periodic boundary conditions?
@@ -82,7 +83,8 @@ public:
     double sampleMaxwellBoltzmann();
     
     std::unique_ptr<Propagator> propagator;
-    
+    std::unique_ptr<Thermostat> thermostat;
+
     void langevinStep();
     void run();
 
@@ -117,6 +119,7 @@ private:
     std::string init_pos_type;
     std::string init_vel_type;
     std::string propagator_type;
+    std::string thermostat_type;
 
     void printDebug(const std::string& text, int target_bead = 0) const;
 };
