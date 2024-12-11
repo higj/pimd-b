@@ -1,5 +1,5 @@
 #include "thermostat.h"
-
+#include <iostream>
 #include <numbers>
 
 #include "simulation.h"
@@ -35,9 +35,9 @@ void LangevinThermostat::step() {
 NoseHooverThermostat::NoseHooverThermostat(Simulation& _sim, int _nchains) : Thermostat(_sim) {
     nchains = _nchains;
 #if IPI_CONVENTION
-    Qi = sim.nbeads / (sim.beta * sim.gamma * sim.gamma);
+    Qi = Constants::hbar * Constants::hbar * sim.beta;//sim.nbeads / (sim.beta * sim.gamma * sim.gamma);
 #else
-    Qi = 1 / (sim.beta * sim.gamma * sim.gamma);
+    Qi = Constants::hbar * Constants::hbar * sim.beta / sim.nbeads;//1 / (sim.beta * sim.gamma * sim.gamma);
 #endif
     Q1 = NDIM * sim.natoms * Qi;
 #if CALC_ETA
@@ -158,7 +158,7 @@ void NoseHooverNpThermostat::step() {
         }
         kinetic_energy *= 0.5 / sim.mass;
         
-        double scale = singleChainStep(kinetic_energy, ptcl_idx * sim.natoms);
+        double scale = singleChainStep(kinetic_energy, ptcl_idx * nchains);
 
         for (int axis = 0; axis < NDIM; ++axis) {
             sim.momenta(ptcl_idx, axis) *= scale;
@@ -182,6 +182,7 @@ NoseHooverNpDimThermostat::NoseHooverNpDimThermostat(Simulation& _sim, int _ncha
     }
 #if IPI_CONVENTION
     required_kinetic_energy = 0.5 * sim.nbeads / sim.beta;
+    std::cout << Qi; 
 #else    
     required_kinetic_energy = 0.5 / sim.beta;
 #endif
@@ -192,7 +193,7 @@ void NoseHooverNpDimThermostat::step() {
     for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
             double kinetic_energy = 0.5 * sim.momenta(ptcl_idx, axis) * sim.momenta(ptcl_idx, axis) / sim.mass;
-            double scale = singleChainStep(kinetic_energy, (ptcl_idx * NDIM + axis) * sim.natoms);
+            double scale = singleChainStep(kinetic_energy, (ptcl_idx * NDIM + axis) * nchains);
             sim.momenta(ptcl_idx, axis) *= scale;
         }
     }   
