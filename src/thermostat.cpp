@@ -56,9 +56,9 @@ NoseHooverThermostat::NoseHooverThermostat(Simulation& _sim, int _nchains) : The
     dt4 = 0.25 * sim.dt;
     dt8 = 0.125 * sim.dt;
 #if IPI_CONVENTION
-    required_kinetic_energy = 0.5 * NDIM * sim.natoms * sim.nbeads / sim.beta;
+    required_kinetic_energy = NDIM * sim.natoms * sim.nbeads / sim.beta;
 #else
-    required_kinetic_energy = 0.5 * NDIM * sim.natoms / sim.beta;
+    required_kinetic_energy = NDIM * sim.natoms / sim.beta;
 #endif
 }
 
@@ -70,7 +70,7 @@ void NoseHooverThermostat::step() {
             kinetic_energy += sim.momenta(ptcl_idx, axis) * sim.momenta(ptcl_idx, axis);
         }
     }
-    kinetic_energy *= 0.5 / sim.mass;
+    kinetic_energy *= 1 / sim.mass;
 
     double scale = singleChainStep(kinetic_energy, 0);
 
@@ -143,9 +143,9 @@ NoseHooverNpThermostat::NoseHooverNpThermostat(Simulation& _sim, int _nchains) :
         eta_dot_dot[i] = 0.0;
     }
 #if IPI_CONVENTION
-    required_kinetic_energy = 0.5 * NDIM * sim.nbeads/ sim.beta;
+    required_kinetic_energy = NDIM * sim.nbeads/ sim.beta;
 #else
-    required_kinetic_energy = 0.5 * NDIM / sim.beta;
+    required_kinetic_energy = NDIM / sim.beta;
 #endif
 }
 
@@ -156,7 +156,7 @@ void NoseHooverNpThermostat::step() {
         for (int axis = 0; axis < NDIM; ++axis) {
             kinetic_energy += sim.momenta(ptcl_idx, axis) * sim.momenta(ptcl_idx, axis);
         }
-        kinetic_energy *= 0.5 / sim.mass;
+        kinetic_energy *= 1 / sim.mass;
         
         double scale = singleChainStep(kinetic_energy, ptcl_idx * nchains);
 
@@ -184,7 +184,7 @@ NoseHooverNpDimThermostat::NoseHooverNpDimThermostat(Simulation& _sim, int _ncha
     required_kinetic_energy = 0.5 * sim.nbeads / sim.beta;
     std::cout << Qi; 
 #else    
-    required_kinetic_energy = 0.5 / sim.beta;
+    required_kinetic_energy = 1 / sim.beta;
 #endif
 }
 
@@ -192,7 +192,7 @@ void NoseHooverNpDimThermostat::step() {
     
     for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
-            double kinetic_energy = 0.5 * sim.momenta(ptcl_idx, axis) * sim.momenta(ptcl_idx, axis) / sim.mass;
+            double kinetic_energy = sim.momenta(ptcl_idx, axis) * sim.momenta(ptcl_idx, axis) / sim.mass;
             double scale = singleChainStep(kinetic_energy, (ptcl_idx * NDIM + axis) * nchains);
             sim.momenta(ptcl_idx, axis) *= scale;
         }
