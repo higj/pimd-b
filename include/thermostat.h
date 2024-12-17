@@ -40,11 +40,12 @@ public:
     ~NoseHooverThermostat() override = default;
 
     void step() override;
-    double singleChainStep(const double& kinetic_energy, const int& index);
+protected:
+    double singleChainStep(const double& current_energy, const int& index);
     int nchains;
     double Q1, Qi;
     double dt2, dt4, dt8;
-    double required_kinetic_energy;
+    double required_energy;
     std::vector<double> eta_dot, eta_dot_dot; 
 #if CALC_ETA
     std::vector<double> eta; 
