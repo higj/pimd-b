@@ -53,13 +53,13 @@ dt = 1.0 femtosecond
 steps = 1e3
 threshold = 0.0
 sfreq = 1
-enable_thermostat = true
 nbeads = 4
 bosonic = true
 pbc = true
 seed = 12345
 initial_position = random
 propagator = cartesian
+thermostat = langevin
 
 [system]
 temperature = 1.0 kelvin
@@ -116,6 +116,17 @@ The `propagator` option allows one to specify the time propagation scheme to be 
 
 * `normal_modes`: propagation of the normal modes of the ring polymers, using the symmetric Trotter expansion. Works exceptionally well for distinguishable particles; bosonic normal mode propagation is still in development
 
+The `thermostat` option allows one to specify the thermostat to be used during the simulation. Currently, five options are evailable:
+
+* `none`: No thermostat, performs an NVE simulation
+
+* `langevin`: A Langevin thermostat
+
+* `nose_hoover`: A single Nose-Hoover chain coupled to all the system
+
+* `nose_hoover_np`: A unique Nose-Hoover chain coupled to each one of the N particles in the system
+
+* `nose_hoover_np_dim`: A unique Nose-Hoover chain coupled to every degree of freedom of any of the N particles in the system
 
 In the `[output]` section, users can request the output of various quantities related to the state of the system (such as positions, velocities, etc.) 
 The format for this section is `state_name = state_unit`. The key (`state_name`) must correspond to a name of a supported state. 
@@ -147,8 +158,8 @@ The following options are available in the `[simulation]` and `[system]` section
 |`steps`     |  Total number of MD steps (can be written in scientific notation) |
 |`threshold`     |  Defines the percentage of steps to throw away for thermalization (float between 0 and 1) |
 |`sfreq`     | Frequency at which the observables are calculated in the production stage |
-|`enable_thermostat`     |  If set to `false`, the Langevin thermostat will be disabled (NVE run) |
 |`gamma`    |  Friction coefficient for the Langevin thermostat in units of inverse time (Default: $\frac{1}{100\Delta t}$) |
+| `nchains` | Number of components in each Nose-Hoover chain for Nose-Hoover-type thermostats
 |`nbeads`     |  Number of imaginary time-slices (beads) |
 |`bosonic`     |  Set to `true`/`false` for bosonic/distinguishable PIMD (Default: `false`) |
 |`pbc`     |  Set to `true` to enable periodic boundary conditions (Default: `false`) |

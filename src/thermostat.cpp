@@ -7,6 +7,8 @@
 Thermostat::Thermostat(Simulation& _sim) : sim(_sim) {}
 void Thermostat::step(){}
 
+/* -------------------------------- */
+
 LangevinThermostat::LangevinThermostat(Simulation& _sim) : Thermostat(_sim) {
     a = exp(-0.5 * sim.gamma * sim.dt);
 
@@ -31,12 +33,14 @@ void LangevinThermostat::step() {
     }
 }
 
+/* -------------------------------- */
+
 NoseHooverThermostat::NoseHooverThermostat(Simulation& _sim, int _nchains) : Thermostat(_sim) {
     nchains = _nchains;
 #if IPI_CONVENTION
-    Qi = Constants::hbar * Constants::hbar * sim.beta;//sim.nbeads / (sim.beta * sim.gamma * sim.gamma);
+    Qi = Constants::hbar * Constants::hbar * sim.beta;
 #else
-    Qi = Constants::hbar * Constants::hbar * sim.beta / sim.nbeads;//1 / (sim.beta * sim.gamma * sim.gamma);
+    Qi = Constants::hbar * Constants::hbar * sim.beta / sim.nbeads;
 #endif
     Q1 = NDIM * sim.natoms * Qi;
 #if CALC_ETA
@@ -62,6 +66,7 @@ NoseHooverThermostat::NoseHooverThermostat(Simulation& _sim, int _nchains) : The
 }
 
 void NoseHooverThermostat::step() {
+    // Calculates the current energy in the system
     double current_energy = 0.0;
     for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
@@ -70,8 +75,10 @@ void NoseHooverThermostat::step() {
     }
     current_energy *= 1 / sim.mass;
 
+    // Obtain the scaling factor
     double scale = singleChainStep(current_energy, 0);
 
+    // Rescale the momenta
     for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
             sim.momenta(ptcl_idx, axis) *= scale;
@@ -79,11 +86,25 @@ void NoseHooverThermostat::step() {
     }
 }
 
+/**
+ * Calculates the scaling factor of the momenta based on
+ * Mark E Tuckerman et al 2006 J. Phys. A: Math. Gen. 39 5629
+ * and its implementation in LAMMPS
+ * 
+ * @param current_energy The current energy
+ * @param index          The index of the first component in the chain
+ * @return               The scaling factor 
+ */
 double NoseHooverThermostat::singleChainStep(const double& current_energy, const int& index) {
     double exp_factor;
+
+    // Update the second derivative of eta for the first component
     eta_dot_dot[index] = (current_energy - required_energy) / Q1;
 
+    // Update the first derivative of eta for the last component
     eta_dot[nchains - 1 + index] += eta_dot_dot[nchains - 1 + index] * dt4;
+
+    // Update the first derivative of eta for all others components
     for (int i = nchains-2; i >= 0; i--) {
         exp_factor = exp(-dt8*eta_dot[i + 1 + index]);
         eta_dot[i + index] *= exp_factor;
@@ -91,18 +112,21 @@ double NoseHooverThermostat::singleChainStep(const double& current_energy, const
         eta_dot[i + index] *= exp_factor;
     }
 
+    // Calculate the rescaling factor
     double scale = exp(-dt2 * eta_dot[index]);
-    eta_dot_dot[index] = (current_energy * scale * scale - required_energy) / Q1;
 
 #if CALC_ETA
     for (int i = 0; i < nchains; i++)
       eta[i + index] += dt2 * eta_dot[i + index];
 #endif
 
+    // Update the derivatives of eta for the first component
+    eta_dot_dot[index] = (current_energy * scale * scale - required_energy) / Q1;
     eta_dot[index] *= exp_factor;
     eta_dot[index] += eta_dot_dot[index] * dt4;
     eta_dot[index] *= exp_factor;
 
+    // Update the derivatives of eta for all other components except the last
     double Q_former = Q1;
     for (int i = 1; i < nchains - 1; i++) {
         exp_factor = exp(-dt8 * eta_dot[i + 1 + index]);
@@ -116,6 +140,8 @@ double NoseHooverThermostat::singleChainStep(const double& current_energy, const
         eta_dot[i + index] *= exp_factor;
         Q_former = Qi;
     }
+
+    // Update the derivatives of eta for the last component
 #if IPI_CONVENTION
     eta_dot_dot[nchains - 1 + index] = (Qi * eta_dot[nchains - 2 + index] * eta_dot[nchains - 2 + index] - sim.nbeads / sim.beta) / Qi;
 #else
@@ -148,7 +174,7 @@ NoseHooverNpThermostat::NoseHooverNpThermostat(Simulation& _sim, int _nchains) :
 }
 
 void NoseHooverNpThermostat::step() {
-    
+    // Calculates the current energy in the system
     for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
         double current_energy = 0.0;
         for (int axis = 0; axis < NDIM; ++axis) {
@@ -156,8 +182,10 @@ void NoseHooverNpThermostat::step() {
         }
         current_energy *= 1 / sim.mass;
         
+        // Obtain the scaling factor
         double scale = singleChainStep(current_energy, ptcl_idx * nchains);
 
+        // Rescale the momenta
         for (int axis = 0; axis < NDIM; ++axis) {
             sim.momenta(ptcl_idx, axis) *= scale;
         }
@@ -189,8 +217,13 @@ void NoseHooverNpDimThermostat::step() {
     
     for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
+            // Calculates the current energy in the system
             double current_energy = sim.momenta(ptcl_idx, axis) * sim.momenta(ptcl_idx, axis) / sim.mass;
+
+            // Obtain the scaling factor
             double scale = singleChainStep(current_energy, (ptcl_idx * NDIM + axis) * nchains);
+
+            // Rescale the momentum
             sim.momenta(ptcl_idx, axis) *= scale;
         }
     }   

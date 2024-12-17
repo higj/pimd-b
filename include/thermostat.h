@@ -4,6 +4,8 @@
 #include "mpi.h"
 #include "common.h"
 
+// Flag enabling the calculation of the fictive degree of freedom eta in Nose-Hoover thermostats
+// (only its derivatives are required for the true dynamics)
 #ifndef CALC_ETA
 #define CALC_ETA false
 #endif
@@ -42,11 +44,11 @@ public:
     void step() override;
 protected:
     double singleChainStep(const double& current_energy, const int& index);
-    int nchains;
-    double Q1, Qi;
+    int nchains; // Number of components in each Nose-Hoover chain
+    double Q1, Qi; // The masses of the eta
     double dt2, dt4, dt8;
-    double required_energy;
-    std::vector<double> eta_dot, eta_dot_dot; 
+    double required_energy; // A measure of the required preserved energy (kT times the number of degrees of freedom associated with the chain)
+    std::vector<double> eta_dot, eta_dot_dot; // The first and second derivatives of eta
 #if CALC_ETA
     std::vector<double> eta; 
 #endif

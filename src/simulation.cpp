@@ -93,7 +93,6 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
         thermostat = std::make_unique<Thermostat>(*this);
     }
 
-
     // Initialize the coordinate, momenta, and force arrays
     coord = dVec(natoms);
     prev_coord = dVec(natoms);
