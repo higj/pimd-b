@@ -1,0 +1,1150 @@
+
+---
+events:
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/share/cmake-3.30/Modules/CMakeDetermineSystem.cmake:205 (message)"
+      - "CMakeLists.txt:9 (project)"
+    message: |
+      The system is: Linux - 5.15.0-125-generic - x86_64
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/share/cmake-3.30/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "/home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/share/cmake-3.30/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "/home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/share/cmake-3.30/Modules/CMakeDetermineCCompiler.cmake:123 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:9 (project)"
+    message: |
+      Compiling the C compiler identification source file "CMakeCCompilerId.c" succeeded.
+      Compiler: /usr/bin/cc 
+      Build flags: 
+      Id flags:  
+      
+      The output was:
+      0
+      
+      
+      Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "a.out"
+      
+      The C compiler identification is GNU, found in:
+        /home/ofirblumer/pimd-b/build/CMakeFiles/3.30.0/CompilerIdC/a.out
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/share/cmake-3.30/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "/home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/share/cmake-3.30/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "/home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/share/cmake-3.30/Modules/CMakeDetermineCXXCompiler.cmake:126 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:9 (project)"
+    message: |
+      Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" succeeded.
+      Compiler: /usr/bin/c++ 
+      Build flags: 
+      Id flags:  
+      
+      The output was:
+      0
+      
+      
+      Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "a.out"
+      
+      The CXX compiler identification is GNU, found in:
+        /home/ofirblumer/pimd-b/build/CMakeFiles/3.30.0/CompilerIdCXX/a.out
+      
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/share/cmake-3.30/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile)"
+      - "/home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/share/cmake-3.30/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:9 (project)"
+    checks:
+      - "Detecting C compiler ABI info"
+    directories:
+      source: "/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeScratch/TryCompile-3OtRt4"
+      binary: "/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeScratch/TryCompile-3OtRt4"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MSVC_DEBUG_INFORMATION_FORMAT: "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>"
+    buildResult:
+      variable: "CMAKE_C_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeScratch/TryCompile-3OtRt4'
+        
+        Run Build Command(s): /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_ff305/fast
+        /usr/bin/make  -f CMakeFiles/cmTC_ff305.dir/build.make CMakeFiles/cmTC_ff305.dir/build
+        make[1]: Entering directory '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeScratch/TryCompile-3OtRt4'
+        Building C object CMakeFiles/cmTC_ff305.dir/CMakeCCompilerABI.c.o
+        /usr/bin/cc   -v -o CMakeFiles/cmTC_ff305.dir/CMakeCCompilerABI.c.o -c /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/share/cmake-3.30/Modules/CMakeCCompilerABI.c
+        Using built-in specs.
+        COLLECT_GCC=/usr/bin/cc
+        Target: x86_64-linux-gnu
+        Configured with: ./configure -v --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=x86_64-linux-gnu --prefix=/usr/local/gcc-13.2.0 --enable-checking=release --enable-languages=c,c++ --disable-multilib --program-suffix=-13.2.0
+        Thread model: posix
+        Supported LTO compression algorithms: zlib
+        gcc version 13.2.0 (GCC) 
+        COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_ff305.dir/CMakeCCompilerABI.c.o' '-c' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_ff305.dir/'
+         /usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/cc1 -quiet -v -imultiarch x86_64-linux-gnu /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/share/cmake-3.30/Modules/CMakeCCompilerABI.c -quiet -dumpdir CMakeFiles/cmTC_ff305.dir/ -dumpbase CMakeCCompilerABI.c.c -dumpbase-ext .c -mtune=generic -march=x86-64 -version -o /tmp/cckiuzoJ.s
+        GNU C17 (GCC) version 13.2.0 (x86_64-linux-gnu)
+        	compiled by GNU C version 13.2.0, GMP version 6.2.0, MPFR version 4.0.2, MPC version 1.1.0, isl version none
+        GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
+        ignoring nonexistent directory "/usr/local/include/x86_64-linux-gnu"
+        ignoring nonexistent directory "/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../../../x86_64-linux-gnu/include"
+        #include "..." search starts here:
+        #include <...> search starts here:
+         /usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/include
+         /usr/local/include
+         /usr/local/gcc-13.2.0/include
+         /usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/include-fixed/x86_64-linux-gnu
+         /usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/include-fixed
+         /usr/include/x86_64-linux-gnu
+         /usr/include
+        End of search list.
+        Compiler executable checksum: 966ca756d82d3711fa2499dfc624bdc0
+        COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_ff305.dir/CMakeCCompilerABI.c.o' '-c' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_ff305.dir/'
+         as -v --64 -o CMakeFiles/cmTC_ff305.dir/CMakeCCompilerABI.c.o /tmp/cckiuzoJ.s
+        GNU assembler version 2.34 (x86_64-linux-gnu) using BFD version (GNU Binutils for Ubuntu) 2.34
+        COMPILER_PATH=/usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/:/usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/:/usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/:/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/:/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/
+        LIBRARY_PATH=/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/:/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../../../lib64/:/lib/x86_64-linux-gnu/:/lib/../lib64/:/usr/lib/x86_64-linux-gnu/:/usr/lib/../lib64/:/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../../:/lib/:/usr/lib/
+        COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_ff305.dir/CMakeCCompilerABI.c.o' '-c' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_ff305.dir/CMakeCCompilerABI.c.'
+        Linking C executable cmTC_ff305
+        /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/bin/cmake -E cmake_link_script CMakeFiles/cmTC_ff305.dir/link.txt --verbose=1
+        /usr/bin/cc  -v -Wl,-v CMakeFiles/cmTC_ff305.dir/CMakeCCompilerABI.c.o -o cmTC_ff305
+        Using built-in specs.
+        COLLECT_GCC=/usr/bin/cc
+        COLLECT_LTO_WRAPPER=/usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/lto-wrapper
+        Target: x86_64-linux-gnu
+        Configured with: ./configure -v --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=x86_64-linux-gnu --prefix=/usr/local/gcc-13.2.0 --enable-checking=release --enable-languages=c,c++ --disable-multilib --program-suffix=-13.2.0
+        Thread model: posix
+        Supported LTO compression algorithms: zlib
+        gcc version 13.2.0 (GCC) 
+        COMPILER_PATH=/usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/:/usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/:/usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/:/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/:/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/
+        LIBRARY_PATH=/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/:/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../../../lib64/:/lib/x86_64-linux-gnu/:/lib/../lib64/:/usr/lib/x86_64-linux-gnu/:/usr/lib/../lib64/:/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../../:/lib/:/usr/lib/
+        COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_ff305' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_ff305.'
+         /usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/collect2 -plugin /usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/liblto_plugin.so -plugin-opt=/usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/lto-wrapper -plugin-opt=-fresolution=/tmp/ccJOe9Rb.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s --eh-frame-hdr -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_ff305 /lib/x86_64-linux-gnu/crt1.o /lib/x86_64-linux-gnu/crti.o /usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/crtbegin.o -L/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0 -L/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../../../lib64 -L/lib/x86_64-linux-gnu -L/lib/../lib64 -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib64 -L/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../.. -v CMakeFiles/cmTC_ff305.dir/CMakeCCompilerABI.c.o -lgcc --push-state --as-needed -lgcc_s --pop-state -lc -lgcc --push-state --as-needed -lgcc_s --pop-state /usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/crtend.o /lib/x86_64-linux-gnu/crtn.o
+        collect2 version 13.2.0
+        /usr/bin/ld -plugin /usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/liblto_plugin.so -plugin-opt=/usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/lto-wrapper -plugin-opt=-fresolution=/tmp/ccJOe9Rb.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s --eh-frame-hdr -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_ff305 /lib/x86_64-linux-gnu/crt1.o /lib/x86_64-linux-gnu/crti.o /usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/crtbegin.o -L/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0 -L/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../../../lib64 -L/lib/x86_64-linux-gnu -L/lib/../lib64 -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib64 -L/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../.. -v CMakeFiles/cmTC_ff305.dir/CMakeCCompilerABI.c.o -lgcc --push-state --as-needed -lgcc_s --pop-state -lc -lgcc --push-state --as-needed -lgcc_s --pop-state /usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/crtend.o /lib/x86_64-linux-gnu/crtn.o
+        GNU ld (GNU Binutils for Ubuntu) 2.34
+        COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_ff305' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_ff305.'
+        make[1]: Leaving directory '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeScratch/TryCompile-3OtRt4'
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/share/cmake-3.30/Modules/CMakeDetermineCompilerABI.cmake:182 (message)"
+      - "/home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/share/cmake-3.30/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:9 (project)"
+    message: |
+      Parsed C implicit include dir info: rv=done
+        found start of include info
+        found start of implicit include info
+          add: [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/include]
+          add: [/usr/local/include]
+          add: [/usr/local/gcc-13.2.0/include]
+          add: [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/include-fixed/x86_64-linux-gnu]
+          add: [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/include-fixed]
+          add: [/usr/include/x86_64-linux-gnu]
+          add: [/usr/include]
+        end of search list found
+        collapse include dir [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/include] ==> [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/include]
+        collapse include dir [/usr/local/include] ==> [/usr/local/include]
+        collapse include dir [/usr/local/gcc-13.2.0/include] ==> [/usr/local/gcc-13.2.0/include]
+        collapse include dir [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/include-fixed/x86_64-linux-gnu] ==> [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/include-fixed/x86_64-linux-gnu]
+        collapse include dir [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/include-fixed] ==> [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/include-fixed]
+        collapse include dir [/usr/include/x86_64-linux-gnu] ==> [/usr/include/x86_64-linux-gnu]
+        collapse include dir [/usr/include] ==> [/usr/include]
+        implicit include dirs: [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/include;/usr/local/include;/usr/local/gcc-13.2.0/include;/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/include-fixed/x86_64-linux-gnu;/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/include-fixed;/usr/include/x86_64-linux-gnu;/usr/include]
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/share/cmake-3.30/Modules/CMakeDetermineCompilerABI.cmake:218 (message)"
+      - "/home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/share/cmake-3.30/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:9 (project)"
+    message: |
+      Parsed C implicit link information:
+        link line regex: [^( *|.*[/\\])(ld[0-9]*(\\.[a-z]+)?|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        linker tool regex: [^[ 	]*(->|")?[ 	]*(([^"]*[/\\])?(ld[0-9]*(\\.[a-z]+)?))("|,| |$)]
+        ignore line: [Change Dir: '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeScratch/TryCompile-3OtRt4']
+        ignore line: []
+        ignore line: [Run Build Command(s): /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_ff305/fast]
+        ignore line: [/usr/bin/make  -f CMakeFiles/cmTC_ff305.dir/build.make CMakeFiles/cmTC_ff305.dir/build]
+        ignore line: [make[1]: Entering directory '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeScratch/TryCompile-3OtRt4']
+        ignore line: [Building C object CMakeFiles/cmTC_ff305.dir/CMakeCCompilerABI.c.o]
+        ignore line: [/usr/bin/cc   -v -o CMakeFiles/cmTC_ff305.dir/CMakeCCompilerABI.c.o -c /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/share/cmake-3.30/Modules/CMakeCCompilerABI.c]
+        ignore line: [Using built-in specs.]
+        ignore line: [COLLECT_GCC=/usr/bin/cc]
+        ignore line: [Target: x86_64-linux-gnu]
+        ignore line: [Configured with: ./configure -v --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=x86_64-linux-gnu --prefix=/usr/local/gcc-13.2.0 --enable-checking=release --enable-languages=c c++ --disable-multilib --program-suffix=-13.2.0]
+        ignore line: [Thread model: posix]
+        ignore line: [Supported LTO compression algorithms: zlib]
+        ignore line: [gcc version 13.2.0 (GCC) ]
+        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_ff305.dir/CMakeCCompilerABI.c.o' '-c' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_ff305.dir/']
+        ignore line: [ /usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/cc1 -quiet -v -imultiarch x86_64-linux-gnu /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/share/cmake-3.30/Modules/CMakeCCompilerABI.c -quiet -dumpdir CMakeFiles/cmTC_ff305.dir/ -dumpbase CMakeCCompilerABI.c.c -dumpbase-ext .c -mtune=generic -march=x86-64 -version -o /tmp/cckiuzoJ.s]
+        ignore line: [GNU C17 (GCC) version 13.2.0 (x86_64-linux-gnu)]
+        ignore line: [	compiled by GNU C version 13.2.0  GMP version 6.2.0  MPFR version 4.0.2  MPC version 1.1.0  isl version none]
+        ignore line: [GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072]
+        ignore line: [ignoring nonexistent directory "/usr/local/include/x86_64-linux-gnu"]
+        ignore line: [ignoring nonexistent directory "/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../../../x86_64-linux-gnu/include"]
+        ignore line: [#include "..." search starts here:]
+        ignore line: [#include <...> search starts here:]
+        ignore line: [ /usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/include]
+        ignore line: [ /usr/local/include]
+        ignore line: [ /usr/local/gcc-13.2.0/include]
+        ignore line: [ /usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/include-fixed/x86_64-linux-gnu]
+        ignore line: [ /usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/include-fixed]
+        ignore line: [ /usr/include/x86_64-linux-gnu]
+        ignore line: [ /usr/include]
+        ignore line: [End of search list.]
+        ignore line: [Compiler executable checksum: 966ca756d82d3711fa2499dfc624bdc0]
+        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_ff305.dir/CMakeCCompilerABI.c.o' '-c' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_ff305.dir/']
+        ignore line: [ as -v --64 -o CMakeFiles/cmTC_ff305.dir/CMakeCCompilerABI.c.o /tmp/cckiuzoJ.s]
+        ignore line: [GNU assembler version 2.34 (x86_64-linux-gnu) using BFD version (GNU Binutils for Ubuntu) 2.34]
+        ignore line: [COMPILER_PATH=/usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/:/usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/:/usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/:/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/:/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/]
+        ignore line: [LIBRARY_PATH=/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/:/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../../../lib64/:/lib/x86_64-linux-gnu/:/lib/../lib64/:/usr/lib/x86_64-linux-gnu/:/usr/lib/../lib64/:/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../../:/lib/:/usr/lib/]
+        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_ff305.dir/CMakeCCompilerABI.c.o' '-c' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_ff305.dir/CMakeCCompilerABI.c.']
+        ignore line: [Linking C executable cmTC_ff305]
+        ignore line: [/home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/bin/cmake -E cmake_link_script CMakeFiles/cmTC_ff305.dir/link.txt --verbose=1]
+        ignore line: [/usr/bin/cc  -v -Wl -v CMakeFiles/cmTC_ff305.dir/CMakeCCompilerABI.c.o -o cmTC_ff305]
+        ignore line: [Using built-in specs.]
+        ignore line: [COLLECT_GCC=/usr/bin/cc]
+        ignore line: [COLLECT_LTO_WRAPPER=/usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/lto-wrapper]
+        ignore line: [Target: x86_64-linux-gnu]
+        ignore line: [Configured with: ./configure -v --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=x86_64-linux-gnu --prefix=/usr/local/gcc-13.2.0 --enable-checking=release --enable-languages=c c++ --disable-multilib --program-suffix=-13.2.0]
+        ignore line: [Thread model: posix]
+        ignore line: [Supported LTO compression algorithms: zlib]
+        ignore line: [gcc version 13.2.0 (GCC) ]
+        ignore line: [COMPILER_PATH=/usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/:/usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/:/usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/:/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/:/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/]
+        ignore line: [LIBRARY_PATH=/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/:/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../../../lib64/:/lib/x86_64-linux-gnu/:/lib/../lib64/:/usr/lib/x86_64-linux-gnu/:/usr/lib/../lib64/:/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../../:/lib/:/usr/lib/]
+        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_ff305' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_ff305.']
+        link line: [ /usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/collect2 -plugin /usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/liblto_plugin.so -plugin-opt=/usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/lto-wrapper -plugin-opt=-fresolution=/tmp/ccJOe9Rb.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s --eh-frame-hdr -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_ff305 /lib/x86_64-linux-gnu/crt1.o /lib/x86_64-linux-gnu/crti.o /usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/crtbegin.o -L/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0 -L/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../../../lib64 -L/lib/x86_64-linux-gnu -L/lib/../lib64 -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib64 -L/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../.. -v CMakeFiles/cmTC_ff305.dir/CMakeCCompilerABI.c.o -lgcc --push-state --as-needed -lgcc_s --pop-state -lc -lgcc --push-state --as-needed -lgcc_s --pop-state /usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/crtend.o /lib/x86_64-linux-gnu/crtn.o]
+          arg [/usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/collect2] ==> ignore
+          arg [-plugin] ==> ignore
+          arg [/usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/liblto_plugin.so] ==> ignore
+          arg [-plugin-opt=/usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/lto-wrapper] ==> ignore
+          arg [-plugin-opt=-fresolution=/tmp/ccJOe9Rb.res] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
+          arg [-plugin-opt=-pass-through=-lc] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
+          arg [--eh-frame-hdr] ==> ignore
+          arg [-m] ==> ignore
+          arg [elf_x86_64] ==> ignore
+          arg [-dynamic-linker] ==> ignore
+          arg [/lib64/ld-linux-x86-64.so.2] ==> ignore
+          arg [-o] ==> ignore
+          arg [cmTC_ff305] ==> ignore
+          arg [/lib/x86_64-linux-gnu/crt1.o] ==> obj [/lib/x86_64-linux-gnu/crt1.o]
+          arg [/lib/x86_64-linux-gnu/crti.o] ==> obj [/lib/x86_64-linux-gnu/crti.o]
+          arg [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/crtbegin.o] ==> obj [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/crtbegin.o]
+          arg [-L/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0] ==> dir [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0]
+          arg [-L/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../../../lib64] ==> dir [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../../../lib64]
+          arg [-L/lib/x86_64-linux-gnu] ==> dir [/lib/x86_64-linux-gnu]
+          arg [-L/lib/../lib64] ==> dir [/lib/../lib64]
+          arg [-L/usr/lib/x86_64-linux-gnu] ==> dir [/usr/lib/x86_64-linux-gnu]
+          arg [-L/usr/lib/../lib64] ==> dir [/usr/lib/../lib64]
+          arg [-L/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../..] ==> dir [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../..]
+          arg [-v] ==> ignore
+          arg [CMakeFiles/cmTC_ff305.dir/CMakeCCompilerABI.c.o] ==> ignore
+          arg [-lgcc] ==> lib [gcc]
+          arg [--push-state] ==> ignore
+          arg [--as-needed] ==> ignore
+          arg [-lgcc_s] ==> lib [gcc_s]
+          arg [--pop-state] ==> ignore
+          arg [-lc] ==> lib [c]
+          arg [-lgcc] ==> lib [gcc]
+          arg [--push-state] ==> ignore
+          arg [--as-needed] ==> ignore
+          arg [-lgcc_s] ==> lib [gcc_s]
+          arg [--pop-state] ==> ignore
+          arg [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/crtend.o] ==> obj [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/crtend.o]
+          arg [/lib/x86_64-linux-gnu/crtn.o] ==> obj [/lib/x86_64-linux-gnu/crtn.o]
+        ignore line: [collect2 version 13.2.0]
+        ignore line: [/usr/bin/ld -plugin /usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/liblto_plugin.so -plugin-opt=/usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/lto-wrapper -plugin-opt=-fresolution=/tmp/ccJOe9Rb.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s --eh-frame-hdr -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_ff305 /lib/x86_64-linux-gnu/crt1.o /lib/x86_64-linux-gnu/crti.o /usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/crtbegin.o -L/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0 -L/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../../../lib64 -L/lib/x86_64-linux-gnu -L/lib/../lib64 -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib64 -L/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../.. -v CMakeFiles/cmTC_ff305.dir/CMakeCCompilerABI.c.o -lgcc --push-state --as-needed -lgcc_s --pop-state -lc -lgcc --push-state --as-needed -lgcc_s --pop-state /usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/crtend.o /lib/x86_64-linux-gnu/crtn.o]
+        linker tool for 'C': /usr/bin/ld
+        collapse library dir [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0] ==> [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0]
+        collapse library dir [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../../../lib64] ==> [/usr/local/gcc-13.2.0/lib64]
+        collapse library dir [/lib/x86_64-linux-gnu] ==> [/lib/x86_64-linux-gnu]
+        collapse library dir [/lib/../lib64] ==> [/lib64]
+        collapse library dir [/usr/lib/x86_64-linux-gnu] ==> [/usr/lib/x86_64-linux-gnu]
+        collapse library dir [/usr/lib/../lib64] ==> [/usr/lib64]
+        collapse library dir [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../..] ==> [/usr/local/gcc-13.2.0/lib]
+        implicit libs: [gcc;gcc_s;c;gcc;gcc_s]
+        implicit objs: [/lib/x86_64-linux-gnu/crt1.o;/lib/x86_64-linux-gnu/crti.o;/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/crtbegin.o;/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/crtend.o;/lib/x86_64-linux-gnu/crtn.o]
+        implicit dirs: [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0;/usr/local/gcc-13.2.0/lib64;/lib/x86_64-linux-gnu;/lib64;/usr/lib/x86_64-linux-gnu;/usr/lib64;/usr/local/gcc-13.2.0/lib]
+        implicit fwks: []
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/share/cmake-3.30/Modules/Internal/CMakeDetermineLinkerId.cmake:40 (message)"
+      - "/home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/share/cmake-3.30/Modules/CMakeDetermineCompilerABI.cmake:255 (cmake_determine_linker_id)"
+      - "/home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/share/cmake-3.30/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:9 (project)"
+    message: |
+      Running the C compiler's linker: "/usr/bin/ld" "-v"
+      GNU ld (GNU Binutils for Ubuntu) 2.34
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/share/cmake-3.30/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile)"
+      - "/home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/share/cmake-3.30/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:9 (project)"
+    checks:
+      - "Detecting CXX compiler ABI info"
+    directories:
+      source: "/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeScratch/TryCompile-MS4Lz4"
+      binary: "/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeScratch/TryCompile-MS4Lz4"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: ""
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_CXX_SCAN_FOR_MODULES: "OFF"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MSVC_DEBUG_INFORMATION_FORMAT: "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>"
+    buildResult:
+      variable: "CMAKE_CXX_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeScratch/TryCompile-MS4Lz4'
+        
+        Run Build Command(s): /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_66496/fast
+        /usr/bin/make  -f CMakeFiles/cmTC_66496.dir/build.make CMakeFiles/cmTC_66496.dir/build
+        make[1]: Entering directory '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeScratch/TryCompile-MS4Lz4'
+        Building CXX object CMakeFiles/cmTC_66496.dir/CMakeCXXCompilerABI.cpp.o
+        /usr/bin/c++   -v -o CMakeFiles/cmTC_66496.dir/CMakeCXXCompilerABI.cpp.o -c /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/share/cmake-3.30/Modules/CMakeCXXCompilerABI.cpp
+        Using built-in specs.
+        COLLECT_GCC=/usr/bin/c++
+        Target: x86_64-linux-gnu
+        Configured with: ./configure -v --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=x86_64-linux-gnu --prefix=/usr/local/gcc-13.2.0 --enable-checking=release --enable-languages=c,c++ --disable-multilib --program-suffix=-13.2.0
+        Thread model: posix
+        Supported LTO compression algorithms: zlib
+        gcc version 13.2.0 (GCC) 
+        COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_66496.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_66496.dir/'
+         /usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/cc1plus -quiet -v -imultiarch x86_64-linux-gnu -D_GNU_SOURCE /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/share/cmake-3.30/Modules/CMakeCXXCompilerABI.cpp -quiet -dumpdir CMakeFiles/cmTC_66496.dir/ -dumpbase CMakeCXXCompilerABI.cpp.cpp -dumpbase-ext .cpp -mtune=generic -march=x86-64 -version -o /tmp/ccpQZxsV.s
+        GNU C++17 (GCC) version 13.2.0 (x86_64-linux-gnu)
+        	compiled by GNU C version 13.2.0, GMP version 6.2.0, MPFR version 4.0.2, MPC version 1.1.0, isl version none
+        GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
+        ignoring nonexistent directory "/usr/local/include/x86_64-linux-gnu"
+        ignoring nonexistent directory "/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../../../x86_64-linux-gnu/include"
+        #include "..." search starts here:
+        #include <...> search starts here:
+         /usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../../../include/c++/13.2.0
+         /usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../../../include/c++/13.2.0/x86_64-linux-gnu
+         /usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../../../include/c++/13.2.0/backward
+         /usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/include
+         /usr/local/include
+         /usr/local/gcc-13.2.0/include
+         /usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/include-fixed/x86_64-linux-gnu
+         /usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/include-fixed
+         /usr/include/x86_64-linux-gnu
+         /usr/include
+        End of search list.
+        Compiler executable checksum: 47aa92a955179e254deb411de9890b56
+        COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_66496.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_66496.dir/'
+         as -v --64 -o CMakeFiles/cmTC_66496.dir/CMakeCXXCompilerABI.cpp.o /tmp/ccpQZxsV.s
+        GNU assembler version 2.34 (x86_64-linux-gnu) using BFD version (GNU Binutils for Ubuntu) 2.34
+        COMPILER_PATH=/usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/:/usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/:/usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/:/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/:/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/
+        LIBRARY_PATH=/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/:/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../../../lib64/:/lib/x86_64-linux-gnu/:/lib/../lib64/:/usr/lib/x86_64-linux-gnu/:/usr/lib/../lib64/:/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../../:/lib/:/usr/lib/
+        COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_66496.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_66496.dir/CMakeCXXCompilerABI.cpp.'
+        Linking CXX executable cmTC_66496
+        /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/bin/cmake -E cmake_link_script CMakeFiles/cmTC_66496.dir/link.txt --verbose=1
+        /usr/bin/c++  -v -Wl,-v CMakeFiles/cmTC_66496.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_66496
+        Using built-in specs.
+        COLLECT_GCC=/usr/bin/c++
+        COLLECT_LTO_WRAPPER=/usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/lto-wrapper
+        Target: x86_64-linux-gnu
+        Configured with: ./configure -v --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=x86_64-linux-gnu --prefix=/usr/local/gcc-13.2.0 --enable-checking=release --enable-languages=c,c++ --disable-multilib --program-suffix=-13.2.0
+        Thread model: posix
+        Supported LTO compression algorithms: zlib
+        gcc version 13.2.0 (GCC) 
+        COMPILER_PATH=/usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/:/usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/:/usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/:/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/:/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/
+        LIBRARY_PATH=/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/:/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../../../lib64/:/lib/x86_64-linux-gnu/:/lib/../lib64/:/usr/lib/x86_64-linux-gnu/:/usr/lib/../lib64/:/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../../:/lib/:/usr/lib/
+        COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_66496' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_66496.'
+         /usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/collect2 -plugin /usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/liblto_plugin.so -plugin-opt=/usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/lto-wrapper -plugin-opt=-fresolution=/tmp/ccUKZUhp.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --eh-frame-hdr -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_66496 /lib/x86_64-linux-gnu/crt1.o /lib/x86_64-linux-gnu/crti.o /usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/crtbegin.o -L/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0 -L/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../../../lib64 -L/lib/x86_64-linux-gnu -L/lib/../lib64 -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib64 -L/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../.. -v CMakeFiles/cmTC_66496.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/crtend.o /lib/x86_64-linux-gnu/crtn.o
+        collect2 version 13.2.0
+        /usr/bin/ld -plugin /usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/liblto_plugin.so -plugin-opt=/usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/lto-wrapper -plugin-opt=-fresolution=/tmp/ccUKZUhp.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --eh-frame-hdr -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_66496 /lib/x86_64-linux-gnu/crt1.o /lib/x86_64-linux-gnu/crti.o /usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/crtbegin.o -L/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0 -L/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../../../lib64 -L/lib/x86_64-linux-gnu -L/lib/../lib64 -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib64 -L/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../.. -v CMakeFiles/cmTC_66496.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/crtend.o /lib/x86_64-linux-gnu/crtn.o
+        GNU ld (GNU Binutils for Ubuntu) 2.34
+        COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_66496' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_66496.'
+        make[1]: Leaving directory '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeScratch/TryCompile-MS4Lz4'
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/share/cmake-3.30/Modules/CMakeDetermineCompilerABI.cmake:182 (message)"
+      - "/home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/share/cmake-3.30/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:9 (project)"
+    message: |
+      Parsed CXX implicit include dir info: rv=done
+        found start of include info
+        found start of implicit include info
+          add: [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../../../include/c++/13.2.0]
+          add: [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../../../include/c++/13.2.0/x86_64-linux-gnu]
+          add: [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../../../include/c++/13.2.0/backward]
+          add: [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/include]
+          add: [/usr/local/include]
+          add: [/usr/local/gcc-13.2.0/include]
+          add: [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/include-fixed/x86_64-linux-gnu]
+          add: [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/include-fixed]
+          add: [/usr/include/x86_64-linux-gnu]
+          add: [/usr/include]
+        end of search list found
+        collapse include dir [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../../../include/c++/13.2.0] ==> [/usr/local/gcc-13.2.0/include/c++/13.2.0]
+        collapse include dir [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../../../include/c++/13.2.0/x86_64-linux-gnu] ==> [/usr/local/gcc-13.2.0/include/c++/13.2.0/x86_64-linux-gnu]
+        collapse include dir [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../../../include/c++/13.2.0/backward] ==> [/usr/local/gcc-13.2.0/include/c++/13.2.0/backward]
+        collapse include dir [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/include] ==> [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/include]
+        collapse include dir [/usr/local/include] ==> [/usr/local/include]
+        collapse include dir [/usr/local/gcc-13.2.0/include] ==> [/usr/local/gcc-13.2.0/include]
+        collapse include dir [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/include-fixed/x86_64-linux-gnu] ==> [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/include-fixed/x86_64-linux-gnu]
+        collapse include dir [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/include-fixed] ==> [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/include-fixed]
+        collapse include dir [/usr/include/x86_64-linux-gnu] ==> [/usr/include/x86_64-linux-gnu]
+        collapse include dir [/usr/include] ==> [/usr/include]
+        implicit include dirs: [/usr/local/gcc-13.2.0/include/c++/13.2.0;/usr/local/gcc-13.2.0/include/c++/13.2.0/x86_64-linux-gnu;/usr/local/gcc-13.2.0/include/c++/13.2.0/backward;/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/include;/usr/local/include;/usr/local/gcc-13.2.0/include;/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/include-fixed/x86_64-linux-gnu;/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/include-fixed;/usr/include/x86_64-linux-gnu;/usr/include]
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/share/cmake-3.30/Modules/CMakeDetermineCompilerABI.cmake:218 (message)"
+      - "/home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/share/cmake-3.30/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:9 (project)"
+    message: |
+      Parsed CXX implicit link information:
+        link line regex: [^( *|.*[/\\])(ld[0-9]*(\\.[a-z]+)?|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        linker tool regex: [^[ 	]*(->|")?[ 	]*(([^"]*[/\\])?(ld[0-9]*(\\.[a-z]+)?))("|,| |$)]
+        ignore line: [Change Dir: '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeScratch/TryCompile-MS4Lz4']
+        ignore line: []
+        ignore line: [Run Build Command(s): /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_66496/fast]
+        ignore line: [/usr/bin/make  -f CMakeFiles/cmTC_66496.dir/build.make CMakeFiles/cmTC_66496.dir/build]
+        ignore line: [make[1]: Entering directory '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeScratch/TryCompile-MS4Lz4']
+        ignore line: [Building CXX object CMakeFiles/cmTC_66496.dir/CMakeCXXCompilerABI.cpp.o]
+        ignore line: [/usr/bin/c++   -v -o CMakeFiles/cmTC_66496.dir/CMakeCXXCompilerABI.cpp.o -c /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/share/cmake-3.30/Modules/CMakeCXXCompilerABI.cpp]
+        ignore line: [Using built-in specs.]
+        ignore line: [COLLECT_GCC=/usr/bin/c++]
+        ignore line: [Target: x86_64-linux-gnu]
+        ignore line: [Configured with: ./configure -v --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=x86_64-linux-gnu --prefix=/usr/local/gcc-13.2.0 --enable-checking=release --enable-languages=c c++ --disable-multilib --program-suffix=-13.2.0]
+        ignore line: [Thread model: posix]
+        ignore line: [Supported LTO compression algorithms: zlib]
+        ignore line: [gcc version 13.2.0 (GCC) ]
+        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_66496.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_66496.dir/']
+        ignore line: [ /usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/cc1plus -quiet -v -imultiarch x86_64-linux-gnu -D_GNU_SOURCE /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/share/cmake-3.30/Modules/CMakeCXXCompilerABI.cpp -quiet -dumpdir CMakeFiles/cmTC_66496.dir/ -dumpbase CMakeCXXCompilerABI.cpp.cpp -dumpbase-ext .cpp -mtune=generic -march=x86-64 -version -o /tmp/ccpQZxsV.s]
+        ignore line: [GNU C++17 (GCC) version 13.2.0 (x86_64-linux-gnu)]
+        ignore line: [	compiled by GNU C version 13.2.0  GMP version 6.2.0  MPFR version 4.0.2  MPC version 1.1.0  isl version none]
+        ignore line: [GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072]
+        ignore line: [ignoring nonexistent directory "/usr/local/include/x86_64-linux-gnu"]
+        ignore line: [ignoring nonexistent directory "/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../../../x86_64-linux-gnu/include"]
+        ignore line: [#include "..." search starts here:]
+        ignore line: [#include <...> search starts here:]
+        ignore line: [ /usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../../../include/c++/13.2.0]
+        ignore line: [ /usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../../../include/c++/13.2.0/x86_64-linux-gnu]
+        ignore line: [ /usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../../../include/c++/13.2.0/backward]
+        ignore line: [ /usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/include]
+        ignore line: [ /usr/local/include]
+        ignore line: [ /usr/local/gcc-13.2.0/include]
+        ignore line: [ /usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/include-fixed/x86_64-linux-gnu]
+        ignore line: [ /usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/include-fixed]
+        ignore line: [ /usr/include/x86_64-linux-gnu]
+        ignore line: [ /usr/include]
+        ignore line: [End of search list.]
+        ignore line: [Compiler executable checksum: 47aa92a955179e254deb411de9890b56]
+        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_66496.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_66496.dir/']
+        ignore line: [ as -v --64 -o CMakeFiles/cmTC_66496.dir/CMakeCXXCompilerABI.cpp.o /tmp/ccpQZxsV.s]
+        ignore line: [GNU assembler version 2.34 (x86_64-linux-gnu) using BFD version (GNU Binutils for Ubuntu) 2.34]
+        ignore line: [COMPILER_PATH=/usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/:/usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/:/usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/:/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/:/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/]
+        ignore line: [LIBRARY_PATH=/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/:/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../../../lib64/:/lib/x86_64-linux-gnu/:/lib/../lib64/:/usr/lib/x86_64-linux-gnu/:/usr/lib/../lib64/:/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../../:/lib/:/usr/lib/]
+        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_66496.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_66496.dir/CMakeCXXCompilerABI.cpp.']
+        ignore line: [Linking CXX executable cmTC_66496]
+        ignore line: [/home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/bin/cmake -E cmake_link_script CMakeFiles/cmTC_66496.dir/link.txt --verbose=1]
+        ignore line: [/usr/bin/c++  -v -Wl -v CMakeFiles/cmTC_66496.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_66496]
+        ignore line: [Using built-in specs.]
+        ignore line: [COLLECT_GCC=/usr/bin/c++]
+        ignore line: [COLLECT_LTO_WRAPPER=/usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/lto-wrapper]
+        ignore line: [Target: x86_64-linux-gnu]
+        ignore line: [Configured with: ./configure -v --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=x86_64-linux-gnu --prefix=/usr/local/gcc-13.2.0 --enable-checking=release --enable-languages=c c++ --disable-multilib --program-suffix=-13.2.0]
+        ignore line: [Thread model: posix]
+        ignore line: [Supported LTO compression algorithms: zlib]
+        ignore line: [gcc version 13.2.0 (GCC) ]
+        ignore line: [COMPILER_PATH=/usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/:/usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/:/usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/:/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/:/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/]
+        ignore line: [LIBRARY_PATH=/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/:/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../../../lib64/:/lib/x86_64-linux-gnu/:/lib/../lib64/:/usr/lib/x86_64-linux-gnu/:/usr/lib/../lib64/:/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../../:/lib/:/usr/lib/]
+        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_66496' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_66496.']
+        link line: [ /usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/collect2 -plugin /usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/liblto_plugin.so -plugin-opt=/usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/lto-wrapper -plugin-opt=-fresolution=/tmp/ccUKZUhp.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --eh-frame-hdr -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_66496 /lib/x86_64-linux-gnu/crt1.o /lib/x86_64-linux-gnu/crti.o /usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/crtbegin.o -L/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0 -L/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../../../lib64 -L/lib/x86_64-linux-gnu -L/lib/../lib64 -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib64 -L/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../.. -v CMakeFiles/cmTC_66496.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/crtend.o /lib/x86_64-linux-gnu/crtn.o]
+          arg [/usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/collect2] ==> ignore
+          arg [-plugin] ==> ignore
+          arg [/usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/liblto_plugin.so] ==> ignore
+          arg [-plugin-opt=/usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/lto-wrapper] ==> ignore
+          arg [-plugin-opt=-fresolution=/tmp/ccUKZUhp.res] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
+          arg [-plugin-opt=-pass-through=-lc] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
+          arg [--eh-frame-hdr] ==> ignore
+          arg [-m] ==> ignore
+          arg [elf_x86_64] ==> ignore
+          arg [-dynamic-linker] ==> ignore
+          arg [/lib64/ld-linux-x86-64.so.2] ==> ignore
+          arg [-o] ==> ignore
+          arg [cmTC_66496] ==> ignore
+          arg [/lib/x86_64-linux-gnu/crt1.o] ==> obj [/lib/x86_64-linux-gnu/crt1.o]
+          arg [/lib/x86_64-linux-gnu/crti.o] ==> obj [/lib/x86_64-linux-gnu/crti.o]
+          arg [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/crtbegin.o] ==> obj [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/crtbegin.o]
+          arg [-L/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0] ==> dir [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0]
+          arg [-L/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../../../lib64] ==> dir [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../../../lib64]
+          arg [-L/lib/x86_64-linux-gnu] ==> dir [/lib/x86_64-linux-gnu]
+          arg [-L/lib/../lib64] ==> dir [/lib/../lib64]
+          arg [-L/usr/lib/x86_64-linux-gnu] ==> dir [/usr/lib/x86_64-linux-gnu]
+          arg [-L/usr/lib/../lib64] ==> dir [/usr/lib/../lib64]
+          arg [-L/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../..] ==> dir [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../..]
+          arg [-v] ==> ignore
+          arg [CMakeFiles/cmTC_66496.dir/CMakeCXXCompilerABI.cpp.o] ==> ignore
+          arg [-lstdc++] ==> lib [stdc++]
+          arg [-lm] ==> lib [m]
+          arg [-lgcc_s] ==> lib [gcc_s]
+          arg [-lgcc] ==> lib [gcc]
+          arg [-lc] ==> lib [c]
+          arg [-lgcc_s] ==> lib [gcc_s]
+          arg [-lgcc] ==> lib [gcc]
+          arg [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/crtend.o] ==> obj [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/crtend.o]
+          arg [/lib/x86_64-linux-gnu/crtn.o] ==> obj [/lib/x86_64-linux-gnu/crtn.o]
+        ignore line: [collect2 version 13.2.0]
+        ignore line: [/usr/bin/ld -plugin /usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/liblto_plugin.so -plugin-opt=/usr/local/gcc-13.2.0/libexec/gcc/x86_64-linux-gnu/13.2.0/lto-wrapper -plugin-opt=-fresolution=/tmp/ccUKZUhp.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --eh-frame-hdr -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_66496 /lib/x86_64-linux-gnu/crt1.o /lib/x86_64-linux-gnu/crti.o /usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/crtbegin.o -L/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0 -L/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../../../lib64 -L/lib/x86_64-linux-gnu -L/lib/../lib64 -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib64 -L/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../.. -v CMakeFiles/cmTC_66496.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/crtend.o /lib/x86_64-linux-gnu/crtn.o]
+        linker tool for 'CXX': /usr/bin/ld
+        collapse library dir [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0] ==> [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0]
+        collapse library dir [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../../../lib64] ==> [/usr/local/gcc-13.2.0/lib64]
+        collapse library dir [/lib/x86_64-linux-gnu] ==> [/lib/x86_64-linux-gnu]
+        collapse library dir [/lib/../lib64] ==> [/lib64]
+        collapse library dir [/usr/lib/x86_64-linux-gnu] ==> [/usr/lib/x86_64-linux-gnu]
+        collapse library dir [/usr/lib/../lib64] ==> [/usr/lib64]
+        collapse library dir [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/../../..] ==> [/usr/local/gcc-13.2.0/lib]
+        implicit libs: [stdc++;m;gcc_s;gcc;c;gcc_s;gcc]
+        implicit objs: [/lib/x86_64-linux-gnu/crt1.o;/lib/x86_64-linux-gnu/crti.o;/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/crtbegin.o;/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/crtend.o;/lib/x86_64-linux-gnu/crtn.o]
+        implicit dirs: [/usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0;/usr/local/gcc-13.2.0/lib64;/lib/x86_64-linux-gnu;/lib64;/usr/lib/x86_64-linux-gnu;/usr/lib64;/usr/local/gcc-13.2.0/lib]
+        implicit fwks: []
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/share/cmake-3.30/Modules/Internal/CMakeDetermineLinkerId.cmake:40 (message)"
+      - "/home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/share/cmake-3.30/Modules/CMakeDetermineCompilerABI.cmake:255 (cmake_determine_linker_id)"
+      - "/home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/share/cmake-3.30/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:9 (project)"
+    message: |
+      Running the CXX compiler's linker: "/usr/bin/ld" "-v"
+      GNU ld (GNU Binutils for Ubuntu) 2.34
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "cmake/modules/FindMPI.cmake:1231 (try_compile)"
+      - "cmake/modules/FindMPI.cmake:1282 (_MPI_try_staged_settings)"
+      - "cmake/modules/FindMPI.cmake:1549 (_MPI_check_lang_works)"
+      - "CMakeLists.txt:27 (find_package)"
+    directories:
+      source: "/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp"
+      binary: "/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/ofirblumer/pimd-b/cmake/modules/"
+      CMAKE_MSVC_DEBUG_INFORMATION_FORMAT: "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>"
+    buildResult:
+      variable: "MPI_RESULT_C_test_mpi_normal"
+      cached: true
+      stdout: |
+        Change Dir: '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_1ab8b/fast
+        /usr/bin/make  -f CMakeFiles/cmTC_1ab8b.dir/build.make CMakeFiles/cmTC_1ab8b.dir/build
+        make[1]: Entering directory '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        Building C object CMakeFiles/cmTC_1ab8b.dir/test_mpi.c.o
+        /usr/bin/cc  -isystem /home/ofir/.openmpi/include -pthread -o CMakeFiles/cmTC_1ab8b.dir/test_mpi.c.o -c /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/share/cmake-3.30/Modules/FindMPI/test_mpi.c
+        Linking C executable cmTC_1ab8b
+        /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/bin/cmake -E cmake_link_script CMakeFiles/cmTC_1ab8b.dir/link.txt --verbose=1
+        /usr/bin/cc -Wl,-rpath -Wl,/home/ofir/.openmpi/lib -Wl,--enable-new-dtags -pthread CMakeFiles/cmTC_1ab8b.dir/test_mpi.c.o -o cmTC_1ab8b  -Wl,-rpath,/home/ofir/.openmpi/lib /home/ofir/.openmpi/lib/libmpi.so
+        make[1]: Leaving directory '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "cmake/modules/FindMPI.cmake:1231 (try_compile)"
+      - "cmake/modules/FindMPI.cmake:1282 (_MPI_try_staged_settings)"
+      - "cmake/modules/FindMPI.cmake:1549 (_MPI_check_lang_works)"
+      - "CMakeLists.txt:27 (find_package)"
+    directories:
+      source: "/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp"
+      binary: "/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: ""
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/ofirblumer/pimd-b/cmake/modules/"
+      CMAKE_MSVC_DEBUG_INFORMATION_FORMAT: "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>"
+    buildResult:
+      variable: "MPI_RESULT_CXX_test_mpi_normal"
+      cached: true
+      stdout: |
+        Change Dir: '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_b7a2c/fast
+        /usr/bin/make  -f CMakeFiles/cmTC_b7a2c.dir/build.make CMakeFiles/cmTC_b7a2c.dir/build
+        make[1]: Entering directory '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        Building CXX object CMakeFiles/cmTC_b7a2c.dir/test_mpi.cpp.o
+        /usr/bin/c++  -isystem /home/ofir/.openmpi/include -pthread -o CMakeFiles/cmTC_b7a2c.dir/test_mpi.cpp.o -c /home/ofirblumer/pimd-b/build/CMakeFiles/FindMPI/test_mpi.cpp
+        Linking CXX executable cmTC_b7a2c
+        /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/bin/cmake -E cmake_link_script CMakeFiles/cmTC_b7a2c.dir/link.txt --verbose=1
+        /usr/bin/c++ -Wl,-rpath -Wl,/home/ofir/.openmpi/lib -Wl,--enable-new-dtags -pthread CMakeFiles/cmTC_b7a2c.dir/test_mpi.cpp.o -o cmTC_b7a2c  -Wl,-rpath,/home/ofir/.openmpi/lib /home/ofir/.openmpi/lib/libmpi.so
+        make[1]: Leaving directory '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "cmake/modules/FindMPI.cmake:1231 (try_compile)"
+      - "cmake/modules/FindMPI.cmake:1576 (_MPI_try_staged_settings)"
+      - "CMakeLists.txt:27 (find_package)"
+    directories:
+      source: "/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp"
+      binary: "/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: ""
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/ofirblumer/pimd-b/cmake/modules/"
+      CMAKE_MSVC_DEBUG_INFORMATION_FORMAT: "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>"
+    buildResult:
+      variable: "MPI_RESULT_CXX_test_mpi_MPICXX"
+      cached: true
+      stdout: |
+        Change Dir: '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_8e4ac/fast
+        /usr/bin/make  -f CMakeFiles/cmTC_8e4ac.dir/build.make CMakeFiles/cmTC_8e4ac.dir/build
+        make[1]: Entering directory '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        Building CXX object CMakeFiles/cmTC_8e4ac.dir/test_mpi.cpp.o
+        /usr/bin/c++  -isystem /home/ofir/.openmpi/include -pthread -o CMakeFiles/cmTC_8e4ac.dir/test_mpi.cpp.o -c /home/ofirblumer/pimd-b/build/CMakeFiles/FindMPI/test_mpi.cpp
+        Linking CXX executable cmTC_8e4ac
+        /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/bin/cmake -E cmake_link_script CMakeFiles/cmTC_8e4ac.dir/link.txt --verbose=1
+        /usr/bin/c++ -Wl,-rpath -Wl,/home/ofir/.openmpi/lib -Wl,--enable-new-dtags -pthread CMakeFiles/cmTC_8e4ac.dir/test_mpi.cpp.o -o cmTC_8e4ac  -Wl,-rpath,/home/ofir/.openmpi/lib /home/ofir/.openmpi/lib/libmpi.so
+        make[1]: Leaving directory '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        
+      exitCode: 0
+...
+
+---
+events:
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "cmake/modules/FindMPI.cmake:1231 (try_compile)"
+      - "cmake/modules/FindMPI.cmake:1282 (_MPI_try_staged_settings)"
+      - "cmake/modules/FindMPI.cmake:1549 (_MPI_check_lang_works)"
+      - "CMakeLists.txt:27 (find_package)"
+    directories:
+      source: "/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp"
+      binary: "/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/ofirblumer/pimd-b/cmake/modules/"
+      CMAKE_MSVC_DEBUG_INFORMATION_FORMAT: "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>"
+    buildResult:
+      variable: "MPI_RESULT_C_test_mpi_normal"
+      cached: true
+      stdout: |
+        Change Dir: '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_a91d1/fast
+        /usr/bin/make  -f CMakeFiles/cmTC_a91d1.dir/build.make CMakeFiles/cmTC_a91d1.dir/build
+        make[1]: Entering directory '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        Building C object CMakeFiles/cmTC_a91d1.dir/test_mpi.c.o
+        /usr/bin/cc  -isystem /home/ofir/.openmpi/include -pthread -o CMakeFiles/cmTC_a91d1.dir/test_mpi.c.o -c /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/share/cmake-3.30/Modules/FindMPI/test_mpi.c
+        Linking C executable cmTC_a91d1
+        /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/bin/cmake -E cmake_link_script CMakeFiles/cmTC_a91d1.dir/link.txt --verbose=1
+        /usr/bin/cc -Wl,-rpath -Wl,/home/ofir/.openmpi/lib -Wl,--enable-new-dtags -pthread CMakeFiles/cmTC_a91d1.dir/test_mpi.c.o -o cmTC_a91d1  -Wl,-rpath,/home/ofir/.openmpi/lib /home/ofir/.openmpi/lib/libmpi.so
+        make[1]: Leaving directory '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "cmake/modules/FindMPI.cmake:1231 (try_compile)"
+      - "cmake/modules/FindMPI.cmake:1282 (_MPI_try_staged_settings)"
+      - "cmake/modules/FindMPI.cmake:1549 (_MPI_check_lang_works)"
+      - "CMakeLists.txt:27 (find_package)"
+    directories:
+      source: "/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp"
+      binary: "/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: ""
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/ofirblumer/pimd-b/cmake/modules/"
+      CMAKE_MSVC_DEBUG_INFORMATION_FORMAT: "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>"
+    buildResult:
+      variable: "MPI_RESULT_CXX_test_mpi_normal"
+      cached: true
+      stdout: |
+        Change Dir: '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_f05f6/fast
+        /usr/bin/make  -f CMakeFiles/cmTC_f05f6.dir/build.make CMakeFiles/cmTC_f05f6.dir/build
+        make[1]: Entering directory '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        Building CXX object CMakeFiles/cmTC_f05f6.dir/test_mpi.cpp.o
+        /usr/bin/c++  -isystem /home/ofir/.openmpi/include -pthread -o CMakeFiles/cmTC_f05f6.dir/test_mpi.cpp.o -c /home/ofirblumer/pimd-b/build/CMakeFiles/FindMPI/test_mpi.cpp
+        Linking CXX executable cmTC_f05f6
+        /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/bin/cmake -E cmake_link_script CMakeFiles/cmTC_f05f6.dir/link.txt --verbose=1
+        /usr/bin/c++ -Wl,-rpath -Wl,/home/ofir/.openmpi/lib -Wl,--enable-new-dtags -pthread CMakeFiles/cmTC_f05f6.dir/test_mpi.cpp.o -o cmTC_f05f6  -Wl,-rpath,/home/ofir/.openmpi/lib /home/ofir/.openmpi/lib/libmpi.so
+        make[1]: Leaving directory '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "cmake/modules/FindMPI.cmake:1231 (try_compile)"
+      - "cmake/modules/FindMPI.cmake:1576 (_MPI_try_staged_settings)"
+      - "CMakeLists.txt:27 (find_package)"
+    directories:
+      source: "/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp"
+      binary: "/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: ""
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/ofirblumer/pimd-b/cmake/modules/"
+      CMAKE_MSVC_DEBUG_INFORMATION_FORMAT: "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>"
+    buildResult:
+      variable: "MPI_RESULT_CXX_test_mpi_MPICXX"
+      cached: true
+      stdout: |
+        Change Dir: '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_1844b/fast
+        /usr/bin/make  -f CMakeFiles/cmTC_1844b.dir/build.make CMakeFiles/cmTC_1844b.dir/build
+        make[1]: Entering directory '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        Building CXX object CMakeFiles/cmTC_1844b.dir/test_mpi.cpp.o
+        /usr/bin/c++  -isystem /home/ofir/.openmpi/include -pthread -o CMakeFiles/cmTC_1844b.dir/test_mpi.cpp.o -c /home/ofirblumer/pimd-b/build/CMakeFiles/FindMPI/test_mpi.cpp
+        Linking CXX executable cmTC_1844b
+        /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/bin/cmake -E cmake_link_script CMakeFiles/cmTC_1844b.dir/link.txt --verbose=1
+        /usr/bin/c++ -Wl,-rpath -Wl,/home/ofir/.openmpi/lib -Wl,--enable-new-dtags -pthread CMakeFiles/cmTC_1844b.dir/test_mpi.cpp.o -o cmTC_1844b  -Wl,-rpath,/home/ofir/.openmpi/lib /home/ofir/.openmpi/lib/libmpi.so
+        make[1]: Leaving directory '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        
+      exitCode: 0
+...
+
+---
+events:
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "cmake/modules/FindMPI.cmake:1231 (try_compile)"
+      - "cmake/modules/FindMPI.cmake:1282 (_MPI_try_staged_settings)"
+      - "cmake/modules/FindMPI.cmake:1549 (_MPI_check_lang_works)"
+      - "CMakeLists.txt:27 (find_package)"
+    directories:
+      source: "/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp"
+      binary: "/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/ofirblumer/pimd-b/cmake/modules/"
+      CMAKE_MSVC_DEBUG_INFORMATION_FORMAT: "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>"
+    buildResult:
+      variable: "MPI_RESULT_C_test_mpi_normal"
+      cached: true
+      stdout: |
+        Change Dir: '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_0a795/fast
+        /usr/bin/make  -f CMakeFiles/cmTC_0a795.dir/build.make CMakeFiles/cmTC_0a795.dir/build
+        make[1]: Entering directory '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        Building C object CMakeFiles/cmTC_0a795.dir/test_mpi.c.o
+        /usr/bin/cc  -isystem /home/ofir/.openmpi/include -pthread -o CMakeFiles/cmTC_0a795.dir/test_mpi.c.o -c /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/share/cmake-3.30/Modules/FindMPI/test_mpi.c
+        Linking C executable cmTC_0a795
+        /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/bin/cmake -E cmake_link_script CMakeFiles/cmTC_0a795.dir/link.txt --verbose=1
+        /usr/bin/cc -Wl,-rpath -Wl,/home/ofir/.openmpi/lib -Wl,--enable-new-dtags -pthread CMakeFiles/cmTC_0a795.dir/test_mpi.c.o -o cmTC_0a795  -Wl,-rpath,/home/ofir/.openmpi/lib /home/ofir/.openmpi/lib/libmpi.so
+        make[1]: Leaving directory '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "cmake/modules/FindMPI.cmake:1231 (try_compile)"
+      - "cmake/modules/FindMPI.cmake:1282 (_MPI_try_staged_settings)"
+      - "cmake/modules/FindMPI.cmake:1549 (_MPI_check_lang_works)"
+      - "CMakeLists.txt:27 (find_package)"
+    directories:
+      source: "/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp"
+      binary: "/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: ""
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/ofirblumer/pimd-b/cmake/modules/"
+      CMAKE_MSVC_DEBUG_INFORMATION_FORMAT: "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>"
+    buildResult:
+      variable: "MPI_RESULT_CXX_test_mpi_normal"
+      cached: true
+      stdout: |
+        Change Dir: '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_a2f32/fast
+        /usr/bin/make  -f CMakeFiles/cmTC_a2f32.dir/build.make CMakeFiles/cmTC_a2f32.dir/build
+        make[1]: Entering directory '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        Building CXX object CMakeFiles/cmTC_a2f32.dir/test_mpi.cpp.o
+        /usr/bin/c++  -isystem /home/ofir/.openmpi/include -pthread -o CMakeFiles/cmTC_a2f32.dir/test_mpi.cpp.o -c /home/ofirblumer/pimd-b/build/CMakeFiles/FindMPI/test_mpi.cpp
+        Linking CXX executable cmTC_a2f32
+        /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/bin/cmake -E cmake_link_script CMakeFiles/cmTC_a2f32.dir/link.txt --verbose=1
+        /usr/bin/c++ -Wl,-rpath -Wl,/home/ofir/.openmpi/lib -Wl,--enable-new-dtags -pthread CMakeFiles/cmTC_a2f32.dir/test_mpi.cpp.o -o cmTC_a2f32  -Wl,-rpath,/home/ofir/.openmpi/lib /home/ofir/.openmpi/lib/libmpi.so
+        make[1]: Leaving directory '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "cmake/modules/FindMPI.cmake:1231 (try_compile)"
+      - "cmake/modules/FindMPI.cmake:1576 (_MPI_try_staged_settings)"
+      - "CMakeLists.txt:27 (find_package)"
+    directories:
+      source: "/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp"
+      binary: "/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: ""
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/ofirblumer/pimd-b/cmake/modules/"
+      CMAKE_MSVC_DEBUG_INFORMATION_FORMAT: "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>"
+    buildResult:
+      variable: "MPI_RESULT_CXX_test_mpi_MPICXX"
+      cached: true
+      stdout: |
+        Change Dir: '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_2d643/fast
+        /usr/bin/make  -f CMakeFiles/cmTC_2d643.dir/build.make CMakeFiles/cmTC_2d643.dir/build
+        make[1]: Entering directory '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        Building CXX object CMakeFiles/cmTC_2d643.dir/test_mpi.cpp.o
+        /usr/bin/c++  -isystem /home/ofir/.openmpi/include -pthread -o CMakeFiles/cmTC_2d643.dir/test_mpi.cpp.o -c /home/ofirblumer/pimd-b/build/CMakeFiles/FindMPI/test_mpi.cpp
+        Linking CXX executable cmTC_2d643
+        /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/bin/cmake -E cmake_link_script CMakeFiles/cmTC_2d643.dir/link.txt --verbose=1
+        /usr/bin/c++ -Wl,-rpath -Wl,/home/ofir/.openmpi/lib -Wl,--enable-new-dtags -pthread CMakeFiles/cmTC_2d643.dir/test_mpi.cpp.o -o cmTC_2d643  -Wl,-rpath,/home/ofir/.openmpi/lib /home/ofir/.openmpi/lib/libmpi.so
+        make[1]: Leaving directory '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        
+      exitCode: 0
+...
+
+---
+events:
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "cmake/modules/FindMPI.cmake:1231 (try_compile)"
+      - "cmake/modules/FindMPI.cmake:1282 (_MPI_try_staged_settings)"
+      - "cmake/modules/FindMPI.cmake:1549 (_MPI_check_lang_works)"
+      - "CMakeLists.txt:27 (find_package)"
+    directories:
+      source: "/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp"
+      binary: "/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/ofirblumer/pimd-b/cmake/modules/"
+      CMAKE_MSVC_DEBUG_INFORMATION_FORMAT: "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>"
+    buildResult:
+      variable: "MPI_RESULT_C_test_mpi_normal"
+      cached: true
+      stdout: |
+        Change Dir: '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_fc467/fast
+        /usr/bin/make  -f CMakeFiles/cmTC_fc467.dir/build.make CMakeFiles/cmTC_fc467.dir/build
+        make[1]: Entering directory '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        Building C object CMakeFiles/cmTC_fc467.dir/test_mpi.c.o
+        /usr/bin/cc  -isystem /home/ofir/.openmpi/include -pthread -o CMakeFiles/cmTC_fc467.dir/test_mpi.c.o -c /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/share/cmake-3.30/Modules/FindMPI/test_mpi.c
+        Linking C executable cmTC_fc467
+        /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/bin/cmake -E cmake_link_script CMakeFiles/cmTC_fc467.dir/link.txt --verbose=1
+        /usr/bin/cc -Wl,-rpath -Wl,/home/ofir/.openmpi/lib -Wl,--enable-new-dtags -pthread CMakeFiles/cmTC_fc467.dir/test_mpi.c.o -o cmTC_fc467  -Wl,-rpath,/home/ofir/.openmpi/lib /home/ofir/.openmpi/lib/libmpi.so
+        make[1]: Leaving directory '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "cmake/modules/FindMPI.cmake:1231 (try_compile)"
+      - "cmake/modules/FindMPI.cmake:1282 (_MPI_try_staged_settings)"
+      - "cmake/modules/FindMPI.cmake:1549 (_MPI_check_lang_works)"
+      - "CMakeLists.txt:27 (find_package)"
+    directories:
+      source: "/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp"
+      binary: "/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: ""
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/ofirblumer/pimd-b/cmake/modules/"
+      CMAKE_MSVC_DEBUG_INFORMATION_FORMAT: "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>"
+    buildResult:
+      variable: "MPI_RESULT_CXX_test_mpi_normal"
+      cached: true
+      stdout: |
+        Change Dir: '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_fb793/fast
+        /usr/bin/make  -f CMakeFiles/cmTC_fb793.dir/build.make CMakeFiles/cmTC_fb793.dir/build
+        make[1]: Entering directory '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        Building CXX object CMakeFiles/cmTC_fb793.dir/test_mpi.cpp.o
+        /usr/bin/c++  -isystem /home/ofir/.openmpi/include -pthread -o CMakeFiles/cmTC_fb793.dir/test_mpi.cpp.o -c /home/ofirblumer/pimd-b/build/CMakeFiles/FindMPI/test_mpi.cpp
+        Linking CXX executable cmTC_fb793
+        /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/bin/cmake -E cmake_link_script CMakeFiles/cmTC_fb793.dir/link.txt --verbose=1
+        /usr/bin/c++ -Wl,-rpath -Wl,/home/ofir/.openmpi/lib -Wl,--enable-new-dtags -pthread CMakeFiles/cmTC_fb793.dir/test_mpi.cpp.o -o cmTC_fb793  -Wl,-rpath,/home/ofir/.openmpi/lib /home/ofir/.openmpi/lib/libmpi.so
+        make[1]: Leaving directory '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "cmake/modules/FindMPI.cmake:1231 (try_compile)"
+      - "cmake/modules/FindMPI.cmake:1576 (_MPI_try_staged_settings)"
+      - "CMakeLists.txt:27 (find_package)"
+    directories:
+      source: "/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp"
+      binary: "/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: ""
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/ofirblumer/pimd-b/cmake/modules/"
+      CMAKE_MSVC_DEBUG_INFORMATION_FORMAT: "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>"
+    buildResult:
+      variable: "MPI_RESULT_CXX_test_mpi_MPICXX"
+      cached: true
+      stdout: |
+        Change Dir: '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_fc27f/fast
+        /usr/bin/make  -f CMakeFiles/cmTC_fc27f.dir/build.make CMakeFiles/cmTC_fc27f.dir/build
+        make[1]: Entering directory '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        Building CXX object CMakeFiles/cmTC_fc27f.dir/test_mpi.cpp.o
+        /usr/bin/c++  -isystem /home/ofir/.openmpi/include -pthread -o CMakeFiles/cmTC_fc27f.dir/test_mpi.cpp.o -c /home/ofirblumer/pimd-b/build/CMakeFiles/FindMPI/test_mpi.cpp
+        Linking CXX executable cmTC_fc27f
+        /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/bin/cmake -E cmake_link_script CMakeFiles/cmTC_fc27f.dir/link.txt --verbose=1
+        /usr/bin/c++ -Wl,-rpath -Wl,/home/ofir/.openmpi/lib -Wl,--enable-new-dtags -pthread CMakeFiles/cmTC_fc27f.dir/test_mpi.cpp.o -o cmTC_fc27f  -Wl,-rpath,/home/ofir/.openmpi/lib /home/ofir/.openmpi/lib/libmpi.so
+        make[1]: Leaving directory '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        
+      exitCode: 0
+...
+
+---
+events:
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "cmake/modules/FindMPI.cmake:1231 (try_compile)"
+      - "cmake/modules/FindMPI.cmake:1282 (_MPI_try_staged_settings)"
+      - "cmake/modules/FindMPI.cmake:1549 (_MPI_check_lang_works)"
+      - "CMakeLists.txt:27 (find_package)"
+    directories:
+      source: "/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp"
+      binary: "/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/ofirblumer/pimd-b/cmake/modules/"
+      CMAKE_MSVC_DEBUG_INFORMATION_FORMAT: "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>"
+    buildResult:
+      variable: "MPI_RESULT_C_test_mpi_normal"
+      cached: true
+      stdout: |
+        Change Dir: '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_86fd3/fast
+        /usr/bin/make  -f CMakeFiles/cmTC_86fd3.dir/build.make CMakeFiles/cmTC_86fd3.dir/build
+        make[1]: Entering directory '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        Building C object CMakeFiles/cmTC_86fd3.dir/test_mpi.c.o
+        /usr/bin/cc  -isystem /home/ofir/.openmpi/include -pthread -o CMakeFiles/cmTC_86fd3.dir/test_mpi.c.o -c /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/share/cmake-3.30/Modules/FindMPI/test_mpi.c
+        Linking C executable cmTC_86fd3
+        /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/bin/cmake -E cmake_link_script CMakeFiles/cmTC_86fd3.dir/link.txt --verbose=1
+        /usr/bin/cc -Wl,-rpath -Wl,/home/ofir/.openmpi/lib -Wl,--enable-new-dtags -pthread CMakeFiles/cmTC_86fd3.dir/test_mpi.c.o -o cmTC_86fd3  -Wl,-rpath,/home/ofir/.openmpi/lib /home/ofir/.openmpi/lib/libmpi.so
+        make[1]: Leaving directory '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "cmake/modules/FindMPI.cmake:1231 (try_compile)"
+      - "cmake/modules/FindMPI.cmake:1282 (_MPI_try_staged_settings)"
+      - "cmake/modules/FindMPI.cmake:1549 (_MPI_check_lang_works)"
+      - "CMakeLists.txt:27 (find_package)"
+    directories:
+      source: "/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp"
+      binary: "/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: ""
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/ofirblumer/pimd-b/cmake/modules/"
+      CMAKE_MSVC_DEBUG_INFORMATION_FORMAT: "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>"
+    buildResult:
+      variable: "MPI_RESULT_CXX_test_mpi_normal"
+      cached: true
+      stdout: |
+        Change Dir: '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_79fc3/fast
+        /usr/bin/make  -f CMakeFiles/cmTC_79fc3.dir/build.make CMakeFiles/cmTC_79fc3.dir/build
+        make[1]: Entering directory '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        Building CXX object CMakeFiles/cmTC_79fc3.dir/test_mpi.cpp.o
+        /usr/bin/c++  -isystem /home/ofir/.openmpi/include -pthread -o CMakeFiles/cmTC_79fc3.dir/test_mpi.cpp.o -c /home/ofirblumer/pimd-b/build/CMakeFiles/FindMPI/test_mpi.cpp
+        Linking CXX executable cmTC_79fc3
+        /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/bin/cmake -E cmake_link_script CMakeFiles/cmTC_79fc3.dir/link.txt --verbose=1
+        /usr/bin/c++ -Wl,-rpath -Wl,/home/ofir/.openmpi/lib -Wl,--enable-new-dtags -pthread CMakeFiles/cmTC_79fc3.dir/test_mpi.cpp.o -o cmTC_79fc3  -Wl,-rpath,/home/ofir/.openmpi/lib /home/ofir/.openmpi/lib/libmpi.so
+        make[1]: Leaving directory '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "cmake/modules/FindMPI.cmake:1231 (try_compile)"
+      - "cmake/modules/FindMPI.cmake:1576 (_MPI_try_staged_settings)"
+      - "CMakeLists.txt:27 (find_package)"
+    directories:
+      source: "/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp"
+      binary: "/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: ""
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/ofirblumer/pimd-b/cmake/modules/"
+      CMAKE_MSVC_DEBUG_INFORMATION_FORMAT: "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>"
+    buildResult:
+      variable: "MPI_RESULT_CXX_test_mpi_MPICXX"
+      cached: true
+      stdout: |
+        Change Dir: '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_13b95/fast
+        /usr/bin/make  -f CMakeFiles/cmTC_13b95.dir/build.make CMakeFiles/cmTC_13b95.dir/build
+        make[1]: Entering directory '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        Building CXX object CMakeFiles/cmTC_13b95.dir/test_mpi.cpp.o
+        /usr/bin/c++  -isystem /home/ofir/.openmpi/include -pthread -o CMakeFiles/cmTC_13b95.dir/test_mpi.cpp.o -c /home/ofirblumer/pimd-b/build/CMakeFiles/FindMPI/test_mpi.cpp
+        Linking CXX executable cmTC_13b95
+        /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/bin/cmake -E cmake_link_script CMakeFiles/cmTC_13b95.dir/link.txt --verbose=1
+        /usr/bin/c++ -Wl,-rpath -Wl,/home/ofir/.openmpi/lib -Wl,--enable-new-dtags -pthread CMakeFiles/cmTC_13b95.dir/test_mpi.cpp.o -o cmTC_13b95  -Wl,-rpath,/home/ofir/.openmpi/lib /home/ofir/.openmpi/lib/libmpi.so
+        make[1]: Leaving directory '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        
+      exitCode: 0
+...
+
+---
+events:
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "cmake/modules/FindMPI.cmake:1231 (try_compile)"
+      - "cmake/modules/FindMPI.cmake:1282 (_MPI_try_staged_settings)"
+      - "cmake/modules/FindMPI.cmake:1549 (_MPI_check_lang_works)"
+      - "CMakeLists.txt:27 (find_package)"
+    directories:
+      source: "/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp"
+      binary: "/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/ofirblumer/pimd-b/cmake/modules/"
+      CMAKE_MSVC_DEBUG_INFORMATION_FORMAT: "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>"
+    buildResult:
+      variable: "MPI_RESULT_C_test_mpi_normal"
+      cached: true
+      stdout: |
+        Change Dir: '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_ef55f/fast
+        /usr/bin/make  -f CMakeFiles/cmTC_ef55f.dir/build.make CMakeFiles/cmTC_ef55f.dir/build
+        make[1]: Entering directory '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        Building C object CMakeFiles/cmTC_ef55f.dir/test_mpi.c.o
+        /usr/bin/cc  -isystem /home/ofir/.openmpi/include -pthread -o CMakeFiles/cmTC_ef55f.dir/test_mpi.c.o -c /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/share/cmake-3.30/Modules/FindMPI/test_mpi.c
+        Linking C executable cmTC_ef55f
+        /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/bin/cmake -E cmake_link_script CMakeFiles/cmTC_ef55f.dir/link.txt --verbose=1
+        /usr/bin/cc -Wl,-rpath -Wl,/home/ofir/.openmpi/lib -Wl,--enable-new-dtags -pthread CMakeFiles/cmTC_ef55f.dir/test_mpi.c.o -o cmTC_ef55f  -Wl,-rpath,/home/ofir/.openmpi/lib /home/ofir/.openmpi/lib/libmpi.so
+        make[1]: Leaving directory '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "cmake/modules/FindMPI.cmake:1231 (try_compile)"
+      - "cmake/modules/FindMPI.cmake:1282 (_MPI_try_staged_settings)"
+      - "cmake/modules/FindMPI.cmake:1549 (_MPI_check_lang_works)"
+      - "CMakeLists.txt:27 (find_package)"
+    directories:
+      source: "/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp"
+      binary: "/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: ""
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/ofirblumer/pimd-b/cmake/modules/"
+      CMAKE_MSVC_DEBUG_INFORMATION_FORMAT: "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>"
+    buildResult:
+      variable: "MPI_RESULT_CXX_test_mpi_normal"
+      cached: true
+      stdout: |
+        Change Dir: '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_1e60b/fast
+        /usr/bin/make  -f CMakeFiles/cmTC_1e60b.dir/build.make CMakeFiles/cmTC_1e60b.dir/build
+        make[1]: Entering directory '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        Building CXX object CMakeFiles/cmTC_1e60b.dir/test_mpi.cpp.o
+        /usr/bin/c++  -isystem /home/ofir/.openmpi/include -pthread -o CMakeFiles/cmTC_1e60b.dir/test_mpi.cpp.o -c /home/ofirblumer/pimd-b/build/CMakeFiles/FindMPI/test_mpi.cpp
+        Linking CXX executable cmTC_1e60b
+        /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/bin/cmake -E cmake_link_script CMakeFiles/cmTC_1e60b.dir/link.txt --verbose=1
+        /usr/bin/c++ -Wl,-rpath -Wl,/home/ofir/.openmpi/lib -Wl,--enable-new-dtags -pthread CMakeFiles/cmTC_1e60b.dir/test_mpi.cpp.o -o cmTC_1e60b  -Wl,-rpath,/home/ofir/.openmpi/lib /home/ofir/.openmpi/lib/libmpi.so
+        make[1]: Leaving directory '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "cmake/modules/FindMPI.cmake:1231 (try_compile)"
+      - "cmake/modules/FindMPI.cmake:1576 (_MPI_try_staged_settings)"
+      - "CMakeLists.txt:27 (find_package)"
+    directories:
+      source: "/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp"
+      binary: "/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: ""
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/ofirblumer/pimd-b/cmake/modules/"
+      CMAKE_MSVC_DEBUG_INFORMATION_FORMAT: "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>"
+    buildResult:
+      variable: "MPI_RESULT_CXX_test_mpi_MPICXX"
+      cached: true
+      stdout: |
+        Change Dir: '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_8131e/fast
+        /usr/bin/make  -f CMakeFiles/cmTC_8131e.dir/build.make CMakeFiles/cmTC_8131e.dir/build
+        make[1]: Entering directory '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        Building CXX object CMakeFiles/cmTC_8131e.dir/test_mpi.cpp.o
+        /usr/bin/c++  -isystem /home/ofir/.openmpi/include -pthread -o CMakeFiles/cmTC_8131e.dir/test_mpi.cpp.o -c /home/ofirblumer/pimd-b/build/CMakeFiles/FindMPI/test_mpi.cpp
+        Linking CXX executable cmTC_8131e
+        /home/ofirblumer/.local/lib/python3.8/site-packages/cmake/data/bin/cmake -E cmake_link_script CMakeFiles/cmTC_8131e.dir/link.txt --verbose=1
+        /usr/bin/c++ -Wl,-rpath -Wl,/home/ofir/.openmpi/lib -Wl,--enable-new-dtags -pthread CMakeFiles/cmTC_8131e.dir/test_mpi.cpp.o -o cmTC_8131e  -Wl,-rpath,/home/ofir/.openmpi/lib /home/ofir/.openmpi/lib/libmpi.so
+        make[1]: Leaving directory '/home/ofirblumer/pimd-b/build/CMakeFiles/CMakeTmp'
+        
+      exitCode: 0
+...

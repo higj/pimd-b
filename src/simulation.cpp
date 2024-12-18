@@ -22,6 +22,7 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     bosonic_exchange(nullptr),
     rand_gen(seed + rank),
     this_bead(rank),
+    normal_modes(*this),
     nproc(nproc) {
     getVariant(param_obj.sim["nbeads"], nbeads);
     getVariant(param_obj.sim["dt"], dt);

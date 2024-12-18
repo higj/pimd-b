@@ -10,7 +10,7 @@
 #include "params.h"
 #include "potential.h"
 #include "bosonic_exchange_base.h"
-
+#include "normal_modes.h"
 
 class State;
 class Observable;
@@ -85,7 +85,8 @@ public:
     std::unique_ptr<Propagator> propagator;
     std::unique_ptr<Thermostat> thermostat;
 
-    void langevinStep();
+    NormalModes normal_modes;
+
     void run();
 
     std::unique_ptr<Potential> ext_potential;
