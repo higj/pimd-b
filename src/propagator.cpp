@@ -1,8 +1,7 @@
 #include "propagator.h"
 #include <numbers>
-
-#include "simulation.h"
 #include "normal_modes.h"
+#include "simulation.h"
 #include "common.h"
 
 Propagator::Propagator(Simulation& _sim) : sim(_sim) {
@@ -46,7 +45,6 @@ void Propagator::coordsStep() {
 
 NormalModesPropagator::NormalModesPropagator(Simulation& _sim) : 
     Propagator(_sim),
-    normal_modes(_sim.normal_modes),
     ext_forces(_sim.natoms),
     spring_forces(_sim.natoms)
 {
@@ -77,22 +75,22 @@ void NormalModesPropagator::step() {
                 sim.momenta(ptcl_idx, axis) += 0.5 * sim.dt * ext_forces(ptcl_idx, axis);
     }
 
-    normal_modes.shareData();
+    sim.normal_modes->shareData();
 
     MPI_Barrier(MPI_COMM_WORLD);
     for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
-            const int glob_idx = normal_modes.globIndexAtom(axis, ptcl_idx);
+            const int glob_idx = sim.normal_modes->globIndexAtom(axis, ptcl_idx);
             // Cartesian-to-nm transformation
-            double coord_nm = normal_modes.coordCarToNM(glob_idx);
-            double momentum_nm = normal_modes.momentumCarToNM(glob_idx);
+            double coord_nm = sim.normal_modes->coordCarToNM(glob_idx);
+            double momentum_nm = sim.normal_modes->momentumCarToNM(glob_idx);
             // Time propagation
             if (freq == 0) {
-                normal_modes.arr_coord_nm[glob_idx + sim.this_bead] = coord_nm + sim.dt / sim.mass * momentum_nm;
-                normal_modes.arr_momenta_nm[glob_idx + sim.this_bead] = momentum_nm;
+                sim.normal_modes->arr_coord_nm[glob_idx + sim.this_bead] = coord_nm + sim.dt / sim.mass * momentum_nm;
+                sim.normal_modes->arr_momenta_nm[glob_idx + sim.this_bead] = momentum_nm;
             } else {
-                normal_modes.arr_coord_nm[glob_idx + sim.this_bead] = c * coord_nm + s / m_omega * momentum_nm;
-                normal_modes.arr_momenta_nm[glob_idx + sim.this_bead] = (-1) * m_omega * s * coord_nm + c * momentum_nm;
+                sim.normal_modes->arr_coord_nm[glob_idx + sim.this_bead] = c * coord_nm + s / m_omega * momentum_nm;
+                sim.normal_modes->arr_momenta_nm[glob_idx + sim.this_bead] = (-1) * m_omega * s * coord_nm + c * momentum_nm;
             }
         }
     }
@@ -100,12 +98,12 @@ void NormalModesPropagator::step() {
     MPI_Barrier(MPI_COMM_WORLD);
     for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
-            int glob_idx = normal_modes.globIndexAtom(axis, ptcl_idx);
+            int glob_idx = sim.normal_modes->globIndexAtom(axis, ptcl_idx);
             // NM-to-Cartesian transformation
-            double coord_cartesian = normal_modes.coordNMToCar(glob_idx); 
-            double momentum_cartesian = normal_modes.momentumNMToCar(glob_idx);
-            normal_modes.arr_coord_cartesian[glob_idx + sim.this_bead] = coord_cartesian;
-            normal_modes.arr_momenta_cartesian[glob_idx + sim.this_bead] = momentum_cartesian;
+            double coord_cartesian = sim.normal_modes->coordNMToCar(glob_idx); 
+            double momentum_cartesian = sim.normal_modes->momentumNMToCar(glob_idx);
+            sim.normal_modes->arr_coord_cartesian[glob_idx + sim.this_bead] = coord_cartesian;
+            sim.normal_modes->arr_momenta_cartesian[glob_idx + sim.this_bead] = momentum_cartesian;
         }
     }
 
@@ -113,9 +111,9 @@ void NormalModesPropagator::step() {
     MPI_Barrier(MPI_COMM_WORLD);
     for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
-            int glob_idx = normal_modes.globIndexAtom(axis, ptcl_idx);
-            sim.coord(ptcl_idx, axis) = normal_modes.arr_coord_cartesian[glob_idx + sim.this_bead];
-            sim.momenta(ptcl_idx, axis) = normal_modes.arr_momenta_cartesian[glob_idx + sim.this_bead];
+            int glob_idx = sim.normal_modes->globIndexAtom(axis, ptcl_idx);
+            sim.coord(ptcl_idx, axis) = sim.normal_modes->arr_coord_cartesian[glob_idx + sim.this_bead];
+            sim.momenta(ptcl_idx, axis) = sim.normal_modes->arr_momenta_cartesian[glob_idx + sim.this_bead];
         }
     }
     sim.updateNeighboringCoordinates();
@@ -127,18 +125,30 @@ void NormalModesPropagator::step() {
     if (!sim.bosonic) {
         for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx)
             for (int axis = 0; axis < NDIM; ++axis)
+#if IPI_CONVENTION
                 sim.momenta(ptcl_idx, axis) += 0.5 * sim.dt * ext_forces(ptcl_idx, axis);
+#else
+                sim.momenta(ptcl_idx, axis) += 0.5 * sim.dt * ext_forces(ptcl_idx, axis) / sim.nbeads;
+#endif
     } else if (sim.this_bead == 0 || sim.this_bead == sim.nbeads - 1) {
         double inner_springs;
         for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
             for (int axis = 0; axis < NDIM; ++axis) {
                 inner_springs = -sim.spring_constant * (2 * sim.coord(ptcl_idx, axis) - sim.prev_coord(ptcl_idx, axis) - sim.next_coord(ptcl_idx, axis));
+#if IPI_CONVENTION
                 sim.momenta(ptcl_idx, axis) += 0.5 * sim.dt * (ext_forces(ptcl_idx, axis) + spring_forces(ptcl_idx, axis) - inner_springs);
+#else
+                sim.momenta(ptcl_idx, axis) += 0.5 * sim.dt * (ext_forces(ptcl_idx, axis) / sim.nbeads + spring_forces(ptcl_idx, axis) - inner_springs);
+#endif
             }
         }
     } else {
         for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx)
             for (int axis = 0; axis < NDIM; ++axis)
+#if IPI_CONVENTION
                 sim.momenta(ptcl_idx, axis) += 0.5 * sim.dt * ext_forces(ptcl_idx, axis);
+#else
+                sim.momenta(ptcl_idx, axis) += 0.5 * sim.dt * ext_forces(ptcl_idx, axis) / sim.nbeads;
+#endif
     }
 }

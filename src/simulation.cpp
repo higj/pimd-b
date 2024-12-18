@@ -10,8 +10,8 @@
 #include "observable.h"
 #include "propagator.h"
 #include "thermostat.h"
+#include "normal_modes.h"
 #include "simulation.h"
-
 #if OLD_BOSONIC_ALGORITHM
 #include "old_bosonic_exchange.h"
 #else
@@ -22,7 +22,6 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     bosonic_exchange(nullptr),
     rand_gen(seed + rank),
     this_bead(rank),
-    normal_modes(*this),
     nproc(nproc) {
     getVariant(param_obj.sim["nbeads"], nbeads);
     getVariant(param_obj.sim["dt"], dt);
@@ -136,6 +135,7 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
 
     initializeStates(param_obj.states);
     initializeObservables(param_obj.observables);
+    normal_modes = std::make_unique<NormalModes>(*this);
 }
 
 Simulation::~Simulation() = default;

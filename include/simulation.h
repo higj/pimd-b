@@ -10,8 +10,8 @@
 #include "params.h"
 #include "potential.h"
 #include "bosonic_exchange_base.h"
-#include "normal_modes.h"
 
+class NormalModes;
 class State;
 class Observable;
 class Propagator;
@@ -85,7 +85,7 @@ public:
     std::unique_ptr<Propagator> propagator;
     std::unique_ptr<Thermostat> thermostat;
 
-    NormalModes normal_modes;
+    std::unique_ptr<NormalModes> normal_modes;
 
     void run();
 

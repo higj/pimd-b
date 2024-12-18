@@ -42,5 +42,4 @@ public:
 private:
     double freq, c, s, m_omega;
     dVec ext_forces, spring_forces;
-    NormalModes& normal_modes;
 };
