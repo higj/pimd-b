@@ -57,23 +57,7 @@ NormalModesPropagator::NormalModesPropagator(Simulation& _sim) :
 
 void NormalModesPropagator::step() {
     // Propagate momenta under external forces
-    if (!sim.bosonic) {
-        for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx)
-            for (int axis = 0; axis < NDIM; ++axis)
-                sim.momenta(ptcl_idx, axis) += 0.5 * sim.dt * ext_forces(ptcl_idx, axis);
-    } else if (sim.this_bead == 0 || sim.this_bead == sim.nbeads - 1) {
-        double inner_springs;
-        for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
-            for (int axis = 0; axis < NDIM; ++axis) {
-                inner_springs = -sim.spring_constant * (2 * sim.coord(ptcl_idx, axis) - sim.prev_coord(ptcl_idx, axis) - sim.next_coord(ptcl_idx, axis));
-                sim.momenta(ptcl_idx, axis) += 0.5 * sim.dt * (ext_forces(ptcl_idx, axis) + spring_forces(ptcl_idx, axis) - inner_springs);
-            }
-        }
-    } else {
-        for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx)
-            for (int axis = 0; axis < NDIM; ++axis)
-                sim.momenta(ptcl_idx, axis) += 0.5 * sim.dt * ext_forces(ptcl_idx, axis);
-    }
+    momentaExternalForces();
 
     sim.normal_modes->shareData();
 
@@ -120,8 +104,12 @@ void NormalModesPropagator::step() {
     sim.updateForces();
     sim.updatePhysicalForces(ext_forces);
     sim.updateSpringForces(spring_forces);
-
+    
     // Propagate momenta under external forces
+    momentaExternalForces();
+}
+
+void NormalModesPropagator::momentaExternalForces() {
     if (!sim.bosonic) {
         for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx)
             for (int axis = 0; axis < NDIM; ++axis)
