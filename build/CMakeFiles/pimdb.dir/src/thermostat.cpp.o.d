@@ -236,4 +236,5 @@ CMakeFiles/pimdb.dir/src/thermostat.cpp.o: \
  /powerapps/share/gcc/gcc-13.2.0/include/c++/13.2.0/bits/stl_map.h \
  /powerapps/share/gcc/gcc-13.2.0/include/c++/13.2.0/bits/stl_multimap.h \
  /hirshblab-storage/ofirblumer/pimd-b/include/potential.h \
- /hirshblab-storage/ofirblumer/pimd-b/include/bosonic_exchange_base.h
+ /hirshblab-storage/ofirblumer/pimd-b/include/bosonic_exchange_base.h \
+ /hirshblab-storage/ofirblumer/pimd-b/include/normal_modes.h

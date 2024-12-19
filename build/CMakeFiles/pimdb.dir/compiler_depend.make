@@ -3849,7 +3849,8 @@ CMakeFiles/pimdb.dir/src/thermostat.cpp.o: ../src/thermostat.cpp \
   /powerapps/share/gcc/gcc-13.2.0/include/c++/13.2.0/bits/stl_map.h \
   /powerapps/share/gcc/gcc-13.2.0/include/c++/13.2.0/bits/stl_multimap.h \
   ../include/potential.h \
-  ../include/bosonic_exchange_base.h
+  ../include/bosonic_exchange_base.h \
+  ../include/normal_modes.h
 
 CMakeFiles/pimdb.dir/src/units.cpp.o: ../src/units.cpp \
   /usr/include/stdc-predef.h \

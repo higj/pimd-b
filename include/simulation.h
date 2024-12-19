@@ -37,6 +37,7 @@ public:
     bool bosonic;       // Is the simulation bosonic?
     bool fixcom;        // Fix the center of mass?
     bool pbc;           // Enable periodic boundary conditions?
+    bool nmthermostat;  // Couple thermostat to normal modes
 
     bool out_pos;       // Output trajectories?
     bool out_vel;       // Output velocities?

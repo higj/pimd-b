@@ -36,6 +36,7 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     getVariant(param_obj.sim["bosonic"], bosonic);
     getVariant(param_obj.sim["fixcom"], fixcom);
     getVariant(param_obj.sim["pbc"], pbc);
+    getVariant(param_obj.sim["nmthermostat"], nmthermostat);
 
     getVariant(param_obj.sys["temperature"], temperature);
     getVariant(param_obj.sys["natoms"], natoms);
@@ -81,18 +82,32 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     }
 
     // Choose thermostat
-    if (thermostat_type == "langevin") {
-        thermostat = std::make_unique<LangevinThermostat>(*this);
-    } else if (thermostat_type == "nose_hoover") {
-        thermostat = std::make_unique<NoseHooverThermostat>(*this, nchains);
-    } else if (thermostat_type == "nose_hoover_np") {
-        thermostat = std::make_unique<NoseHooverNpThermostat>(*this, nchains);
-    } else if (thermostat_type == "nose_hoover_np_dim") {
-        thermostat = std::make_unique<NoseHooverNpDimThermostat>(*this, nchains);
-    } else if (thermostat_type == "none") {
-        thermostat = std::make_unique<Thermostat>(*this);
+    if (nmthermostat) {
+        if (thermostat_type == "langevin") {
+            thermostat = std::make_unique<LangevinThermostatNM>(*this);
+        } else if (thermostat_type == "nose_hoover") {
+            thermostat = std::make_unique<NoseHooverThermostatNM>(*this, nchains);
+        } else if (thermostat_type == "nose_hoover_np") {
+            thermostat = std::make_unique<NoseHooverNpThermostatNM>(*this, nchains);
+        } else if (thermostat_type == "nose_hoover_np_dim") {
+            thermostat = std::make_unique<NoseHooverNpDimThermostatNM>(*this, nchains);
+        } else if (thermostat_type == "none") {
+            thermostat = std::make_unique<Thermostat>(*this);
+        }
     }
-
+    else {
+        if (thermostat_type == "langevin") {
+            thermostat = std::make_unique<LangevinThermostat>(*this);
+        } else if (thermostat_type == "nose_hoover") {
+            thermostat = std::make_unique<NoseHooverThermostat>(*this, nchains);
+        } else if (thermostat_type == "nose_hoover_np") {
+            thermostat = std::make_unique<NoseHooverNpThermostat>(*this, nchains);
+        } else if (thermostat_type == "nose_hoover_np_dim") {
+            thermostat = std::make_unique<NoseHooverNpDimThermostat>(*this, nchains);
+        } else if (thermostat_type == "none") {
+            thermostat = std::make_unique<Thermostat>(*this);
+        }
+    }
     // Initialize the coordinate, momenta, and force arrays
     coord = dVec(natoms);
     prev_coord = dVec(natoms);

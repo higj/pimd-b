@@ -19,7 +19,7 @@ public:
 
     virtual void step();
 protected:
-    Simulation& sim; // Reference to the simulation object
+    Simulation& sim;   // Reference to the simulation object
 };
 
 /* -------------------------------- */
@@ -30,8 +30,18 @@ public:
     ~LangevinThermostat() override = default;
 
     void step() override;
-private:
+protected:
     double a, b;
+};
+
+/* -------------------------------- */
+
+class LangevinThermostatNM : public LangevinThermostat {
+public:
+    LangevinThermostatNM(Simulation& _sim);
+    ~LangevinThermostatNM() override = default;
+
+    void step() override;
 };
 
 /* -------------------------------- */
@@ -56,10 +66,29 @@ protected:
 
 /* -------------------------------- */
 
+class NoseHooverThermostatNM : public NoseHooverThermostat {
+public:
+    NoseHooverThermostatNM(Simulation& _sim, int _nchains);
+    ~NoseHooverThermostatNM() override = default;
+
+    void step() override; 
+};
+
+/* -------------------------------- */
+
 class NoseHooverNpThermostat : public NoseHooverThermostat {
 public:
     NoseHooverNpThermostat(Simulation& _sim, int _nchains);
     ~NoseHooverNpThermostat() override = default;
+
+    void step() override;
+};
+/* -------------------------------- */
+
+class NoseHooverNpThermostatNM : public NoseHooverNpThermostat {
+public:
+    NoseHooverNpThermostatNM(Simulation& _sim, int _nchains);
+    ~NoseHooverNpThermostatNM() override = default;
 
     void step() override;
 };
@@ -73,3 +102,12 @@ public:
     void step() override;
 };
 /* -------------------------------- */
+
+class NoseHooverNpDimThermostatNM : public NoseHooverNpDimThermostat {
+public: 
+    NoseHooverNpDimThermostatNM(Simulation& _sim, int _nchains);
+    ~NoseHooverNpDimThermostatNM() override = default;
+ 
+    void step() override; 
+};
+

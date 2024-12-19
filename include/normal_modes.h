@@ -18,7 +18,7 @@ public:
     double coordNMToCar(const int glob_idx);
     double momentumNMToCar(const int glob_idx);
     int globIndexAtom(const int axis, int atom) const { return axis * axis_stride + atom * atom_stride; }
-    
+    void updateCartesianMomenta(); 
 private:
     int axis_stride, atom_stride;  // For indexing purposes
     MPI_Win win_coord_cartesian, win_coord_nm, win_momenta_cartesian, win_momenta_nm;     // Window objects associated with the arrays

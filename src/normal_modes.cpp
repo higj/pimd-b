@@ -127,3 +127,14 @@ double NormalModes::momentumNMToCar(const int glob_idx) {
     }
     return momentum_cartesian;
 }
+
+void NormalModes::updateCartesianMomenta() {
+    for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
+        for (int axis = 0; axis < NDIM; ++axis) {
+            int glob_idx = globIndexAtom(axis, ptcl_idx);
+            arr_momenta_cartesian[glob_idx + sim.this_bead] = momentumNMToCar(glob_idx);
+            sim.momenta(ptcl_idx, axis) = arr_momenta_cartesian[glob_idx + sim.this_bead]; 
+        }
+    }
+}
+

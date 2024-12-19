@@ -41,6 +41,8 @@ Params::Params(const std::string& filename, const int& rank) : reader(filename) 
     sim["fixcom"] = reader.GetBoolean(Sections::SIMULATION, "fixcom", true);
     // Enable periodic boundary conditions?
     sim["pbc"] = reader.GetBoolean(Sections::SIMULATION, "pbc", false);
+    // Couple thermostat to normal modes?
+    sim["nmthermostat"] = reader.GetBoolean(Sections::SIMULATION, "nmthermostat", true);
 
     std::string init_pos_type, init_pos_specification;
 
