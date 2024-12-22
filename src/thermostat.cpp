@@ -179,18 +179,23 @@ double NoseHooverThermostat::singleChainStep(const double& current_energy, const
 
 NoseHooverThermostatNM::NoseHooverThermostatNM(Simulation& _sim, int _nchains) : NoseHooverThermostat(_sim, _nchains) {}
 void NoseHooverThermostatNM::step() {
+    // MPI communcation
+    sim.normal_modes->shareData();
+    MPI_Barrier(MPI_COMM_WORLD);
+    
+    iVec glob_idxs(sim.natoms);
+    dVec momenta_nm(sim.natoms);
+
     // Calculates the current energy in the system
     double current_energy = 0.0;
     for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
-            current_energy += sim.momenta(ptcl_idx, axis) * sim.momenta(ptcl_idx, axis);
+            glob_idxs(ptcl_idx, axis) = sim.normal_modes->globIndexAtom(axis, ptcl_idx);
+            momenta_nm(ptcl_idx, axis) = sim.normal_modes->momentumCarToNM(glob_idxs(ptcl_idx, axis));
+            current_energy += momenta_nm(ptcl_idx, axis) * momenta_nm(ptcl_idx, axis);
         }
     }
     current_energy *= 1 / sim.mass;
-
-    // MPI communcation
-    sim.normal_modes->shareData();
-    MPI_Barrier(MPI_COMM_WORLD);
 
     // Obtain the scaling factor
     double scale = singleChainStep(current_energy, 0);
@@ -198,8 +203,7 @@ void NoseHooverThermostatNM::step() {
     // Rescale the momenta in normal modes
     for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
-            const int glob_idx = sim.normal_modes->globIndexAtom(axis, ptcl_idx);
-            sim.normal_modes->arr_momenta_nm[glob_idx + sim.this_bead] = scale * sim.normal_modes->momentumCarToNM(glob_idx);
+            sim.normal_modes->arr_momenta_nm[glob_idxs(ptcl_idx, axis) + sim.this_bead] = scale * momenta_nm(ptcl_idx, axis);
         }
     }
 
@@ -257,20 +261,26 @@ void NoseHooverNpThermostatNM::step() {
     // MPI communcation
     sim.normal_modes->shareData();
     MPI_Barrier(MPI_COMM_WORLD);
+
     for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
+        std::vector<int> glob_idxs(NDIM);
+        std::vector<double> momenta_nm(NDIM);
+
         // Calculates the current energy in the system
         double current_energy = 0.0;
         for (int axis = 0; axis < NDIM; ++axis) {
-            current_energy += sim.momenta(ptcl_idx, axis) * sim.momenta(ptcl_idx, axis);
+            glob_idxs[axis] = sim.normal_modes->globIndexAtom(axis, ptcl_idx);
+            momenta_nm[axis] = sim.normal_modes->momentumCarToNM(glob_idxs[axis]);
+            current_energy += momenta_nm[axis] * momenta_nm[axis];
         }
         current_energy *= 1 / sim.mass;
+
         // Obtain the scaling factor
         double scale = singleChainStep(current_energy, ptcl_idx * nchains);
 
         // Rescale the momenta in normal modes
         for (int axis = 0; axis < NDIM; ++axis) {
-            const int glob_idx = sim.normal_modes->globIndexAtom(axis, ptcl_idx);
-            sim.normal_modes->arr_momenta_nm[glob_idx + sim.this_bead] = scale * sim.normal_modes->momentumCarToNM(glob_idx);
+            sim.normal_modes->arr_momenta_nm[glob_idxs[axis] + sim.this_bead] = scale * momenta_nm[axis];
         }
     }
 
@@ -328,15 +338,17 @@ void NoseHooverNpDimThermostatNM::step() {
     
     for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
+            const int glob_idx = sim.normal_modes->globIndexAtom(axis, ptcl_idx);
+            double momentum_nm = sim.normal_modes->momentumCarToNM(glob_idx);
+
             // Calculates the current energy in the system
-            double current_energy = sim.momenta(ptcl_idx, axis) * sim.momenta(ptcl_idx, axis) / sim.mass;
+            double current_energy = momentum_nm * momentum_nm / sim.mass;
  
             // Obtain the scaling factor
             double scale = singleChainStep(current_energy, (ptcl_idx * NDIM + axis) * nchains);
  
             // Rescale the momentum in normal modes
-            const int glob_idx = sim.normal_modes->globIndexAtom(axis, ptcl_idx);
-            sim.normal_modes->arr_momenta_nm[glob_idx + sim.this_bead] = scale * sim.normal_modes->momentumCarToNM(glob_idx);
+            sim.normal_modes->arr_momenta_nm[glob_idx + sim.this_bead] = scale * momentum_nm;
         }
     }
 

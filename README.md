@@ -60,6 +60,7 @@ seed = 12345
 initial_position = random
 propagator = cartesian
 thermostat = langevin
+nmthermostat = true
 
 [system]
 temperature = 1.0 kelvin
@@ -127,6 +128,8 @@ The `thermostat` option allows one to specify the thermostat to be used during t
 * `nose_hoover_np`: A unique Nose-Hoover chain coupled to each one of the N particles in the system
 
 * `nose_hoover_np_dim`: A unique Nose-Hoover chain coupled to every degree of freedom of any of the N particles in the system
+
+The nmthermostat flag is used to couple the chosen thermostat to the normal modes instead of the Cartesian coordinates (default is true).
 
 In the `[output]` section, users can request the output of various quantities related to the state of the system (such as positions, velocities, etc.) 
 The format for this section is `state_name = state_unit`. The key (`state_name`) must correspond to a name of a supported state. 
