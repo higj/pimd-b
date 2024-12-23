@@ -38,7 +38,7 @@
 // H_tuckerman = H_ipi / P. Note however that the expressions for the various estimators are unaffected by this choice.
 // Setting the following pre-processor directive to false amounts to adopting Tuckerman's convention.
 #ifndef IPI_CONVENTION
-#define IPI_CONVENTION false
+#define IPI_CONVENTION true
 #endif
 
 // A small number (but not necessarily the smallest)
