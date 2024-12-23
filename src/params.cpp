@@ -42,7 +42,7 @@ Params::Params(const std::string& filename, const int& rank) : reader(filename) 
     // Enable periodic boundary conditions?
     sim["pbc"] = reader.GetBoolean(Sections::SIMULATION, "pbc", false);
     // Couple thermostat to normal modes?
-    sim["nmthermostat"] = reader.GetBoolean(Sections::SIMULATION, "nmthermostat", true);
+    sim["nmthermostat"] = reader.GetBoolean(Sections::SIMULATION, "nmthermostat", false);
 
     std::string init_pos_type, init_pos_specification;
 
