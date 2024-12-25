@@ -20,7 +20,7 @@ public:
     BosonicExchangeBase(const BosonicExchangeBase&) = delete;
     BosonicExchangeBase& operator=(const BosonicExchangeBase&) = delete;
 
-    void exteriorSpringForce(dVec& f);
+    virtual void exteriorSpringForce(dVec& f);
 
     virtual void prepare() = 0;
     virtual double effectivePotential() = 0;
@@ -32,13 +32,13 @@ public:
     virtual void printBosonicDebug() = 0;
 
 protected:
-    void assignFirstLast(dVec& x_first_bead, dVec& x_last_bead) const;
+    virtual void assignFirstLast(dVec& x_first_bead, dVec& x_last_bead) const;
     void getBeadsSeparation(const dVec& x1, int l1, const dVec& x2, int l2, double diff[NDIM]) const;
     [[nodiscard]] double getBeadsSeparationSquared(const dVec& x1, int l1, const dVec& x2, int l2) const;
 
     // Pure virtual functions (must be implemented by derived classes)
-    virtual void springForceFirstBead(dVec& f) = 0;
-    virtual void springForceLastBead(dVec& f) = 0;
+    virtual void springForceFirstBead(dVec& f, const dVec& x, const dVec& x_prev, const dVec& x_next) = 0;
+    virtual void springForceLastBead(dVec& f, const dVec& x, const dVec& x_prev, const dVec& x_next) = 0;
 
     const Simulation& sim; // Reference to the simulation object
 

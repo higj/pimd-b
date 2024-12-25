@@ -156,7 +156,7 @@ void BosonicExchange::evaluateConnectionProbabilities() {
     }
 }
 
-void BosonicExchange::springForceLastBead(dVec& f) {
+void BosonicExchange::springForceLastBead(dVec& f, const dVec& x, const dVec& x_prev, const dVec& x_next) {
     for (int l = 0; l < nbosons; l++) {
         std::array<double, NDIM> sums = {};
 
@@ -185,7 +185,7 @@ void BosonicExchange::springForceLastBead(dVec& f) {
     }
 }
 
-void BosonicExchange::springForceFirstBead(dVec& f) {
+void BosonicExchange::springForceFirstBead(dVec& f, const dVec& x, const dVec& x_prev, const dVec& x_next) {
     for (int l = 0; l < nbosons; l++) {
         std::array<double, NDIM> sums = {};
 

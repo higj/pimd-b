@@ -71,9 +71,9 @@ double BosonicExchangeBase::getBeadsSeparationSquared(const dVec& x1, int l1, co
  */
 void BosonicExchangeBase::exteriorSpringForce(dVec& f) {
     if (sim.this_bead == 0) {
-        springForceFirstBead(f);
+        springForceFirstBead(f, x, x_prev, x_next);
     } else {
-        springForceLastBead(f);
+        springForceLastBead(f, x, x_prev, x_next);
     }
 }
 

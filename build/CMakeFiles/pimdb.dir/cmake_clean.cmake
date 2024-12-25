@@ -9,6 +9,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/pimdb.dir/src/bosonic_exchange.cpp.o.d"
   "CMakeFiles/pimdb.dir/src/bosonic_exchange_base.cpp.o"
   "CMakeFiles/pimdb.dir/src/bosonic_exchange_base.cpp.o.d"
+  "CMakeFiles/pimdb.dir/src/bosonic_exchange_carrousel.cpp.o"
+  "CMakeFiles/pimdb.dir/src/bosonic_exchange_carrousel.cpp.o.d"
   "CMakeFiles/pimdb.dir/src/common.cpp.o"
   "CMakeFiles/pimdb.dir/src/common.cpp.o.d"
   "CMakeFiles/pimdb.dir/src/normal_modes.cpp.o"

@@ -3,7 +3,7 @@
 #include "common.h"
 #include "bosonic_exchange_base.h"
 
-class BosonicExchange final : public BosonicExchangeBase {
+class BosonicExchange : public BosonicExchangeBase {
 public:
     BosonicExchange(const Simulation& _sim);
     ~BosonicExchange() override = default;
@@ -21,11 +21,11 @@ public:
     void printBosonicDebug() override;
 
 protected:
-    void springForceFirstBead(dVec& f) override;
-    void springForceLastBead(dVec& f) override;
-
-private:
+    void springForceFirstBead(dVec& f, const dVec& x, const dVec& x_prev, const dVec& x_next) override;
+    void springForceLastBead(dVec& f, const dVec& x, const dVec& x_prev, const dVec& x_next) override;
     void evaluateBosonicEnergies();
+    
+private:
     void evaluateCycleEnergies();
 
     double getEnk(int m, int k) const;

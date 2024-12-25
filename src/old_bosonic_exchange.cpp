@@ -118,7 +118,7 @@ double OldBosonicExchange::effectivePotential() {
  *
  * @param[out] f Spring forces acting on the particles at time-slice P.
  */
-void OldBosonicExchange::springForceLastBead(dVec& f) {
+void OldBosonicExchange::springForceLastBead(dVec& f, const dVec& x, const dVec& x_prev, const dVec& x_next) {
     const dVec x_first_bead = x_next;
     const dVec x_last_bead = x;
 
@@ -176,7 +176,7 @@ void OldBosonicExchange::springForceLastBead(dVec& f) {
  *
  * @param[out] f Spring forces acting on the particles at time-slice 1.
  */
-void OldBosonicExchange::springForceFirstBead(dVec& f) {
+void OldBosonicExchange::springForceFirstBead(dVec& f, const dVec& x, const dVec& x_prev, const dVec& x_next) {
     const dVec x_first_bead = x;
     const dVec x_last_bead = x_prev;
 
