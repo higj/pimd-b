@@ -27,6 +27,10 @@
 #define OLD_BOSONIC_ALGORITHM false  // Enable the old bosonic algorithm that scales as O(N!)?
 #endif
 
+#ifndef CARROUSEL_BOSONIC_ALGORITHM
+#define CARROUSEL_BOSONIC_ALGORITHM true  // Enable the old bosonic algorithm that scales as O(N!)?
+#endif
+
 // In the "i-Pi convention" [J. Chem. Phys. 133, 124104 (2010); also J. Chem. Phys. 74, 4078-4095 (1981)], 
 // the Boltzmann exponents have the form exp[-(beta/P)H], where H is the classical Hamiltonian of the 
 // ring polymers. This results in a canonical distribution at P times the physical temperature.

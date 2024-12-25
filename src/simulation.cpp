@@ -12,10 +12,15 @@
 #include "thermostat.h"
 #include "normal_modes.h"
 #include "simulation.h"
+
+#if CARROUSEL_BOSONIC_ALGORITHM
+#include "bosonic_exchange_carrousel.h"
+#else
 #if OLD_BOSONIC_ALGORITHM
 #include "old_bosonic_exchange.h"
 #else
 #include "bosonic_exchange.h"
+#endif
 #endif
 
 Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, unsigned int seed) :
@@ -141,10 +146,14 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     is_bosonic_bead = bosonic && (this_bead == 0 || this_bead == nbeads - 1);
 
     if (is_bosonic_bead) {
+#if CARROUSEL_BOSONIC_ALGORITHM
+    bosonic_exchange = std::make_unique<OldBosonicExchangeCarrousel>(*this);
+#else
 #if OLD_BOSONIC_ALGORITHM
         bosonic_exchange = std::make_unique<OldBosonicExchange>(*this);
 #else
         bosonic_exchange = std::make_unique<BosonicExchange>(*this);
+#endif
 #endif
     }
 
