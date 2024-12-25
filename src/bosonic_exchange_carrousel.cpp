@@ -39,10 +39,11 @@ void BosonicExchangeCarrousel::assignTempCoords() {
  */
 void BosonicExchangeCarrousel::exteriorSpringForce(dVec& f) {
     dVec temp_f(nbosons);
+    std::vector<int> indexes(nbosons);
     for (int i = 0; i < nbosons; i++) {
-        int index = ((i + sim.getStep()) % nbosons);
+        indexes[i] = ((i + sim.getStep()) % nbosons);
         for (int axis = 0; axis < NDIM; ++axis) {
-            temp_f(i, axis) = f(index, axis);
+            temp_f(i, axis) = f(indexes[i], axis);
         }
     }
 
@@ -54,7 +55,7 @@ void BosonicExchangeCarrousel::exteriorSpringForce(dVec& f) {
 
     for (int i = 0; i < nbosons; i++) {
         for (int axis = 0; axis < NDIM; ++axis) {
-            f(i, axis) = temp_f(i, axis);
+            f(indexes[i], axis) = temp_f(i, axis);
         }
     }
 }

@@ -28,7 +28,7 @@
 #endif
 
 #ifndef CARROUSEL_BOSONIC_ALGORITHM
-#define CARROUSEL_BOSONIC_ALGORITHM true  // Enable the old bosonic algorithm that scales as O(N!)?
+#define CARROUSEL_BOSONIC_ALGORITHM false  // Enable the new carrousel bosonic algorithm?
 #endif
 
 // In the "i-Pi convention" [J. Chem. Phys. 133, 124104 (2010); also J. Chem. Phys. 74, 4078-4095 (1981)], 

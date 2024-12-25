@@ -147,7 +147,7 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
 
     if (is_bosonic_bead) {
 #if CARROUSEL_BOSONIC_ALGORITHM
-    bosonic_exchange = std::make_unique<OldBosonicExchangeCarrousel>(*this);
+    bosonic_exchange = std::make_unique<BosonicExchangeCarrousel>(*this);
 #else
 #if OLD_BOSONIC_ALGORITHM
         bosonic_exchange = std::make_unique<OldBosonicExchange>(*this);
