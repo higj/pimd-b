@@ -113,6 +113,14 @@ double OldBosonicExchange::effectivePotential() {
     return (-1.0 / beta) * log(weights_sum / permutation_counter);
 }
 
+void OldBosonicExchange::exteriorSpringForce(dVec& f) {
+    if (sim.this_bead == 0) {
+        springForceFirstBead(f, indirection_x, indirection_x_prev, indirection_x_next);
+    } else {
+        springForceLastBead(f, indirection_x, indirection_x_prev, indirection_x_next);
+    }
+}
+
 /**
  * Evaluates the bosonic spring forces acting on the particles at the last imaginary time slice.
  *
