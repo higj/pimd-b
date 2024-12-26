@@ -4,6 +4,7 @@
 
 #include "bosonic_exchange.h"
 #include "simulation.h"
+#include <iostream>
 
 BosonicExchange::BosonicExchange(const Simulation& _sim) : BosonicExchangeBase(_sim),
     E_kn(nbosons * (nbosons + 1) / 2),
@@ -167,9 +168,10 @@ void BosonicExchange::exteriorSpringForce(dVec& f) {
         std::array<double, NDIM> sums = (sim.this_bead == 0 ? springForceFirstBead(l, indirection_x, indirection_x_prev, indirection_x_next) : springForceLastBead(l, indirection_x, indirection_x_prev, indirection_x_next));
 
         for (int axis = 0; axis < NDIM; ++axis) {
+            std::cout << sums[axis] << " ";
             f(indexes[l], axis) = sums[axis] * spring_constant;
         }
-
+        std::cout << "\n";
     }
 }
 
