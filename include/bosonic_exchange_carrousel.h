@@ -7,8 +7,7 @@ class BosonicExchangeCarrousel final : public BosonicExchange {
 public:
     BosonicExchangeCarrousel(const Simulation& _sim);
     ~BosonicExchangeCarrousel() override = default;
-    void prepare() override;
 
-private:
-    void assignTempCoords();
+protected:
+    void assignIndirectionCoords() override;
 };

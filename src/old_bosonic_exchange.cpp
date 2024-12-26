@@ -17,6 +17,7 @@ OldBosonicExchange::OldBosonicExchange(const Simulation& _sim) : BosonicExchange
  * @brief Recalculates the smallest exterior spring energy after each coordinate update.
  */
 void OldBosonicExchange::prepare() {
+    assignIndirectionCoords(); 
     e_shift = getMinExteriorSpringEnergy();
 }
 

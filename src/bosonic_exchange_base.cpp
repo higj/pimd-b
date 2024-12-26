@@ -25,6 +25,12 @@ BosonicExchangeBase::BosonicExchangeBase(const Simulation& _sim) :
     }
 }
 
+void BosonicExchangeBase::assignIndirectionCoords() {
+    indirection_x = x;
+    indirection_x_prev = x_prev;
+    indirection_x_next = x_next;
+}
+
 /**
  * Calculates the vector distance between two beads (second minus first).
  *

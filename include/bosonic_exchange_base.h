@@ -20,9 +20,8 @@ public:
     BosonicExchangeBase(const BosonicExchangeBase&) = delete;
     BosonicExchangeBase& operator=(const BosonicExchangeBase&) = delete;
 
-    virtual void exteriorSpringForce(dVec& f) = 0;
-
     virtual void prepare() = 0;
+    virtual void exteriorSpringForce(dVec& f) = 0;
     virtual double effectivePotential() = 0;
     virtual double primEstimator() = 0;
 
@@ -48,6 +47,7 @@ protected:
     const dVec& x_prev;
     const dVec& x_next;
 
+    virtual void assignIndirectionCoords();
     dVec indirection_x;
     dVec indirection_x_prev;
     dVec indirection_x_next;

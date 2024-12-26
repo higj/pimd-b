@@ -22,8 +22,8 @@ public:
     void exteriorSpringForce(dVec& f) override;
 
 protected:
-    std::array<double, NDIM> springForceFirstBead(const int l, const dVec& x, const dVec& x_prev, const dVec& x_next);
-    std::array<double, NDIM> springForceLastBead(const int l, const dVec& x, const dVec& x_prev, const dVec& x_next);
+    std::array<double, NDIM> springForceFirstBead(const int l);
+    std::array<double, NDIM> springForceLastBead(const int l);
     void evaluateBosonicEnergies();
     
 private:
