@@ -30,7 +30,9 @@ public:
     ~LangevinThermostat() override = default;
 
     void step() override;
+
 protected:
+    // CR: more descriptive names?
     double a, b;
 };
 
@@ -59,6 +61,7 @@ protected:
     double dt2, dt4, dt8;
     double required_energy; // A measure of the required preserved energy (kT times the number of degrees of freedom associated with the chain)
     std::vector<double> eta_dot, eta_dot_dot; // The first and second derivatives of eta
+    // CR: remove ifdef, keep eta
 #if CALC_ETA
     std::vector<double> eta; 
 #endif

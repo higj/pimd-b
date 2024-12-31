@@ -11,11 +11,13 @@ void Thermostat::step(){}
 /* -------------------------------- */
 
 LangevinThermostat::LangevinThermostat(Simulation& _sim) : Thermostat(_sim) {
+    // CR: this->a
     a = exp(-0.5 * sim.gamma * sim.dt);
-
 #if IPI_CONVENTION
+    // CR: this->b
     b = sqrt((1 - a * a) * sim.mass * sim.nbeads / sim.beta);
 #else
+    // CR: this->b
     b = sqrt((1 - a * a) * sim.mass / sim.beta);
 #endif
 
@@ -48,6 +50,10 @@ void LangevinThermostatNM::step() {
             double noise = sim.mars_gen->gaussian(); // LAMMPS pimd/langevin random numbers
             const int glob_idx = sim.normal_modes->globIndexAtom(axis, ptcl_idx);
             // Perturb the normal modes momenta with a Langevin thermostat
+            // CR: try to separate concerns between thermostat, normal modes
+//            arr_momenta_nm = cartesian_to_nm(momenta);
+//            arr_momenta_nm *= whatever;
+//            arr_momenta = nm_to_cartesian_to_nm(momenta)
             sim.normal_modes->arr_momenta_nm[glob_idx + sim.this_bead] = a * sim.normal_modes->momentumCarToNM(glob_idx) + b * noise;
         }
     }

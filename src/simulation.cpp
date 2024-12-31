@@ -75,6 +75,8 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     thermostat_type = std::get<std::string>(param_obj.sim["thermostat_type"]);
     
     // Choose time propagation scheme
+    // CR: extract method
+    // CR: disable normal modes propagator for bosonic
     if (propagator_type == "cartesian") {
         propagator = std::make_unique<VelocityVerletPropagator>(*this);
     } else if (propagator_type == "normal_modes") {
@@ -82,6 +84,8 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     }
 
     // Choose thermostat
+    // CR: extract method
+    // CR: make sure that this option is provided only in NVT
     if (nmthermostat) {
         if (thermostat_type == "langevin") {
             thermostat = std::make_unique<LangevinThermostatNM>(*this);
