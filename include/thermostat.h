@@ -1,29 +1,31 @@
 #pragma once
 
 #include <vector>
-#include "mpi.h"
 #include "common.h"
+#include <memory>
 
 class Simulation;
+class Coupling;
 
 class Thermostat {
 public:
-    explicit Thermostat(Simulation& _sim);
+    explicit Thermostat(Simulation& _sim, bool normal_modes);
     virtual ~Thermostat() = default;
-
-    virtual void step();
+    void step();
+    virtual void momentaUpdate();
 protected:
     Simulation& sim;   // Reference to the simulation object
+    std::unique_ptr<Coupling> coupling;
 };
 
 /* -------------------------------- */
 
 class LangevinThermostat : public Thermostat {
 public:
-    LangevinThermostat(Simulation& _sim);
+    LangevinThermostat(Simulation& _sim, bool normal_modes);
     ~LangevinThermostat() override = default;
 
-    void step() override;
+    void momentaUpdate() override;
 
 protected:
     double friction_coefficient, noise_coefficient;
@@ -31,22 +33,12 @@ protected:
 
 /* -------------------------------- */
 
-class LangevinThermostatNM : public LangevinThermostat {
-public:
-    LangevinThermostatNM(Simulation& _sim);
-    ~LangevinThermostatNM() override = default;
-
-    void step() override;
-};
-
-/* -------------------------------- */
-
 class NoseHooverThermostat : public Thermostat {
 public:
-    NoseHooverThermostat(Simulation& _sim, int _nchains);
+    NoseHooverThermostat(Simulation& _sim, bool normal_modes, int _nchains);
     ~NoseHooverThermostat() override = default;
 
-    void step() override;
+    void momentaUpdate() override;
 protected:
     double singleChainStep(const double& current_energy, const int& index);
     int nchains; // Number of components in each Nose-Hoover chain
@@ -59,48 +51,20 @@ protected:
 
 /* -------------------------------- */
 
-class NoseHooverThermostatNM : public NoseHooverThermostat {
-public:
-    NoseHooverThermostatNM(Simulation& _sim, int _nchains);
-    ~NoseHooverThermostatNM() override = default;
-
-    void step() override; 
-};
-
-/* -------------------------------- */
-
 class NoseHooverNpThermostat : public NoseHooverThermostat {
 public:
-    NoseHooverNpThermostat(Simulation& _sim, int _nchains);
+    NoseHooverNpThermostat(Simulation& _sim, bool normal_modes, int _nchains);
     ~NoseHooverNpThermostat() override = default;
 
-    void step() override;
+    void momentaUpdate() override;
 };
-/* -------------------------------- */
 
-class NoseHooverNpThermostatNM : public NoseHooverNpThermostat {
-public:
-    NoseHooverNpThermostatNM(Simulation& _sim, int _nchains);
-    ~NoseHooverNpThermostatNM() override = default;
-
-    void step() override;
-};
 /* -------------------------------- */
 
 class NoseHooverNpDimThermostat : public NoseHooverThermostat {
 public:
-    NoseHooverNpDimThermostat(Simulation& _sim, int _nchains);
+    NoseHooverNpDimThermostat(Simulation& _sim, bool normal_modes, int _nchains);
     ~NoseHooverNpDimThermostat() override = default;
 
-    void step() override;
+    void momentaUpdate() override;
 };
-/* -------------------------------- */
-
-class NoseHooverNpDimThermostatNM : public NoseHooverNpDimThermostat {
-public: 
-    NoseHooverNpDimThermostatNM(Simulation& _sim, int _nchains);
-    ~NoseHooverNpDimThermostatNM() override = default;
- 
-    void step() override; 
-};
-
