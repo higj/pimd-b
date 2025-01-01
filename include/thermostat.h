@@ -4,12 +4,6 @@
 #include "mpi.h"
 #include "common.h"
 
-// Flag enabling the calculation of the fictive degree of freedom eta in Nose-Hoover thermostats
-// (only its derivatives are required for the true dynamics)
-#ifndef CALC_ETA
-#define CALC_ETA false
-#endif
-
 class Simulation;
 
 class Thermostat {
@@ -32,8 +26,7 @@ public:
     void step() override;
 
 protected:
-    // CR: more descriptive names?
-    double a, b;
+    double friction_coefficient, noise_coefficient;
 };
 
 /* -------------------------------- */
@@ -61,10 +54,7 @@ protected:
     double dt2, dt4, dt8;
     double required_energy; // A measure of the required preserved energy (kT times the number of degrees of freedom associated with the chain)
     std::vector<double> eta_dot, eta_dot_dot; // The first and second derivatives of eta
-    // CR: remove ifdef, keep eta
-#if CALC_ETA
     std::vector<double> eta; 
-#endif
 };
 
 /* -------------------------------- */

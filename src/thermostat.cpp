@@ -12,13 +12,13 @@ void Thermostat::step(){}
 
 LangevinThermostat::LangevinThermostat(Simulation& _sim) : Thermostat(_sim) {
     // CR: this->a
-    a = exp(-0.5 * sim.gamma * sim.dt);
+    friction_coefficient = exp(-0.5 * sim.gamma * sim.dt);
 #if IPI_CONVENTION
     // CR: this->b
-    b = sqrt((1 - a * a) * sim.mass * sim.nbeads / sim.beta);
+    noise_coefficient = sqrt((1 - friction_coefficient * friction_coefficient) * sim.mass * sim.nbeads / sim.beta);
 #else
     // CR: this->b
-    b = sqrt((1 - a * a) * sim.mass / sim.beta);
+    noise_coefficient = sqrt((1 - friction_coefficient * friction_coefficient) * sim.mass / sim.beta);
 #endif
 
 }
@@ -31,7 +31,7 @@ void LangevinThermostat::step() {
             double noise = sim.mars_gen->gaussian(); // LAMMPS pimd/langevin random numbers
 
             // Perturb the momenta with a Langevin thermostat
-            sim.momenta(ptcl_idx, axis) = a * sim.momenta(ptcl_idx, axis) + b * noise;
+            sim.momenta(ptcl_idx, axis) = friction_coefficient * sim.momenta(ptcl_idx, axis) + noise_coefficient * noise;
         }
     }
 }
@@ -54,7 +54,7 @@ void LangevinThermostatNM::step() {
 //            arr_momenta_nm = cartesian_to_nm(momenta);
 //            arr_momenta_nm *= whatever;
 //            arr_momenta = nm_to_cartesian_to_nm(momenta)
-            sim.normal_modes->arr_momenta_nm[glob_idx + sim.this_bead] = a * sim.normal_modes->momentumCarToNM(glob_idx) + b * noise;
+            sim.normal_modes->arr_momenta_nm[glob_idx + sim.this_bead] = friction_coefficient * sim.normal_modes->momentumCarToNM(glob_idx) + noise_coefficient * noise;
         }
     }
 
@@ -72,15 +72,11 @@ NoseHooverThermostat::NoseHooverThermostat(Simulation& _sim, int _nchains) : The
     Qi = Constants::hbar * Constants::hbar * sim.beta / sim.nbeads;
 #endif
     Q1 = NDIM * sim.natoms * Qi;
-#if CALC_ETA
     eta = std::vector<double>(nchains);
-#endif
     eta_dot = std::vector<double>(nchains);
     eta_dot_dot = std::vector<double>(nchains);
     for (int i = 0; i < nchains; i++) {
-#if CALC_ETA
         eta[i] = 0.0;
-#endif
         eta_dot[i] = 0.0;
         eta_dot_dot[i] = 0.0;
     }
@@ -144,10 +140,8 @@ double NoseHooverThermostat::singleChainStep(const double& current_energy, const
     // Calculate the rescaling factor
     double scale = exp(-dt2 * eta_dot[index]);
 
-#if CALC_ETA
     for (int i = 0; i < nchains; i++)
       eta[i + index] += dt2 * eta_dot[i + index];
-#endif
 
     // Update the derivatives of eta for the first component
     eta_dot_dot[index] = (current_energy * scale * scale - required_energy) / Q1;
@@ -221,15 +215,11 @@ void NoseHooverThermostatNM::step() {
 
 NoseHooverNpThermostat::NoseHooverNpThermostat(Simulation& _sim, int _nchains) : NoseHooverThermostat(_sim, _nchains) {
     Q1 = NDIM * Qi;
-#if CALC_ETA
     eta = std::vector<double>(nchains * sim.natoms);
-#endif
     eta_dot = std::vector<double>(nchains * sim.natoms);
     eta_dot_dot = std::vector<double>(nchains * sim.natoms);
     for (int i = 0; i < nchains * sim.natoms; i++) {
-#if CALC_ETA
         eta[i] = 0.0;
-#endif
         eta_dot[i] = 0.0;
         eta_dot_dot[i] = 0.0;
     }
@@ -297,15 +287,11 @@ void NoseHooverNpThermostatNM::step() {
 
 NoseHooverNpDimThermostat::NoseHooverNpDimThermostat(Simulation& _sim, int _nchains) : NoseHooverThermostat(_sim, _nchains) {
     Q1 = Qi;
-#if CALC_ETA
     eta = std::vector<double>(nchains * sim.natoms * NDIM);
-#endif
     eta_dot = std::vector<double>(nchains * sim.natoms * NDIM);
     eta_dot_dot = std::vector<double>(nchains * sim.natoms * NDIM);
     for (int i = 0; i < nchains * sim.natoms * NDIM; i++) {
-#if CALC_ETA
         eta[i] = 0.0;
-#endif
         eta_dot[i] = 0.0;
         eta_dot_dot[i] = 0.0;
     }

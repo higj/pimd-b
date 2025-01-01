@@ -85,7 +85,6 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
 
     // Choose thermostat
     // CR: extract method
-    // CR: make sure that this option is provided only in NVT
     if (nmthermostat) {
         if (thermostat_type == "langevin") {
             thermostat = std::make_unique<LangevinThermostatNM>(*this);

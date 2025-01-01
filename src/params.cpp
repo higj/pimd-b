@@ -36,13 +36,15 @@ Params::Params(const std::string& filename, const int& rank) : reader(filename) 
 
     /****** Flags ******/
     // Bosonic or distinguishable simulation?
-    sim["bosonic"] = reader.GetBoolean(Sections::SIMULATION, "bosonic", false);
+    bool bosonic = reader.GetBoolean(Sections::SIMULATION, "bosonic", false);
+    sim["bosonic"] = bosonic;
     // Fix the center of mass?
     sim["fixcom"] = reader.GetBoolean(Sections::SIMULATION, "fixcom", true);
     // Enable periodic boundary conditions?
     sim["pbc"] = reader.GetBoolean(Sections::SIMULATION, "pbc", false);
     // Couple thermostat to normal modes?
-    sim["nmthermostat"] = reader.GetBoolean(Sections::SIMULATION, "nmthermostat", false);
+    bool nmthermostat = reader.GetBoolean(Sections::SIMULATION, "nmthermostat", false);
+    sim["nmthermostat"] = nmthermostat;
 
     std::string init_pos_type, init_pos_specification;
 
@@ -141,6 +143,9 @@ Params::Params(const std::string& filename, const int& rank) : reader(filename) 
     // "normal_modes": a velocity Verlet algorithm that propagates the normal modes
     allowed_propagators = { "cartesian", "normal_modes" };
     std::string propagator_type = reader.GetString(Sections::SIMULATION, "propagator", "cartesian");
+    if (bosonic && propagator_type == "normal_modes") {
+        throw std::invalid_argument("Normal modes propogation is currently not available for bosons!");
+    }
     sim["propagator_type"] = propagator_type;
     
     if (!labelInArray(propagator_type, allowed_propagators))
@@ -153,7 +158,16 @@ Params::Params(const std::string& filename, const int& rank) : reader(filename) 
     // "nose_hoover_np_dim" A unique Nose-Hoover chain coupled to each cartezian coordinate of each particle
     // "none": No thermostat (NVE simulation)
     allowed_thermostats = { "langevin", "nose_hoover", "nose_hoover_np", "nose_hoover_np_dim", "none" };
-    std::string thermostat_type = reader.GetString(Sections::SIMULATION, "thermostat", "langevin");
+    std::string thermostat_type = reader.GetString(Sections::SIMULATION, "thermostat", "error");
+    if (thermostat_type == "error") {
+        throw std::invalid_argument("Thermostat must be specified!");
+    }
+    if (nmthermostat && thermostat_type == "none") {
+        throw std::invalid_argument("nmthermostat cannot be used in nve ensemble!");
+    }
+    if ((reader.GetInteger(Sections::SIMULATION, "nchains", -1) != -1) && ((thermostat_type == "none") || (thermostat_type == "langevin"))) {
+        throw std::invalid_argument("nchains can only be used with Nose-Hoover thermostats!");
+    }
     sim["thermostat_type"] = thermostat_type;
     
     if (!labelInArray(thermostat_type, allowed_thermostats))
