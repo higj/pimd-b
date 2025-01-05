@@ -9,7 +9,7 @@ Dimension                               	:	3
 Seed                                    	:	90846
 Coordinate initialization method        	:	random
 Number of atoms                         	:	8
-Number of beads                         	:	2
+Number of beads                         	:	8
 Temperature                             	:	5.802 kelvin
 Linear size of the system               	:	158.7531653396754 angstroms
 Mass                                    	:	0.0005485799049146451 amu
@@ -23,4 +23,4 @@ Minimum image convention                	:	false
 Wrapping of coordinates                 	:	false
 Using i-Pi convention                   	:	true
 ---------
-Wall time                               	:	00:00:01
+Wall time                               	:	00:00:02
