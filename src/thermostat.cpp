@@ -26,6 +26,10 @@ void Thermostat::step() {
 // This is an update of the momenta within the thermostat step, unique for each thermostat
 void Thermostat::momentaUpdate(){}
 
+double Thermostat::getAdditionToH() {
+    return 0;
+}
+
 /* -------------------------------- */
 
 LangevinThermostat::LangevinThermostat(Simulation& _sim, bool normal_modes) : Thermostat(_sim, normal_modes) {
@@ -81,6 +85,30 @@ NoseHooverThermostat::NoseHooverThermostat(Simulation& _sim, bool normal_modes, 
 #else
     required_energy = NDIM * sim.natoms / sim.beta;
 #endif
+}
+
+double NoseHooverThermostat::getAdditionToH() {
+    return singleChainGetAdditionToH(NDIM * sim.natoms, 0);    
+}
+
+double NoseHooverThermostat::singleChainGetAdditionToH(const int& expected_energy, const int& index) {
+    double additionToH = 0.5 * Q1 * eta_dot[index] * eta_dot[index];
+#if IPI_CONVENTION
+    additionToH += expected_energy * eta[index] * sim.nbeads / sim.beta;
+#else
+    additionToH += expected_energy * eta[index] / sim.beta;
+#endif
+
+    for (int i = 1; i < nchains; i++) {
+        additionToH += 0.5 * Qi * eta_dot[index + i] * eta_dot[index + i];
+#if IPI_CONVENTION
+        additionToH += eta[index + i] * sim.nbeads / sim.beta;
+#else
+        additionToH += eta[index + i] / sim.beta;
+#endif
+    }
+
+    return additionToH;
 }
 
 void NoseHooverThermostat::momentaUpdate() {
@@ -212,6 +240,14 @@ void NoseHooverNpThermostat::momentaUpdate() {
     }   
 }
 
+double NoseHooverNpThermostat::getAdditionToH() {
+    double additionToH = 0;
+    for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
+        additionToH += singleChainGetAdditionToH(NDIM, ptcl_idx * nchains);
+    }
+    return additionToH;
+}
+
 /* -------------------------------- */
 
 NoseHooverNpDimThermostat::NoseHooverNpDimThermostat(Simulation& _sim, bool normal_modes, int _nchains) : NoseHooverThermostat(_sim, normal_modes, _nchains) {
@@ -247,6 +283,16 @@ void NoseHooverNpDimThermostat::momentaUpdate() {
             momentum_for_update = momentum_for_calc * scale;
         }
     }   
+}
+
+double NoseHooverNpDimThermostat::getAdditionToH() {
+    double additionToH = 0;
+    for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
+        for (int axis = 0; axis < NDIM; ++axis) {
+            additionToH += singleChainGetAdditionToH(1, (ptcl_idx * NDIM + axis) * nchains);
+        }
+    }
+    return additionToH;
 }
 
 /* -------------------------------- */

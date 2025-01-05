@@ -112,6 +112,7 @@ public:
     int this_bead;   // Current process id ("rank" of MPI_Comm_rank)
     int nproc;       // Number of processes ("size" of MPI_Comm_size)
     unsigned int params_seed;
+    std::string thermostat_type;
 
 private:
     int md_step;
@@ -121,7 +122,6 @@ private:
     std::string init_pos_type;
     std::string init_vel_type;
     std::string propagator_type;
-    std::string thermostat_type;
 
     void printDebug(const std::string& text, int target_bead = 0) const;
 };

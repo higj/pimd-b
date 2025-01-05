@@ -1,7 +1,7 @@
 #include "observable.h"
 #include "simulation.h"
+#include "thermostat.h"
 #include "units.h"
-
 #include <ranges>
 #include "mpi.h"
 
@@ -226,12 +226,20 @@ void EnergyObservable::calculatePotential() {
  */
 ClassicalObservable::ClassicalObservable(const Simulation& _sim, int _freq, const std::string& _out_unit) :
     Observable(_sim, _freq, _out_unit) {
-    initialize({ "temperature", "cl_kinetic", "cl_spring" });
+    if (sim.thermostat_type == "nose_hoover" || sim.thermostat_type == "nose_hoover_np" || sim.thermostat_type == "nose_hoover_np_dim") {
+        initialize({ "temperature", "cl_kinetic", "cl_spring", "nh_energy" });
+    }
+    else {
+        initialize({ "temperature", "cl_kinetic", "cl_spring" });
+    }
 }
 
 void ClassicalObservable::calculate() {
     calculateKineticEnergy();
     calculateSpringEnergy();
+    if (sim.thermostat_type == "nose_hoover" || sim.thermostat_type == "nose_hoover_np" || sim.thermostat_type == "nose_hoover_np_dim") {
+        quantities["nh_energy"] = Units::convertToUser("energy", out_unit, sim.thermostat->getAdditionToH());
+    }
 }
 
 /**

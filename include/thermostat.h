@@ -13,6 +13,7 @@ public:
     virtual ~Thermostat() = default;
     void step();
     virtual void momentaUpdate();
+    virtual double getAdditionToH();
 protected:
     Simulation& sim;   // Reference to the simulation object
     std::unique_ptr<Coupling> coupling;
@@ -39,6 +40,7 @@ public:
     ~NoseHooverThermostat() override = default;
 
     void momentaUpdate() override;
+    double getAdditionToH() override; // The equations of motion conserve H + additionToH, where H is the Hamiltonian of the physical system
 protected:
     double singleChainStep(const double& current_energy, const int& index);
     int nchains; // Number of components in each Nose-Hoover chain
@@ -47,6 +49,7 @@ protected:
     double required_energy; // A measure of the required preserved energy (kT times the number of degrees of freedom associated with the chain)
     std::vector<double> eta_dot, eta_dot_dot; // The first and second derivatives of eta
     std::vector<double> eta; 
+    double singleChainGetAdditionToH(const int& expected_energy, const int& index);
 };
 
 /* -------------------------------- */
@@ -57,6 +60,7 @@ public:
     ~NoseHooverNpThermostat() override = default;
 
     void momentaUpdate() override;
+    double getAdditionToH() override; // The equations of motion conserve H + additionToH, where H is the Hamiltonian of the physical system
 };
 
 /* -------------------------------- */
@@ -67,4 +71,5 @@ public:
     ~NoseHooverNpDimThermostat() override = default;
 
     void momentaUpdate() override;
+    double getAdditionToH() override; // The equations of motion conserve H + additionToH, where H is the Hamiltonian of the physical system
 };
