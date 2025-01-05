@@ -291,6 +291,7 @@ void Simulation::run() {
         }
 
         thermostat->step();
+        MPI_Barrier(MPI_COMM_WORLD);
 
         // If fixcom=true, the center of mass of the ring polymers is fixed during the simulation
         if (fixcom) {
@@ -300,6 +301,7 @@ void Simulation::run() {
         propagator->step();
 
         thermostat->step();
+        MPI_Barrier(MPI_COMM_WORLD);
 
         // Zero momentum after every thermostat step (if needed)
         if (fixcom) {
