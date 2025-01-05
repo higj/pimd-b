@@ -289,7 +289,7 @@ void Simulation::run() {
         for (const auto& state : states) {
             state->output(step);
         }
-
+        MPI_Barrier(MPI_COMM_WORLD);
         thermostat->step();
         MPI_Barrier(MPI_COMM_WORLD);
 
@@ -299,7 +299,7 @@ void Simulation::run() {
         }
 
         propagator->step();
-
+        MPI_Barrier(MPI_COMM_WORLD);
         thermostat->step();
         MPI_Barrier(MPI_COMM_WORLD);
 
