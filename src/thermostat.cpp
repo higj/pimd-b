@@ -85,7 +85,20 @@ NoseHooverThermostat::NoseHooverThermostat(Simulation& _sim, bool normal_modes, 
 #else
     required_energy = NDIM * sim.natoms / sim.beta;
 #endif
+
+//    out_file_expfactor.open(std::format("expfactor_{}", sim.this_bead), std::ios::out | std::ios::app); //OBtest
+//    out_file_scale.open(std::format("scale_{}", sim.this_bead), std::ios::out | std::ios::app); //OBtest
 }
+
+// OBtest
+//NoseHooverThermostat::~NoseHooverThermostat() {
+//    if (out_file_expfactor.is_open()) {
+//        out_file_expfactor.close();
+//    }
+//    if (out_file_scale.is_open()) {
+//        out_file_scale.close();
+//    }
+//}
 
 double NoseHooverThermostat::getAdditionToH() {
     return singleChainGetAdditionToH(NDIM * sim.natoms, 0);    
@@ -116,8 +129,11 @@ void NoseHooverThermostat::momentaUpdate() {
     double current_energy = 0.0;
     for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
-            double momentum_for_calc = coupling->getMomentumForCalc(ptcl_idx, axis);
-            current_energy += momentum_for_calc * momentum_for_calc;
+//            double momentum_for_calc = coupling->getMomentumForCalc(ptcl_idx, axis);
+//            current_energy += momentum_for_calc * momentum_for_calc;
+//
+//            Explicitly use Cartesian coordinates:
+            current_energy += sim.momenta(ptcl_idx, axis) * sim.momenta(ptcl_idx, axis);
         }
     }
     current_energy *= 1 / sim.mass;
@@ -128,9 +144,12 @@ void NoseHooverThermostat::momentaUpdate() {
     // Rescale the momenta
     for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
-            double momentum_for_calc = coupling->getMomentumForCalc(ptcl_idx, axis);
-            double& momentum_for_update = coupling->getMomentumForUpdate(ptcl_idx, axis);
-            momentum_for_update = momentum_for_calc * scale;
+//            double momentum_for_calc = coupling->getMomentumForCalc(ptcl_idx, axis);
+//            double& momentum_for_update = coupling->getMomentumForUpdate(ptcl_idx, axis);
+//            momentum_for_update = momentum_for_calc * scale;
+//
+//            Explicitly use Cartesian coordinates:
+            sim.momenta(ptcl_idx, axis) *= scale;
         }
     }
 }
@@ -159,10 +178,12 @@ double NoseHooverThermostat::singleChainStep(const double& current_energy, const
         eta_dot[i + index] *= exp_factor;
         eta_dot[i + index] += eta_dot_dot[i + index] * dt4;
         eta_dot[i + index] *= exp_factor;
+//        out_file_expfactor << std::format("{:^20.12e} ", exp_factor);//OBtest
     }
-
+//    out_file_expfactor << '\n';//OBtest
     // Calculate the rescaling factor
     double scale = exp(-dt2 * eta_dot[index]);
+//    out_file_scale << std::format("{:^20.12e} ", scale);//OBtest
 
     for (int i = 0; i < nchains; i++)
       eta[i + index] += dt2 * eta_dot[i + index];
@@ -186,7 +207,9 @@ double NoseHooverThermostat::singleChainStep(const double& current_energy, const
 	eta_dot[i + index] += eta_dot_dot[i + index] * dt4;
         eta_dot[i + index] *= exp_factor;
         Q_former = Qi;
+//        out_file_expfactor << std::format("{:^20.12e} ", exp_factor);//OBtest
     }
+//    out_file_expfactor << '\n';//OBtest
 
     // Update the derivatives of eta for the last component
 #if IPI_CONVENTION

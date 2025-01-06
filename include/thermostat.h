@@ -4,6 +4,8 @@
 #include "common.h"
 #include <memory>
 
+//#include <fstream> // OBtest
+
 class Simulation;
 class Coupling;
 
@@ -38,7 +40,7 @@ class NoseHooverThermostat : public Thermostat {
 public:
     NoseHooverThermostat(Simulation& _sim, bool normal_modes, int _nchains);
     ~NoseHooverThermostat() override = default;
-
+//    ~NoseHooverThermostat() override; //OBtest 
     void momentaUpdate() override;
     double getAdditionToH() override; // The equations of motion conserve H + additionToH, where H is the Hamiltonian of the physical system
 protected:
@@ -50,6 +52,9 @@ protected:
     std::vector<double> eta_dot, eta_dot_dot; // The first and second derivatives of eta
     std::vector<double> eta; 
     double singleChainGetAdditionToH(const int& expected_energy, const int& index);
+
+  //  std::ofstream out_file_expfactor; //OBtest
+  //  std::ofstream out_file_scale; //OBtest
 };
 
 /* -------------------------------- */
