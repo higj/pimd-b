@@ -85,6 +85,8 @@ NoseHooverThermostat::NoseHooverThermostat(Simulation& _sim, bool normal_modes, 
 #else
     required_energy = NDIM * sim.natoms / sim.beta;
 #endif
+    out_file_expfactor.open(std::format("expfactor_{}", sim.this_bead), std::ios::out | std::ios::app); //OBtest
+    out_file_scale.open(std::format("scale_{}", sim.this_bead), std::ios::out | std::ios::app); //OBtest
 }
 
 double NoseHooverThermostat::getAdditionToH() {
@@ -135,6 +137,16 @@ void NoseHooverThermostat::momentaUpdate() {
     }
 }
 
+NoseHooverThermostat::~NoseHooverThermostat() {
+    if (out_file_expfactor.is_open()) {
+        out_file_expfactor.close();
+    }
+    if (out_file_scale.is_open()) {
+        out_file_scale.close();
+    }
+}
+
+
 /**
  * Calculates the scaling factor of the momenta based on
  * Mark E Tuckerman et al 2006 J. Phys. A: Math. Gen. 39 5629
@@ -159,11 +171,13 @@ double NoseHooverThermostat::singleChainStep(const double& current_energy, const
         eta_dot[i + index] *= exp_factor;
         eta_dot[i + index] += eta_dot_dot[i + index] * dt4;
         eta_dot[i + index] *= exp_factor;
+        out_file_expfactor << std::format("{:^20.12e} ", exp_factor);
     }
+    out_file_expfactor << '\n';
 
     // Calculate the rescaling factor
     double scale = exp(-dt2 * eta_dot[index]);
-
+    out_file_scale << std::format("{:^20.12e}\n", scale);
     for (int i = 0; i < nchains; i++)
       eta[i + index] += dt2 * eta_dot[i + index];
 

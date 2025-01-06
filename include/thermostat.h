@@ -1,4 +1,5 @@
 #pragma once
+#include <fstream> 
 
 #include <vector>
 #include "common.h"
@@ -37,7 +38,7 @@ protected:
 class NoseHooverThermostat : public Thermostat {
 public:
     NoseHooverThermostat(Simulation& _sim, bool normal_modes, int _nchains);
-    ~NoseHooverThermostat() override = default;
+    ~NoseHooverThermostat() override;
 
     void momentaUpdate() override;
     double getAdditionToH() override; // The equations of motion conserve H + additionToH, where H is the Hamiltonian of the physical system
@@ -50,6 +51,8 @@ protected:
     std::vector<double> eta_dot, eta_dot_dot; // The first and second derivatives of eta
     std::vector<double> eta; 
     double singleChainGetAdditionToH(const int& expected_energy, const int& index);
+    std::ofstream out_file_expfactor;
+    std::ofstream out_file_scale;
 };
 
 /* -------------------------------- */
