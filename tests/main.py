@@ -128,11 +128,13 @@ def compare_xyz(actual_xyz_file, expected_xyz_file, natoms):
 
     are_equal, index = compare_arrays(coords, coords_test)
     if not are_equal:
-        print(coords[index:index+10],coords_test[index:index+10])
-        expfactor = np.loadtxt(str(actual_xyz_file).split("output")[0] + "expfactor_" + str(actual_xyz_file).split(".")[0][-1])
-        print(expfactor[index*2-5:index*2+5])
+        #print(coords[index:index+10],coords_test[index:index+10])
+        #expfactor = np.loadtxt(str(actual_xyz_file).split("output")[0] + "expfactor_" + str(actual_xyz_file).split(".")[0][-1])
+        #print(expfactor[index*2-5:index*2+5])
         scale = np.loadtxt(str(actual_xyz_file).split("output")[0] + "scale_" + str(actual_xyz_file).split(".")[0][-1]) 
-        print(scale[index*2-5:index*2+5])
+        expectedScale = np.loadtxt(str(expected_xyz_file).split("pos")[0] + "scale_" + str(actual_xyz_file).split(".")[0][-1])
+        are_equal, indexs = compare_arrays(scale,expectedScale)
+        print(indexs)
         raise AssertionError(f"Test failed: Coordinates in {actual_xyz_file.name} do not match at step {index}.")
     
     return True
