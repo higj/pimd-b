@@ -155,14 +155,14 @@ double NoseHooverThermostat::singleChainStep(const double& current_energy, const
 
     // Update the first derivative of eta for all others components
     for (int i = nchains-2; i >= 0; i--) {
-        exp_factor = 1-dt8*eta_dot[i + 1 + index];//exp(-dt8*eta_dot[i + 1 + index]);
+        exp_factor = exp(-dt8*eta_dot[i + 1 + index]);
         eta_dot[i + index] *= exp_factor;
         eta_dot[i + index] += eta_dot_dot[i + index] * dt4;
         eta_dot[i + index] *= exp_factor;
     }
 
     // Calculate the rescaling factor
-    double scale = 1-dt2 * eta_dot[index];//exp(-dt2 * eta_dot[index]);
+    double scale = exp(-dt2 * eta_dot[index]);
 
     for (int i = 0; i < nchains; i++)
       eta[i + index] += dt2 * eta_dot[i + index];
@@ -176,7 +176,7 @@ double NoseHooverThermostat::singleChainStep(const double& current_energy, const
     // Update the derivatives of eta for all other components except the last
     double Q_former = Q1;
     for (int i = 1; i < nchains - 1; i++) {
-        exp_factor = 1-dt8 * eta_dot[i + 1 + index];//exp(-dt8 * eta_dot[i + 1 + index]);
+        exp_factor = exp(-dt8 * eta_dot[i + 1 + index]);
         eta_dot[i + index] *= exp_factor;
 #if IPI_CONVENTION
         eta_dot_dot[i + index] = (Q_former * eta_dot[i - 1 + index] * eta_dot[i - 1 + index] - sim.nbeads / sim.beta) / Qi;

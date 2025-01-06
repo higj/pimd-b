@@ -128,7 +128,7 @@ def compare_xyz(actual_xyz_file, expected_xyz_file, natoms):
 
     are_equal, index = compare_arrays(coords, coords_test)
     if not are_equal:
-        print(coords[-10:],coords_test[-10:])
+        print(coords[index:],coords_test[index:])
         raise AssertionError(f"Test failed: Coordinates in {actual_xyz_file.name} do not match at step {index}.")
     
     return True
