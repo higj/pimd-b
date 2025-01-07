@@ -132,6 +132,7 @@ def compare_xyz(actual_xyz_file, expected_xyz_file, natoms):
         #print(expfactor[index*2-5:index*2+5])
         scale = np.loadtxt(str(actual_xyz_file).split("output")[0] + "scale_" + str(actual_xyz_file).split(".")[0][-1]) 
         expectedScale = np.loadtxt(str(expected_xyz_file).split("pos")[0] + "scale_" + str(actual_xyz_file).split(".")[0][-1])
+        print(scale.shape,expectedScale.shape)
         are_equals, indexs = compare_arrays(scale,expectedScale)
         if are_equals:
             print("scale equal!\n")
