@@ -280,7 +280,7 @@ def test_forces(output_folder, test_folder):
 
         are_equal, index = compare_arrays(forces_out, forces_test)
         if not are_equal:
-            print(f"Test failed: Forces do not match at step {index}, {forces_out[index}, {forces_test[index]}.")
+            print(f"Test failed: Forces do not match at step {index}, {forces_out[index]}, {forces_test[index]}.")
 #            raise AssertionError(f"Test failed: Forces do not match at step {index}.")
     
     print("Test passed: Forces match.")
