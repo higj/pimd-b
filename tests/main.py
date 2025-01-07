@@ -75,7 +75,7 @@ def run_simulation(executable_dir, input_file):
 
 def compare_arrays(array1, array2):
     # Check if the arrays are equal within a tolerance
-    if np.allclose(array1, array2, rtol=1e-20, atol=1e-20)#rtol=1e-5):
+    if np.allclose(array1, array2, rtol=1e-20, atol=1e-20):#rtol=1e-5):
         return True, None  # Arrays are equal
 
     # Find the index where the first difference occurs
