@@ -9,7 +9,6 @@ import numpy as np
 import configparser
 import argparse
 import MDAnalysis as mda
-import pandas as pd
 
 # Columns of observables to compare
 #columns = ["step", "kinetic", "potential", "ext_pot", "int_pot", "virial", "temperature", "cl_kinetic", "cl_spring"]
@@ -285,8 +284,8 @@ def test_forces(output_folder, test_folder):
 #            raise AssertionError(f"Test failed: Forces do not match at step {index}.")
     
     print("Test passed: Forces match.")
-    data = pd.read_csv(str(actual_xyz_file).split("pos")[0] + "/simulation.out", names=["time","kin","pot","vir","temperature","cl_kinetic","cl_spring","nh_energy"],skiprows=1,delim_whitespace=True)
-    print(data.temperature.mean(), data.temperature.std(), (data.pot+data.vir).mean(), (data.pot+data.vir).std())
+    data = np.loadtxt(str(actual_xyz_file).split("pos")[0] + "/simulation.out",skiprows=1)
+    print(data[:,4].mean(),data[:,4].std(), (data[:,2]+data[:,3]).mean(), (data[:,2]+data[:,3]).std())
     return True
 
 
