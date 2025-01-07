@@ -286,7 +286,7 @@ def test_forces(output_folder, test_folder):
     
     print("Test passed: Forces match.")
     data = pd.read_csv(str(actual_xyz_file).split("pos")[0] + "/simulation.out", names=["time","kin","pot","vir","temperature","cl_kinetic","cl_spring","nh_energy"],skiprows=1,delim_whitespace=True)
-    print(data.temperature.mean(), (data.pot+data.vir).mean())
+    print(data.temperature.mean(), data.temperature.std(), (data.pot+data.vir).mean(), (data.pot+data.vir).std())
     return True
 
 
