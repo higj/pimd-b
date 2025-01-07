@@ -9,7 +9,7 @@ import numpy as np
 import configparser
 import argparse
 import MDAnalysis as mda
-
+import pandas as pd
 
 # Columns of observables to compare
 #columns = ["step", "kinetic", "potential", "ext_pot", "int_pot", "virial", "temperature", "cl_kinetic", "cl_spring"]
