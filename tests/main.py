@@ -75,14 +75,18 @@ def run_simulation(executable_dir, input_file):
 
 def compare_arrays(array1, array2):
     # Check if the arrays are equal within a tolerance
-    if np.allclose(array1, array2, rtol=1e-20, atol=1e-20):#rtol=1e-5):
-        return True, None  # Arrays are equal
+    #if np.allclose(array1, array2, rtol=1e-5):
+    #    return True, None  # Arrays are equal
 
     # Find the index where the first difference occurs
-    index = np.where(~np.isclose(array1, array2))[0][0]
+    #index = np.where(~np.isclose(array1, array2))[0][0]
     # Return the difference
-    return False, index
-
+    #return False, index
+    diff = np.where(array1 != array2)[0]
+    if diff.size == 0:
+        True, None
+    else:
+        False, diff[0]
 
 def compare_output(actual_output, expected_output):
     data_actual = read_data(actual_output)
@@ -132,11 +136,11 @@ def compare_xyz(actual_xyz_file, expected_xyz_file, natoms):
         scale = np.loadtxt(str(actual_xyz_file).split("output")[0] + "scale_" + str(actual_xyz_file).split(".")[0][-1]) 
         expectedScale = np.loadtxt(str(expected_xyz_file).split("pos")[0] + "scale_" + str(actual_xyz_file).split(".")[0][-1])
         print(scale.shape,expectedScale.shape)
-    #    are_equals, indexs = compare_arrays(scale,expectedScale)
-    #    if are_equals:
-    #        print("scale equal!\n")
-    #    else:
-    #        print(indexs, scale[indexs],expectedScale[indexs])
+        are_equals, indexs = compare_arrays(scale,expectedScale)
+        if are_equals:
+            print("scale equal!\n")
+        else:
+            print(indexs, scale[indexs],expectedScale[indexs])
         print(f"Test failed: Coordinates in {actual_xyz_file.name} do not match at step {index}, {coords[index]} {coords_test[index]}")
 #        raise AssertionError(f"Test failed: Coordinates in {actual_xyz_file.name} do not match at step {index}.")
     
