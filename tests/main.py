@@ -79,8 +79,10 @@ def compare_arrays(array1, array2):
         return True, None  # Arrays are equal
 
     # Find the index where the first difference occurs
-    index = np.where(~np.isclose(array1, array2))[0][0]
-
+    try:
+        index = np.where(~np.isclose(array1, array2))[0][0]
+    except:
+        index = np.where(~np.isclose(array1, array2))[0]
     # Return the difference
     return False, index
 
