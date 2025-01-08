@@ -79,10 +79,7 @@ def compare_arrays(array1, array2):
         return True, None  # Arrays are equal
 
     # Find the index where the first difference occurs
-    try:
-        index = np.where(~np.isclose(array1, array2))[0][0]
-    except:
-        index = np.where(~np.isclose(array1, array2))[0]
+    index = np.where(~np.isclose(array1, array2))[0][0]
     # Return the difference
     return False, index
 
@@ -135,11 +132,11 @@ def compare_xyz(actual_xyz_file, expected_xyz_file, natoms):
         scale = np.loadtxt(str(actual_xyz_file).split("output")[0] + "scale_" + str(actual_xyz_file).split(".")[0][-1]) 
         expectedScale = np.loadtxt(str(expected_xyz_file).split("pos")[0] + "scale_" + str(actual_xyz_file).split(".")[0][-1])
         print(scale.shape,expectedScale.shape)
-        are_equals, indexs = compare_arrays(scale,expectedScale)
-        if are_equals:
-            print("scale equal!\n")
-        else:
-            print(indexs, scale[indexs],expectedScale[indexs])
+    #    are_equals, indexs = compare_arrays(scale,expectedScale)
+    #    if are_equals:
+    #        print("scale equal!\n")
+    #    else:
+    #        print(indexs, scale[indexs],expectedScale[indexs])
         print(f"Test failed: Coordinates in {actual_xyz_file.name} do not match at step {index}, {coords[index]} {coords_test[index]}")
 #        raise AssertionError(f"Test failed: Coordinates in {actual_xyz_file.name} do not match at step {index}.")
     
