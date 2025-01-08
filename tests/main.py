@@ -84,9 +84,9 @@ def compare_arrays(array1, array2):
     #return False, index
     diff = np.where(array1 != array2)[0]
     if diff.size == 0:
-        True, None
+        return True, None
     else:
-        False, diff[0]
+        return False, diff[0]
 
 def compare_output(actual_output, expected_output):
     data_actual = read_data(actual_output)
