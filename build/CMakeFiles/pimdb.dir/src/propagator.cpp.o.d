@@ -66,8 +66,8 @@ CMakeFiles/pimdb.dir/src/propagator.cpp.o: \
  /usr/local/gcc-13.2.0/include/c++/13.2.0/bits/ranges_base.h \
  /usr/local/gcc-13.2.0/include/c++/13.2.0/bits/max_size_type.h \
  /usr/local/gcc-13.2.0/include/c++/13.2.0/numbers \
- /home/ofir/.openmpi/include/mpi.h \
- /home/ofir/.openmpi/include/mpi_portable_platform.h \
+ /usr/bin/openmpi-4.1.4/include/mpi.h \
+ /usr/bin/openmpi-4.1.4/include/mpi_portable_platform.h \
  /home/ofirblumer/pimd-b/include/common.h \
  /usr/local/gcc-13.2.0/include/c++/13.2.0/format \
  /usr/local/gcc-13.2.0/include/c++/13.2.0/array \

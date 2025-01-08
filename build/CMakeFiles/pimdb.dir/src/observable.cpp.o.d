@@ -314,5 +314,5 @@ CMakeFiles/pimdb.dir/src/observable.cpp.o: \
  /home/ofirblumer/pimd-b/include/potential.h \
  /home/ofirblumer/pimd-b/include/bosonic_exchange_base.h \
  /usr/local/gcc-13.2.0/include/c++/13.2.0/ranges \
- /home/ofir/.openmpi/include/mpi.h \
- /home/ofir/.openmpi/include/mpi_portable_platform.h
+ /usr/bin/openmpi-4.1.4/include/mpi.h \
+ /usr/bin/openmpi-4.1.4/include/mpi_portable_platform.h

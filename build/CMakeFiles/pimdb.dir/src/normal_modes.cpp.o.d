@@ -226,8 +226,8 @@ CMakeFiles/pimdb.dir/src/normal_modes.cpp.o: \
  /usr/local/gcc-13.2.0/include/c++/13.2.0/bits/node_handle.h \
  /usr/local/gcc-13.2.0/include/c++/13.2.0/bits/erase_if.h \
  /home/ofirblumer/pimd-b/include/normal_modes.h \
- /home/ofir/.openmpi/include/mpi.h \
- /home/ofir/.openmpi/include/mpi_portable_platform.h \
+ /usr/bin/openmpi-4.1.4/include/mpi.h \
+ /usr/bin/openmpi-4.1.4/include/mpi_portable_platform.h \
  /home/ofirblumer/pimd-b/include/simulation.h \
  /usr/local/gcc-13.2.0/include/c++/13.2.0/random \
  /usr/local/gcc-13.2.0/include/c++/13.2.0/cstdint \

@@ -15,8 +15,8 @@ CMakeFiles/pimdb.dir/src/pimdb.cpp.o: \
  /usr/local/gcc-13.2.0/lib/gcc/x86_64-linux-gnu/13.2.0/include/stddef.h \
  /usr/include/x86_64-linux-gnu/bits/types/locale_t.h \
  /usr/include/x86_64-linux-gnu/bits/types/__locale_t.h \
- /usr/include/strings.h /home/ofir/.openmpi/include/mpi.h \
- /home/ofir/.openmpi/include/mpi_portable_platform.h \
+ /usr/include/strings.h /usr/bin/openmpi-4.1.4/include/mpi.h \
+ /usr/bin/openmpi-4.1.4/include/mpi_portable_platform.h \
  /home/ofirblumer/pimd-b/include/params.h \
  /home/ofirblumer/pimd-b/include/common.h \
  /usr/local/gcc-13.2.0/include/c++/13.2.0/vector \

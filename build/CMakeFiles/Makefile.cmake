@@ -129,7 +129,6 @@ set(CMAKE_MAKEFILE_PRODUCTS
   "CMakeFiles/3.30.0/CMakeCXXCompiler.cmake"
   "CMakeFiles/FindMPI/test_mpi.cpp"
   "CMakeFiles/FindMPI/test_mpi.cpp"
-  "CMakeFiles/FindMPI/test_mpi.cpp"
   "CMakeFiles/CMakeDirectoryInformation.cmake"
   )
 
