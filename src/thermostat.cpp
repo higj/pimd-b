@@ -171,12 +171,11 @@ double NoseHooverThermostat::singleChainStep(const double& current_energy, const
         eta_dot[i + index] *= exp_factor;
         eta_dot[i + index] += eta_dot_dot[i + index] * dt4;
         eta_dot[i + index] *= exp_factor;
-        out_file_expfactor << std::format("{:^.17e} ", exp_factor);
     }
-    out_file_expfactor << '\n';
 
     // Calculate the rescaling factor
     double scale = exp(-dt2 * eta_dot[index]);
+    out_file_expfactor << std::format("{:^.17e}\n", -dt2 * eta_dot[index]);
     out_file_scale << std::format("{:^.17e}\n", scale);
     for (int i = 0; i < nchains; i++)
       eta[i + index] += dt2 * eta_dot[i + index];
