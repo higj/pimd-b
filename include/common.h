@@ -16,7 +16,7 @@
 #endif
 
 #ifndef MINIM
-#define MINIM false                  // Apply minimum image convention when PBC are used
+#define MINIM true                  // Apply minimum image convention when PBC are used
 #endif
 
 #ifndef WRAP
