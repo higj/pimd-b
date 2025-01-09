@@ -86,7 +86,7 @@ NoseHooverThermostat::NoseHooverThermostat(Simulation& _sim, bool normal_modes, 
     required_energy = NDIM * sim.natoms / sim.beta;
 #endif
     out_file_expfactor.open(std::format("expfactor_{}", sim.this_bead), std::ios::out | std::ios::app); //OBtest
-    out_file_expfactor << exp(-6.61990809755320301e-04);
+    out_file_expfactor << std::format("{:^.17e}\n",exp(-6.61990809755320301e-04));
     out_file_expfactor.close();
 //    out_file_scale.open(std::format("scale_{}", sim.this_bead), std::ios::out | std::ios::app); //OBtest
 }

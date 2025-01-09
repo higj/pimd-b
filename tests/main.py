@@ -297,7 +297,6 @@ def test_forces(output_folder, test_folder):
     
     print("Test passed: Forces match.")
     data = np.loadtxt(str(output_folder) + "/simulation.out",skiprows=1)
-    print(data[:,4].mean(),data[:,4].std(), (data[:,2]+data[:,3]).mean(), (data[:,2]+data[:,3]).std())
     return True
 
 
