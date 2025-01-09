@@ -128,7 +128,8 @@ def compare_xyz(actual_xyz_file, expected_xyz_file, natoms):
     coords, steps = get_coordinates(xyz_path=actual_xyz_file, natoms=natoms, dim=3)
     coords_test, steps_test = get_coordinates(xyz_path=expected_xyz_file, natoms=natoms, dim=3)
     expectedScale = np.loadtxt(str(expected_xyz_file).split("pos")[0] + "expfactor_" + str(actual_xyz_file).split(".")[0][-1])
-    #print(expectedScale)
+    if str(actual_xyz_file).split(".")[0][-1] == "0":
+        print(expectedScale, "!!!!!!!!!!!!!!")
     are_equal, index = compare_arrays(coords, coords_test)
 #    if not are_equal:
         #print(coords[index:index+10],coords_test[index:index+10])
