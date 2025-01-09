@@ -130,7 +130,7 @@ def compare_xyz(actual_xyz_file, expected_xyz_file, natoms):
     expectedScale = np.loadtxt(str(expected_xyz_file).split("pos")[0] + "expfactor_" + str(actual_xyz_file).split(".")[0][-1])
     print(expectedScale)
     are_equal, index = compare_arrays(coords, coords_test)
-    if not are_equal:
+#    if not are_equal:
         #print(coords[index:index+10],coords_test[index:index+10])
         #expfactor = np.loadtxt(str(actual_xyz_file).split("output")[0] + "expfactor_" + str(actual_xyz_file).split(".")[0][-1])
         #print(expfactor[index*2-5:index*2+5])
