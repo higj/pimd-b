@@ -83,8 +83,7 @@ void PositionState::output(int step) {
         out_file << "1";
 
         for (int axis = 0; axis < NDIM; ++axis) {
-//            out_file << std::format(" {:^20.12e}", Units::convertToUser("length", out_unit, sim.coord(ptcl_idx, axis)));
-            out_file << std::format(" {:.17e}", sim.coord(ptcl_idx, axis));
+            out_file << std::format(" {:^20.12e}", Units::convertToUser("length", out_unit, sim.coord(ptcl_idx, axis)));
         }
 #if NDIM == 1
         out_file << " 0.0 0.0";
@@ -132,8 +131,7 @@ void VelocityState::output(int step) {
         out_file << (ptcl_idx + 1) << " 1";
 
         for (int axis = 0; axis < NDIM; ++axis) {
-//            out_file << std::format(" {:^20.12e}", Units::convertToUser("velocity", out_unit, sim.momenta(ptcl_idx, axis) / sim.mass));
-            out_file << std::format(" {:.17e}", sim.momenta(ptcl_idx, axis) / sim.mass);
+            out_file << std::format(" {:^20.12e}", Units::convertToUser("velocity", out_unit, sim.momenta(ptcl_idx, axis) / sim.mass));
         }
 #if NDIM == 1
         out_file << " 0.0 0.0";
@@ -181,8 +179,7 @@ void ForceState::output(int step) {
         out_file << (ptcl_idx + 1) << " 1";
 
         for (int axis = 0; axis < NDIM; ++axis) {
-//            out_file << std::format(" {:^20.12e}", Units::convertToUser("force", out_unit, sim.forces(ptcl_idx, axis)));
-            out_file << std::format(" {:.17e}", sim.forces(ptcl_idx, axis));
+            out_file << std::format(" {:^20.12e}", Units::convertToUser("force", out_unit, sim.forces(ptcl_idx, axis)));
         }
 #if NDIM == 1
         out_file << " 0.0 0.0";
