@@ -178,9 +178,10 @@ double NoseHooverThermostat::singleChainStep(const double& current_energy, const
     }
 
     // Calculate the rescaling factor
-    double scale = exp(-dt2 * eta_dot[index]);
+    double logscale = -dt2 * eta_dot[index];
+    double scale = exp(logscale);
     std::array<char, 64> buffer{};
-    auto res = std::to_chars(buffer.data(), buffer.data() + buffer.size(), -dt2 * eta_dot[index], std::chars_format::scientific);
+    auto res = std::to_chars(buffer.data(), buffer.data() + buffer.size(), logscale, std::chars_format::scientific);
     out_file_expfactor << std::string(buffer.data(), res.ptr) << '\n';
     std::array<char, 64> buffer2{};
     res = std::to_chars(buffer2.data(), buffer2.data() + buffer2.size(), scale, std::chars_format::scientific);
