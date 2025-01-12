@@ -127,26 +127,21 @@ def get_coordinates(xyz_path, natoms, dim=3):
 def compare_xyz(actual_xyz_file, expected_xyz_file, natoms):
     coords, steps = get_coordinates(xyz_path=actual_xyz_file, natoms=natoms, dim=3)
     coords_test, steps_test = get_coordinates(xyz_path=expected_xyz_file, natoms=natoms, dim=3)
-    expectedScale = np.loadtxt(str(actual_xyz_file).split("output")[0] + "exp_" + str(actual_xyz_file).split(".")[0][-1])
-    if str(actual_xyz_file).split(".")[0][-1] == "0":
-        print(expectedScale, "!!!!!!!!!!!!!!")
     are_equal, index = compare_arrays(coords, coords_test)
-#    if not are_equal:
-        #print(coords[index:index+10],coords_test[index:index+10])
-        #expfactor = np.loadtxt(str(actual_xyz_file).split("output")[0] + "expfactor_" + str(actual_xyz_file).split(".")[0][-1])
-        #print(expfactor[index*2-5:index*2+5])
-        #scale = np.loadtxt(str(actual_xyz_file).split("output")[0] + "scale_" + str(actual_xyz_file).split(".")[0][-1]) 
-        #expectedScale = np.loadtxt(str(expected_xyz_file).split("pos")[0] + "scale_" + str(actual_xyz_file).split(".")[0][-1])
-        #are_equals, indexs = compare_arrays(scale,expectedScale)
-        #if are_equals:
-        #    print("scale equal!\n")
-        #else:
-        #    print(indexs, format(scale[indexs], ".17e"),format(expectedScale[indexs], ".17e"),str(actual_xyz_file).split(".")[0][-1])
-        #scale = np.loadtxt(str(actual_xyz_file).split("output")[0] + "expfactor_" + str(actual_xyz_file).split(".")[0][-1])
-#        if are_equals:
-#            print("scale equal!\n")
-#        else:
-#            print(indexs, format(scale[indexs], ".17e"),format(expectedScale[indexs], ".17e"),str(actual_xyz_file).split(".")[0][-1])
+    if not are_equal:
+        scale = np.loadtxt(str(actual_xyz_file).split("output")[0] + "scale_" + str(actual_xyz_file).split(".")[0][-1]) 
+        expectedScale = np.loadtxt(str(expected_xyz_file).split("pos")[0] + "scale_" + str(actual_xyz_file).split(".")[0][-1])
+        are_equals, indexs = compare_arrays(scale,expectedScale)
+        if are_equals:
+            print("scale equal!\n")
+        else:
+            print(indexs, format(scale[indexs], ".17e"),format(expectedScale[indexs], ".17e"),str(actual_xyz_file).split(".")[0][-1])
+        scale = np.loadtxt(str(actual_xyz_file).split("output")[0] + "exp_" + str(actual_xyz_file).split(".")[0][-1])
+        expectedScale = np.loadtxt(str(expected_xyz_file).split("pos")[0] + "exp_" + str(actual_xyz_file).split(".")[0][-1])
+        if are_equals:
+            print("scale equal!\n")
+        else:
+            print(indexs, format(scale[indexs], ".17e"),format(expectedScale[indexs], ".17e"),str(actual_xyz_file).split(".")[0][-1])
 
 
         #print(f"Test failed: Coordinates in {actual_xyz_file.name} do not match at step {index}, {coords[index]} {coords_test[index]}")

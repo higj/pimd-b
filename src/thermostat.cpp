@@ -1,6 +1,8 @@
 #include "thermostat.h"
 #include <numbers>
-
+#include <charconv>
+#include <iostream>
+#include <array>
 #include "simulation.h"
 #include "common.h"
 #include "normal_modes.h"
@@ -86,9 +88,9 @@ NoseHooverThermostat::NoseHooverThermostat(Simulation& _sim, bool normal_modes, 
     required_energy = NDIM * sim.natoms / sim.beta;
 #endif
     out_file_expfactor.open(std::format("exp_{}", sim.this_bead), std::ios::out | std::ios::app); //OBtest
-    out_file_expfactor << std::format("{:^.17e}\n",exp(-6.61990809755320301e-04));
-    out_file_expfactor.close();
-//    out_file_scale.open(std::format("scale_{}", sim.this_bead), std::ios::out | std::ios::app); //OBtest
+//    out_file_expfactor << std::format("{:^.17e}\n",exp(-6.61990809755320301e-04));
+//    out_file_expfactor.close();
+    out_file_scale.open(std::format("scale_{}", sim.this_bead), std::ios::out | std::ios::app); //OBtest
 }
 
 double NoseHooverThermostat::getAdditionToH() {
@@ -177,8 +179,12 @@ double NoseHooverThermostat::singleChainStep(const double& current_energy, const
 
     // Calculate the rescaling factor
     double scale = exp(-dt2 * eta_dot[index]);
- //   out_file_expfactor << std::format("{:^.17e}\n", -dt2 * eta_dot[index]);
- //   out_file_scale << std::format("{:^.17e}\n", scale);
+    std::array<char, 64> buffer{};
+    auto res = std::to_chars(buffer.data(), buffer.data() + buffer.size(), -dt2 * eta_dot[index], std::chars_format::scientific);
+    out_file_expfactor << std::string(buffer.data(), res.ptr) << '\n';
+    std::array<char, 64> buffer2{};
+    res = std::to_chars(buffer2.data(), buffer2.data() + buffer2.size(), scale, std::chars_format::scientific);
+    out_file_scale << std::string(buffer2.data(), res.ptr) << '\n';
     for (int i = 0; i < nchains; i++)
       eta[i + index] += dt2 * eta_dot[i + index];
 
