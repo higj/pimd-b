@@ -1,11 +1,5 @@
 #include "thermostat.h"
 #include <numbers>
-#include <charconv>
-#include <iostream>
-#include <bitset>
-#include <cstdint>  // For uint64_t
-#include <cstring>
-#include <array>
 #include "simulation.h"
 #include "common.h"
 #include "normal_modes.h"
@@ -90,10 +84,6 @@ NoseHooverThermostat::NoseHooverThermostat(Simulation& _sim, bool normal_modes, 
 #else
     required_energy = NDIM * sim.natoms / sim.beta;
 #endif
-    out_file_expfactor.open(std::format("exp_{}", sim.this_bead), std::ios::out | std::ios::app); //OBtest
-//    out_file_expfactor << std::format("{:^.17e}\n",exp(-6.61990809755320301e-04));
-//    out_file_expfactor.close();
-    out_file_scale.open(std::format("scale_{}", sim.this_bead), std::ios::out | std::ios::app); //OBtest
 }
 
 double NoseHooverThermostat::getAdditionToH() {
@@ -144,16 +134,6 @@ void NoseHooverThermostat::momentaUpdate() {
     }
 }
 
-NoseHooverThermostat::~NoseHooverThermostat() {
-    if (out_file_expfactor.is_open()) {
-        out_file_expfactor.close();
-    }
-    if (out_file_scale.is_open()) {
-        out_file_scale.close();
-    }
-}
-
-
 /**
  * Calculates the scaling factor of the momenta based on
  * Mark E Tuckerman et al 2006 J. Phys. A: Math. Gen. 39 5629
@@ -181,14 +161,7 @@ double NoseHooverThermostat::singleChainStep(const double& current_energy, const
     }
 
     // Calculate the rescaling factor
-    double logscale = -dt2 * eta_dot[index];
-    double scale = exp(logscale);
-    uint64_t binary_representation;
-    std::memcpy(&binary_representation, &logscale, sizeof(double));
-    out_file_expfactor << std::bitset<64>(binary_representation) << '\n';
-    uint64_t binary_representation2;
-    std::memcpy(&binary_representation2, &scale, sizeof(double));
-    out_file_scale << std::bitset<64>(binary_representation2) << '\n';
+    double scale = exp(-dt2 * eta_dot[index]);
     for (int i = 0; i < nchains; i++)
       eta[i + index] += dt2 * eta_dot[i + index];
 

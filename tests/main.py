@@ -10,6 +10,7 @@ import configparser
 import argparse
 import MDAnalysis as mda
 
+
 # Columns of observables to compare
 #columns = ["step", "kinetic", "potential", "ext_pot", "int_pot", "virial", "temperature", "cl_kinetic", "cl_spring"]
 out_filename = "simulation.out"
@@ -75,18 +76,15 @@ def run_simulation(executable_dir, input_file):
 
 def compare_arrays(array1, array2):
     # Check if the arrays are equal within a tolerance
-    #if np.allclose(array1, array2, rtol=1e-5):
-    #    return True, None  # Arrays are equal
+    if np.allclose(array1, array2, rtol=1e-5):
+        return True, None  # Arrays are equal
 
     # Find the index where the first difference occurs
-    #index = np.where(~np.isclose(array1, array2))[0][0]
+    index = np.where(~np.isclose(array1, array2))[0][0]
+
     # Return the difference
-    #return False, index
-    diff = np.where(array1 != array2)[0]
-    if diff.size == 0:
-        return True, None
-    else:
-        return False, diff[0]
+    return False, index
+
 
 def compare_output(actual_output, expected_output):
     data_actual = read_data(actual_output)
@@ -98,14 +96,13 @@ def compare_output(actual_output, expected_output):
     
     columns = list(data_actual.keys())
     
-#    print(f"Comparing columns {columns}")
+    print(f"Comparing columns {columns}")
     
     # Check if the values of observables match
     for column in columns:
         are_equal, index = compare_arrays(data_actual[column], data_expected[column])
-#        if not are_equal:
-           # print(f"Test 'failed': '{column}' does not match at step {index}: {data_actual[column][index]} {data_expected[column][index]}.")
-           # raise AssertionError(f"Test failed: '{column}' does not match at step {index}.")
+        if not are_equal:
+            raise AssertionError(f"Test failed: '{column}' does not match at step {index}.")
         
     return True
 
@@ -121,33 +118,16 @@ def get_coordinates(xyz_path, natoms, dim=3):
 
     return coords, steps
 
-def compare_strings(arr1, arr2):
-    with open(arr1, "r") as f:
-        lines1 = f.readlines()
-    with open(arr2, "r") as f:
-        lines2 = f.readlines()
-    match = True
-    for i in range(len(lines1)):
-        if lines1[i] != lines2[i]:
-            match = False
-            print(i, lines1[i], lines2[i])
-            break
 
 # Coordinates are assumed to be in Angstroms
 # Coordinate files are assumed to have names in the format "position_0.xyz", ..., "position_P-1.xyz"
 def compare_xyz(actual_xyz_file, expected_xyz_file, natoms):
     coords, steps = get_coordinates(xyz_path=actual_xyz_file, natoms=natoms, dim=3)
     coords_test, steps_test = get_coordinates(xyz_path=expected_xyz_file, natoms=natoms, dim=3)
+
     are_equal, index = compare_arrays(coords, coords_test)
     if not are_equal:
-        scale = str(actual_xyz_file).split("output")[0] + "scale_" + str(actual_xyz_file).split(".")[0][-1] 
-        expectedScale = str(expected_xyz_file).split("pos")[0] + "scale_" + str(actual_xyz_file).split(".")[0][-1]
-        compare_strings(scale,expectedScale)
-        scale = str(actual_xyz_file).split("output")[0] + "exp_" + str(actual_xyz_file).split(".")[0][-1]      
-        expectedScale = str(expected_xyz_file).split("pos")[0] + "exp_" + str(actual_xyz_file).split(".")[0][-1]
-        compare_strings(scale,expectedScale)
-        #print(f"Test failed: Coordinates in {actual_xyz_file.name} do not match at step {index}, {coords[index]} {coords_test[index]}")
-#        raise AssertionError(f"Test failed: Coordinates in {actual_xyz_file.name} do not match at step {index}.")
+        raise AssertionError(f"Test failed: Coordinates in {actual_xyz_file.name} do not match at step {index}.")
     
     return True
 
@@ -187,7 +167,7 @@ def test_coordinates(output_folder, test_folder, in_file):
     # If the test contains '.xyz' files, compare them.
     # Otherwise, skip this test.
     if test_xyz_files:
- #       print("Comparing trajectories...")
+        print("Comparing trajectories...")
         xyz_file_names = [file.name for file in test_xyz_files]  # Expected xyz file names
 
         # Check if the simulation output directory has the same number of xyz files and same filenames
@@ -207,7 +187,7 @@ def test_coordinates(output_folder, test_folder, in_file):
             test_xyz_file = test_folder / xyz_file_name
             compare_xyz(actual_xyz_file=out_xyz_file, expected_xyz_file=test_xyz_file, natoms=natoms)
                     
-  #      print("Test passed: Trajectories match.")
+        print("Test passed: Trajectories match.")
 
 
 def test_velocities(output_folder, test_folder):
@@ -222,7 +202,7 @@ def test_velocities(output_folder, test_folder):
     if not velocity_files:
         return True
 
-   # print("Comparing velocities...")
+    print("Comparing velocities...")
     
     # Get the names of all 'velocity_X.dat' files in test
     velocity_file_names = [file.name for file in velocity_files]
@@ -245,11 +225,10 @@ def test_velocities(output_folder, test_folder):
         vels_test = extract_numeric_data(test_vel_file)
 
         are_equal, index = compare_arrays(vels_out, vels_test)
-#        if not are_equal:
-#            print(f"Test failed: Velocities do not match at step {index}, {vels_out[index]} {vels_test[index]}.")
-#            raise AssertionError(f"Test failed: Velocities do not match at step {index}.")
+        if not are_equal:
+            raise AssertionError(f"Test failed: Velocities do not match at step {index}.")
     
-    #print("Test passed: Velocities match.")
+    print("Test passed: Velocities match.")
 
     return True
 
@@ -265,7 +244,7 @@ def test_forces(output_folder, test_folder):
     if not force_files:
         return True
 
-   # print("Comparing forces...")
+    print("Comparing forces...")
     
     # Get the names of all 'force_X.dat' files in test
     force_file_names = [file.name for file in force_files]
@@ -288,12 +267,11 @@ def test_forces(output_folder, test_folder):
         forces_test = extract_numeric_data(test_force_file)
 
         are_equal, index = compare_arrays(forces_out, forces_test)
-#        if not are_equal:
-#            print(f"Test failed: Forces do not match at step {index}, {forces_out[index]}, {forces_test[index]}.")
-#            raise AssertionError(f"Test failed: Forces do not match at step {index}.")
+        if not are_equal:
+            raise AssertionError(f"Test failed: Forces do not match at step {index}.")
     
-   # print("Test passed: Forces match.")
-    data = np.loadtxt(str(output_folder) + "/simulation.out",skiprows=1)
+    print("Test passed: Forces match.")
+
     return True
 
 
@@ -317,7 +295,7 @@ def run_tests(executable_dir, tests_dir, is_old_bosonic):
         print("-------------------")
         #print("Currently here:", os.getcwd())
         if os.path.isdir(test_case):
-    #        print(f"Running test case: {test_case.name}")
+            print(f"Running test case: {test_case.name}")
             input_file = test_case / f"{test_case.name}.ini"
             # print("Input file of the test:", input_file)
             expected_out_path = test_case / out_filename
@@ -326,12 +304,12 @@ def run_tests(executable_dir, tests_dir, is_old_bosonic):
             cmd_out = run_simulation(executable_dir, tests_dir / input_file)
             #print(cmd_out)
             
-     #       print("Comparing output files...")
+            print("Comparing output files...")
             # 1st test: Compare the output with the expected output
-          #  if compare_output(out_path, expected_out_path):
-          #      print("Test passed: Output matches expected output.")
-          #  else:
-          #      raise AssertionError("Test failed: Output does not match expected output.")
+            if compare_output(out_path, expected_out_path):
+                print("Test passed: Output matches expected output.")
+            else:
+                raise AssertionError("Test failed: Output does not match expected output.")
             
             # 2nd test: Compare the coordinates with the expected coordinates
             test_coordinates(out_folder, test_case, input_file)
@@ -343,7 +321,7 @@ def run_tests(executable_dir, tests_dir, is_old_bosonic):
             test_forces(out_folder, test_case)
             
             # Clean up the generated output file
-      #      print("Deleting:", out_folder)
+            print("Deleting:", out_folder)
             shutil.rmtree(out_folder)
 
 
