@@ -135,13 +135,14 @@ def compare_xyz(actual_xyz_file, expected_xyz_file, natoms):
         if are_equals:
             print("scale equal!\n")
         else:
-            print(indexs, format(scale[indexs], ".17e"),format(expectedScale[indexs], ".17e"),str(actual_xyz_file).split(".")[0][-1])
+            print(indexs, str(scale[indexs]),str(expectedScale[indexs]),str(actual_xyz_file).split(".")[0][-1])
         scale = np.loadtxt(str(actual_xyz_file).split("output")[0] + "exp_" + str(actual_xyz_file).split(".")[0][-1])
         expectedScale = np.loadtxt(str(expected_xyz_file).split("pos")[0] + "exp_" + str(actual_xyz_file).split(".")[0][-1])
+        are_equals, indexs = compare_arrays(scale,expectedScale)
         if are_equals:
             print("scale equal!\n")
         else:
-            print(indexs, format(scale[indexs], ".17e"),format(expectedScale[indexs], ".17e"),str(actual_xyz_file).split(".")[0][-1])
+            print(indexs, str(scale[indexs]),str(expectedScale[indexs]),str(actual_xyz_file).split(".")[0][-1])
 
 
         #print(f"Test failed: Coordinates in {actual_xyz_file.name} do not match at step {index}, {coords[index]} {coords_test[index]}")
