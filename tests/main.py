@@ -127,7 +127,7 @@ def compare_strings(arr1, arr2):
     with open(arr2, "r") as f:
         lines2 = f.readlines()
     match = True
-    for i in range(len(lines1):
+    for i in range(len(lines1)):
         if lines1[i] != lines2[i]:
             match = False
             print(i, lines1[i], lines2[i])
