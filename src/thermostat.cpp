@@ -2,6 +2,9 @@
 #include <numbers>
 #include <charconv>
 #include <iostream>
+#include <bitset>
+#include <cstdint>  // For uint64_t
+#include <cstring>
 #include <array>
 #include "simulation.h"
 #include "common.h"
@@ -180,12 +183,12 @@ double NoseHooverThermostat::singleChainStep(const double& current_energy, const
     // Calculate the rescaling factor
     double logscale = -dt2 * eta_dot[index];
     double scale = exp(logscale);
-    std::array<char, 64> buffer{};
-    auto res = std::to_chars(buffer.data(), buffer.data() + buffer.size(), logscale, std::chars_format::scientific);
-    out_file_expfactor << std::string(buffer.data(), res.ptr) << '\n';
-    std::array<char, 64> buffer2{};
-    res = std::to_chars(buffer2.data(), buffer2.data() + buffer2.size(), scale, std::chars_format::scientific);
-    out_file_scale << std::string(buffer2.data(), res.ptr) << '\n';
+    uint64_t binary_representation;
+    std::memcpy(&binary_representation, &logscale, sizeof(double));
+    out_file_expfactor << std::bitset<64>(binary_representation) << '\n';
+    uint64_t binary_representation2;
+    std::memcpy(&binary_representation2, &scale, sizeof(double));
+    out_file_scale << std::bitset<64>(binary_representation2) << '\n';
     for (int i = 0; i < nchains; i++)
       eta[i + index] += dt2 * eta_dot[i + index];
 

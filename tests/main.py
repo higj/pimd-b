@@ -121,6 +121,17 @@ def get_coordinates(xyz_path, natoms, dim=3):
 
     return coords, steps
 
+def compare_strings(arr1, arr2):
+    with open(arr1, "r") as f:
+        lines1 = f.readlines()
+    with open(arr2, "r") as f:
+        lines2 = f.readlines()
+    match = True
+    for i in range(len(lines1):
+        if lines1[i] != lines2[i]:
+            match = False
+            print(i, lines1[i], lines2[i])
+            break
 
 # Coordinates are assumed to be in Angstroms
 # Coordinate files are assumed to have names in the format "position_0.xyz", ..., "position_P-1.xyz"
@@ -129,22 +140,12 @@ def compare_xyz(actual_xyz_file, expected_xyz_file, natoms):
     coords_test, steps_test = get_coordinates(xyz_path=expected_xyz_file, natoms=natoms, dim=3)
     are_equal, index = compare_arrays(coords, coords_test)
     if not are_equal:
-        scale = np.loadtxt(str(actual_xyz_file).split("output")[0] + "scale_" + str(actual_xyz_file).split(".")[0][-1]) 
-        expectedScale = np.loadtxt(str(expected_xyz_file).split("pos")[0] + "scale_" + str(actual_xyz_file).split(".")[0][-1])
-        are_equals, indexs = compare_arrays(scale,expectedScale)
-        if are_equals:
-            print("scale equal!\n")
-        else:
-            print(indexs, str(scale[indexs]),str(expectedScale[indexs]),str(actual_xyz_file).split(".")[0][-1])
-        scale = np.loadtxt(str(actual_xyz_file).split("output")[0] + "exp_" + str(actual_xyz_file).split(".")[0][-1])
-        expectedScale = np.loadtxt(str(expected_xyz_file).split("pos")[0] + "exp_" + str(actual_xyz_file).split(".")[0][-1])
-        are_equals, indexs = compare_arrays(scale,expectedScale)
-        if are_equals:
-            print("scale equal!\n")
-        else:
-            print(indexs, str(scale[indexs]),str(expectedScale[indexs]),str(actual_xyz_file).split(".")[0][-1])
-
-
+        scale = str(actual_xyz_file).split("output")[0] + "scale_" + str(actual_xyz_file).split(".")[0][-1] 
+        expectedScale = str(expected_xyz_file).split("pos")[0] + "scale_" + str(actual_xyz_file).split(".")[0][-1]
+        compare_strings(scale,expectedScale)
+        scale = str(actual_xyz_file).split("output")[0] + "exp_" + str(actual_xyz_file).split(".")[0][-1]      
+        expectedScale = str(expected_xyz_file).split("pos")[0] + "exp_" + str(actual_xyz_file).split(".")[0][-1]
+        compare_strings(scale,expectedScale)
         #print(f"Test failed: Coordinates in {actual_xyz_file.name} do not match at step {index}, {coords[index]} {coords_test[index]}")
 #        raise AssertionError(f"Test failed: Coordinates in {actual_xyz_file.name} do not match at step {index}.")
     
