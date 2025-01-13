@@ -10,6 +10,7 @@ import configparser
 import argparse
 import MDAnalysis as mda
 
+
 # Columns of observables to compare
 #columns = ["step", "kinetic", "potential", "ext_pot", "int_pot", "virial", "temperature", "cl_kinetic", "cl_spring"]
 out_filename = "simulation.out"
@@ -75,18 +76,15 @@ def run_simulation(executable_dir, input_file):
 
 def compare_arrays(array1, array2):
     # Check if the arrays are equal within a tolerance
-    #if np.allclose(array1, array2, rtol=1e-5):
-    #    return True, None  # Arrays are equal
+    if np.allclose(array1, array2, rtol=1e-5):
+        return True, None  # Arrays are equal
 
     # Find the index where the first difference occurs
-    #index = np.where(~np.isclose(array1, array2))[0][0]
+    index = np.where(~np.isclose(array1, array2))[0][0]
+
     # Return the difference
-    #return False, index
-    diff = np.where(array1 != array2)[0]
-    if diff.size == 0:
-        return True, None
-    else:
-        return False, diff[0]
+    return False, index
+
 
 def compare_output(actual_output, expected_output):
     data_actual = read_data(actual_output)
@@ -103,9 +101,8 @@ def compare_output(actual_output, expected_output):
     # Check if the values of observables match
     for column in columns:
         are_equal, index = compare_arrays(data_actual[column], data_expected[column])
-#        if not are_equal:
-           # print(f"Test 'failed': '{column}' does not match at step {index}: {data_actual[column][index]} {data_expected[column][index]}.")
-           # raise AssertionError(f"Test failed: '{column}' does not match at step {index}.")
+        if not are_equal:
+            raise AssertionError(f"Test failed: '{column}' does not match at step {index}.")
         
     return True
 
@@ -130,26 +127,7 @@ def compare_xyz(actual_xyz_file, expected_xyz_file, natoms):
 
     are_equal, index = compare_arrays(coords, coords_test)
     if not are_equal:
-        #print(coords[index:index+10],coords_test[index:index+10])
-        #expfactor = np.loadtxt(str(actual_xyz_file).split("output")[0] + "expfactor_" + str(actual_xyz_file).split(".")[0][-1])
-        #print(expfactor[index*2-5:index*2+5])
-        scale = np.loadtxt(str(actual_xyz_file).split("output")[0] + "scale_" + str(actual_xyz_file).split(".")[0][-1]) 
-        expectedScale = np.loadtxt(str(expected_xyz_file).split("pos")[0] + "scale_" + str(actual_xyz_file).split(".")[0][-1])
-        are_equals, indexs = compare_arrays(scale,expectedScale)
-        if are_equals:
-            print("scale equal!\n")
-        else:
-            print(indexs, format(scale[indexs], ".17e"),format(expectedScale[indexs], ".17e"),str(actual_xyz_file).split(".")[0][-1])
-        scale = np.loadtxt(str(actual_xyz_file).split("output")[0] + "expfactor_" + str(actual_xyz_file).split(".")[0][-1])
-        expectedScale = np.loadtxt(str(expected_xyz_file).split("pos")[0] + "expfactor_" + str(actual_xyz_file).split(".")[0][-1])
-        if are_equals:
-            print("scale equal!\n")
-        else:
-            print(indexs, format(scale[indexs], ".17e"),format(expectedScale[indexs], ".17e"),str(actual_xyz_file).split(".")[0][-1])
-
-
-        #print(f"Test failed: Coordinates in {actual_xyz_file.name} do not match at step {index}, {coords[index]} {coords_test[index]}")
-#        raise AssertionError(f"Test failed: Coordinates in {actual_xyz_file.name} do not match at step {index}.")
+        raise AssertionError(f"Test failed: Coordinates in {actual_xyz_file.name} do not match at step {index}.")
     
     return True
 
@@ -247,9 +225,8 @@ def test_velocities(output_folder, test_folder):
         vels_test = extract_numeric_data(test_vel_file)
 
         are_equal, index = compare_arrays(vels_out, vels_test)
-#        if not are_equal:
-#            print(f"Test failed: Velocities do not match at step {index}, {vels_out[index]} {vels_test[index]}.")
-#            raise AssertionError(f"Test failed: Velocities do not match at step {index}.")
+        if not are_equal:
+            raise AssertionError(f"Test failed: Velocities do not match at step {index}.")
     
     print("Test passed: Velocities match.")
 
@@ -290,13 +267,11 @@ def test_forces(output_folder, test_folder):
         forces_test = extract_numeric_data(test_force_file)
 
         are_equal, index = compare_arrays(forces_out, forces_test)
-#        if not are_equal:
-#            print(f"Test failed: Forces do not match at step {index}, {forces_out[index]}, {forces_test[index]}.")
-#            raise AssertionError(f"Test failed: Forces do not match at step {index}.")
+        if not are_equal:
+            raise AssertionError(f"Test failed: Forces do not match at step {index}.")
     
     print("Test passed: Forces match.")
-    data = np.loadtxt(str(output_folder) + "/simulation.out",skiprows=1)
-    print(data[:,4].mean(),data[:,4].std(), (data[:,2]+data[:,3]).mean(), (data[:,2]+data[:,3]).std())
+
     return True
 
 
