@@ -19,10 +19,11 @@ public:
     double getLongestProbability() override;
 
     void printBosonicDebug() override;
+    void exteriorSpringForce(dVec& f) override;
 
 protected:
-    void springForceFirstBead(dVec& f, const dVec& x, const dVec& x_prev, const dVec& x_next) override;
-    void springForceLastBead(dVec& f, const dVec& x, const dVec& x_prev, const dVec& x_next) override;
+    std::array<double, NDIM> springForceFirstBead(const int l);
+    std::array<double, NDIM> springForceLastBead(const int l);
     void evaluateBosonicEnergies();
     
 private:

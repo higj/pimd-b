@@ -17,6 +17,7 @@ OldBosonicExchange::OldBosonicExchange(const Simulation& _sim) : BosonicExchange
  * @brief Recalculates the smallest exterior spring energy after each coordinate update.
  */
 void OldBosonicExchange::prepare() {
+    assignIndirectionCoords(); 
     e_shift = getMinExteriorSpringEnergy();
 }
 
@@ -111,6 +112,14 @@ double OldBosonicExchange::effectivePotential() {
     } while (std::ranges::next_permutation(labels).found);
 
     return (-1.0 / beta) * log(weights_sum / permutation_counter);
+}
+
+void OldBosonicExchange::exteriorSpringForce(dVec& f) {
+    if (sim.this_bead == 0) {
+        springForceFirstBead(f, indirection_x, indirection_x_prev, indirection_x_next);
+    } else {
+        springForceLastBead(f, indirection_x, indirection_x_prev, indirection_x_next);
+    }
 }
 
 /**

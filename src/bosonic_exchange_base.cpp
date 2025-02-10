@@ -11,11 +11,24 @@ BosonicExchangeBase::BosonicExchangeBase(const Simulation& _sim) :
     beta(_sim.beta),
     x(_sim.coord),
     x_prev(_sim.prev_coord),
-    x_next(_sim.next_coord) {
+    x_next(_sim.next_coord),
+    indirection_x(_sim.coord),
+    indirection_x_prev(_sim.prev_coord),
+    indirection_x_next(_sim.next_coord),
+    indexes(_sim.natoms)   {
     assert(_sim.is_bosonic_bead);
 #if IPI_CONVENTION
     beta /= _sim.nbeads;
 #endif
+    for (int i = 0; i < nbosons; ++i) {
+        indexes[i] = i;
+    }
+}
+
+void BosonicExchangeBase::assignIndirectionCoords() {
+    indirection_x = x;
+    indirection_x_prev = x_prev;
+    indirection_x_next = x_next;
 }
 
 /**
@@ -63,19 +76,6 @@ double BosonicExchangeBase::getBeadsSeparationSquared(const dVec& x1, int l1, co
     return dist_sqrd;
 }
 
-/**
- * Calculates the bosonic force exerted on the beads
- * at the first and the last time-slices.
- *
- * @param[out] f Vector to store the forces.
- */
-void BosonicExchangeBase::exteriorSpringForce(dVec& f) {
-    if (sim.this_bead == 0) {
-        springForceFirstBead(f, x, x_prev, x_next);
-    } else {
-        springForceLastBead(f, x, x_prev, x_next);
-    }
-}
 
 /**
  * Determines the coordinates of the first and the last bead based on the current time-slice.
@@ -85,10 +85,10 @@ void BosonicExchangeBase::exteriorSpringForce(dVec& f) {
  */
 void BosonicExchangeBase::assignFirstLast(dVec& x_first_bead, dVec& x_last_bead) const {
     if (sim.this_bead == 0) {
-        x_first_bead = x;
-        x_last_bead = x_prev;
+        x_first_bead = indirection_x;
+        x_last_bead = indirection_x_prev;
     } else {
-        x_first_bead = x_next;
-        x_last_bead = x;
+        x_first_bead = indirection_x_next;
+        x_last_bead = indirection_x;
     }
 }

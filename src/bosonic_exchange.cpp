@@ -16,19 +16,20 @@ BosonicExchange::BosonicExchange(const Simulation& _sim) : BosonicExchangeBase(_
     evaluateBosonicEnergies();
 }
 
+/**
+ *  *  * @brief Re-evaluate the bosonic energies and connection probabilities.
+ *   *   * Typically used after coordinate updates.
+ *    *    */
+void BosonicExchange::prepare() {
+    assignIndirectionCoords();
+    evaluateBosonicEnergies();
+}
+
 void BosonicExchange::evaluateBosonicEnergies() {
     evaluateCycleEnergies();
     evaluateVBn();
     evaluateVBackwards();
     evaluateConnectionProbabilities();
-}
-
-/**
- * @brief Re-evaluate the bosonic energies and connection probabilities.
- * Typically used after coordinate updates.
- */
-void BosonicExchange::prepare() {
-    evaluateBosonicEnergies();
 }
 
 void BosonicExchange::evaluateCycleEnergies() {
@@ -156,62 +157,67 @@ void BosonicExchange::evaluateConnectionProbabilities() {
     }
 }
 
-void BosonicExchange::springForceLastBead(dVec& f, const dVec& x, const dVec& x_prev, const dVec& x_next) {
+/**
+ *  *  *  * Calculates the bosonic force exerted on the beads
+ *   *   *   * at the first and the last time-slices.
+ *    *    *    *
+ *     *     *     * @param[out] f Vector to store the forces.
+ *      *      *      */
+void BosonicExchange::exteriorSpringForce(dVec& f) {
     for (int l = 0; l < nbosons; l++) {
-        std::array<double, NDIM> sums = {};
-
-        for (int next_l = 0; next_l <= l + 1 && next_l < nbosons; next_l++) {
-            double diff_next[NDIM];
-
-            getBeadsSeparation(x, l, x_next, next_l, diff_next);
-
-            double prob = connection_probabilities[nbosons * l + next_l];
-
-            for (int axis = 0; axis < NDIM; ++axis) {
-                sums[axis] += prob * diff_next[axis];
-            }
-        }
-
-        double diff_prev[NDIM];
-        getBeadsSeparation(x, l, x_prev, l, diff_prev);
+        std::array<double, NDIM> sums = (sim.this_bead == 0 ? springForceFirstBead(l) : springForceLastBead(l));
 
         for (int axis = 0; axis < NDIM; ++axis) {
-            sums[axis] += diff_prev[axis];
-        }
-
-        for (int axis = 0; axis < NDIM; ++axis) {
-            f(l, axis) = sums[axis] * spring_constant;
+            f(indexes[l], axis) = sums[axis] * spring_constant;
         }
     }
 }
 
-void BosonicExchange::springForceFirstBead(dVec& f, const dVec& x, const dVec& x_prev, const dVec& x_next) {
-    for (int l = 0; l < nbosons; l++) {
-        std::array<double, NDIM> sums = {};
+std::array<double, NDIM> BosonicExchange::springForceLastBead(const int l) {
+    std::array<double, NDIM> sums = {};
 
-        for (int prev_l = std::max(0, l - 1); prev_l < nbosons; prev_l++) {
-            double diff_prev[NDIM];
-
-            getBeadsSeparation(x, l, x_prev, prev_l, diff_prev);
-
-            double prob = connection_probabilities[nbosons * prev_l + l];
-
-            for (int axis = 0; axis < NDIM; ++axis) {
-                sums[axis] += prob * diff_prev[axis];
-            }
-        }
-
+    for (int next_l = 0; next_l <= l + 1 && next_l < nbosons; next_l++) {
         double diff_next[NDIM];
-        getBeadsSeparation(x, l, x_next, l, diff_next);
+        getBeadsSeparation(indirection_x, l, indirection_x_next, next_l, diff_next);
+
+        double prob = connection_probabilities[nbosons * l + next_l];
 
         for (int axis = 0; axis < NDIM; ++axis) {
-            sums[axis] += diff_next[axis];
-        }
-
-        for (int axis = 0; axis < NDIM; ++axis) {
-            f(l, axis) = sums[axis] * spring_constant;
+            sums[axis] += prob * diff_next[axis];
         }
     }
+
+    double diff_prev[NDIM];
+    getBeadsSeparation(indirection_x, l, indirection_x_prev, l, diff_prev);
+
+    for (int axis = 0; axis < NDIM; ++axis) {
+        sums[axis] += diff_prev[axis];
+    }
+    return sums;
+}
+
+std::array<double, NDIM> BosonicExchange::springForceFirstBead(const int l) {
+    std::array<double, NDIM> sums = {};
+
+    for (int prev_l = std::max(0, l - 1); prev_l < nbosons; prev_l++) {
+        double diff_prev[NDIM];
+
+        getBeadsSeparation(indirection_x, l, indirection_x_prev, prev_l, diff_prev);
+
+        double prob = connection_probabilities[nbosons * prev_l + l];
+
+        for (int axis = 0; axis < NDIM; ++axis) {
+            sums[axis] += prob * diff_prev[axis];
+        }
+    }
+
+    double diff_next[NDIM];
+    getBeadsSeparation(indirection_x, l, indirection_x_next, l, diff_next);
+
+    for (int axis = 0; axis < NDIM; ++axis) {
+        sums[axis] += diff_next[axis];
+    }
+    return sums;
 }
 
 /**
