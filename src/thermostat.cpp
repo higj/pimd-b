@@ -1,64 +1,66 @@
 #include "thermostat.h"
 #include <numbers>
-
 #include "simulation.h"
 #include "common.h"
 #include "normal_modes.h"
+#include "thermostat_coupling.h"
 
-Thermostat::Thermostat(Simulation& _sim) : sim(_sim) {}
-void Thermostat::step(){}
+Thermostat::Thermostat(Simulation& _sim, bool normal_modes) : sim(_sim) {
+    // Choose coupling (Cartesian coords or normal modes of distinguishable ring polymers)
+    if (normal_modes) {
+        coupling = std::make_unique<NMCoupling>(_sim);
+    }
+    else {
+        coupling = std::make_unique<CartesianCoupling>(_sim);
+    }
+}
+
+// This is the step function of a general thermostat, called in the simulation's run loop
+void Thermostat::step() {
+    coupling->mpiCommunication();
+    momentaUpdate();
+    coupling->updateCoupledMomenta();
+}
+
+// This is an update of the momenta within the thermostat step, unique for each thermostat
+void Thermostat::momentaUpdate(){}
+
+double Thermostat::getAdditionToH() {
+    return 0;
+}
 
 /* -------------------------------- */
 
-LangevinThermostat::LangevinThermostat(Simulation& _sim) : Thermostat(_sim) {
-    a = exp(-0.5 * sim.gamma * sim.dt);
-
+LangevinThermostat::LangevinThermostat(Simulation& _sim, bool normal_modes) : Thermostat(_sim, normal_modes) {
+    // CR: this->a
+    friction_coefficient = exp(-0.5 * sim.gamma * sim.dt);
 #if IPI_CONVENTION
-    b = sqrt((1 - a * a) * sim.mass * sim.nbeads / sim.beta);
+    // CR: this->b
+    noise_coefficient = sqrt((1 - friction_coefficient * friction_coefficient) * sim.mass * sim.nbeads / sim.beta);
 #else
-    b = sqrt((1 - a * a) * sim.mass / sim.beta);
+    // CR: this->b
+    noise_coefficient = sqrt((1 - friction_coefficient * friction_coefficient) * sim.mass / sim.beta);
 #endif
 
 }
 
-void LangevinThermostat::step() {
+void LangevinThermostat::momentaUpdate() {
     //std::normal_distribution<double> normal; // At the moment we use the Marsaglia generator
 
     for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
             double noise = sim.mars_gen->gaussian(); // LAMMPS pimd/langevin random numbers
-
+            double momentum_for_calc = coupling->getMomentumForCalc(ptcl_idx, axis);
+            double& momentum_for_update = coupling->getMomentumForUpdate(ptcl_idx, axis);
             // Perturb the momenta with a Langevin thermostat
-            sim.momenta(ptcl_idx, axis) = a * sim.momenta(ptcl_idx, axis) + b * noise;
+            momentum_for_update = friction_coefficient * momentum_for_calc + noise_coefficient * noise;
         }
     }
 }
 
 /* -------------------------------- */
 
-LangevinThermostatNM::LangevinThermostatNM(Simulation& _sim) : LangevinThermostat(_sim) {}
-
-void LangevinThermostatNM::step() {
-    // MPI communcation
-    sim.normal_modes->shareData();
-    MPI_Barrier(MPI_COMM_WORLD);
-
-    for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
-        for (int axis = 0; axis < NDIM; ++axis) {
-            double noise = sim.mars_gen->gaussian(); // LAMMPS pimd/langevin random numbers
-            const int glob_idx = sim.normal_modes->globIndexAtom(axis, ptcl_idx);
-            // Perturb the normal modes momenta with a Langevin thermostat
-            sim.normal_modes->arr_momenta_nm[glob_idx + sim.this_bead] = a * sim.normal_modes->momentumCarToNM(glob_idx) + b * noise;
-        }
-    }
-
-    MPI_Barrier(MPI_COMM_WORLD);
-    sim.normal_modes->updateCartesianMomenta();
-}
-
-/* -------------------------------- */
-
-NoseHooverThermostat::NoseHooverThermostat(Simulation& _sim, int _nchains) : Thermostat(_sim) {
+NoseHooverThermostat::NoseHooverThermostat(Simulation& _sim, bool normal_modes, int _nchains) : Thermostat(_sim, normal_modes) {
     nchains = _nchains;
 #if IPI_CONVENTION
     Qi = Constants::hbar * Constants::hbar * sim.beta;
@@ -66,15 +68,11 @@ NoseHooverThermostat::NoseHooverThermostat(Simulation& _sim, int _nchains) : The
     Qi = Constants::hbar * Constants::hbar * sim.beta / sim.nbeads;
 #endif
     Q1 = NDIM * sim.natoms * Qi;
-#if CALC_ETA
     eta = std::vector<double>(nchains);
-#endif
     eta_dot = std::vector<double>(nchains);
     eta_dot_dot = std::vector<double>(nchains);
     for (int i = 0; i < nchains; i++) {
-#if CALC_ETA
         eta[i] = 0.0;
-#endif
         eta_dot[i] = 0.0;
         eta_dot_dot[i] = 0.0;
     }
@@ -88,12 +86,37 @@ NoseHooverThermostat::NoseHooverThermostat(Simulation& _sim, int _nchains) : The
 #endif
 }
 
-void NoseHooverThermostat::step() {
+double NoseHooverThermostat::getAdditionToH() {
+    return singleChainGetAdditionToH(NDIM * sim.natoms, 0);    
+}
+
+double NoseHooverThermostat::singleChainGetAdditionToH(const int& expected_energy, const int& index) {
+    double additionToH = 0.5 * Q1 * eta_dot[index] * eta_dot[index];
+#if IPI_CONVENTION
+    additionToH += expected_energy * eta[index] * sim.nbeads / sim.beta;
+#else
+    additionToH += expected_energy * eta[index] / sim.beta;
+#endif
+
+    for (int i = 1; i < nchains; i++) {
+        additionToH += 0.5 * Qi * eta_dot[index + i] * eta_dot[index + i];
+#if IPI_CONVENTION
+        additionToH += eta[index + i] * sim.nbeads / sim.beta;
+#else
+        additionToH += eta[index + i] / sim.beta;
+#endif
+    }
+
+    return additionToH;
+}
+
+void NoseHooverThermostat::momentaUpdate() {
     // Calculates the current energy in the system
     double current_energy = 0.0;
     for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
-            current_energy += sim.momenta(ptcl_idx, axis) * sim.momenta(ptcl_idx, axis);
+            double momentum_for_calc = coupling->getMomentumForCalc(ptcl_idx, axis);
+            current_energy += momentum_for_calc * momentum_for_calc;
         }
     }
     current_energy *= 1 / sim.mass;
@@ -104,7 +127,9 @@ void NoseHooverThermostat::step() {
     // Rescale the momenta
     for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
-            sim.momenta(ptcl_idx, axis) *= scale;
+            double momentum_for_calc = coupling->getMomentumForCalc(ptcl_idx, axis);
+            double& momentum_for_update = coupling->getMomentumForUpdate(ptcl_idx, axis);
+            momentum_for_update = momentum_for_calc * scale;
         }
     }
 }
@@ -137,11 +162,8 @@ double NoseHooverThermostat::singleChainStep(const double& current_energy, const
 
     // Calculate the rescaling factor
     double scale = exp(-dt2 * eta_dot[index]);
-
-#if CALC_ETA
     for (int i = 0; i < nchains; i++)
       eta[i + index] += dt2 * eta_dot[i + index];
-#endif
 
     // Update the derivatives of eta for the first component
     eta_dot_dot[index] = (current_energy * scale * scale - required_energy) / Q1;
@@ -177,53 +199,13 @@ double NoseHooverThermostat::singleChainStep(const double& current_energy, const
 
 /* -------------------------------- */
 
-NoseHooverThermostatNM::NoseHooverThermostatNM(Simulation& _sim, int _nchains) : NoseHooverThermostat(_sim, _nchains) {}
-void NoseHooverThermostatNM::step() {
-    // MPI communcation
-    sim.normal_modes->shareData();
-    MPI_Barrier(MPI_COMM_WORLD);
-    
-    iVec glob_idxs(sim.natoms);
-    dVec momenta_nm(sim.natoms);
-
-    // Calculates the current energy in the system
-    double current_energy = 0.0;
-    for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
-        for (int axis = 0; axis < NDIM; ++axis) {
-            glob_idxs(ptcl_idx, axis) = sim.normal_modes->globIndexAtom(axis, ptcl_idx);
-            momenta_nm(ptcl_idx, axis) = sim.normal_modes->momentumCarToNM(glob_idxs(ptcl_idx, axis));
-            current_energy += momenta_nm(ptcl_idx, axis) * momenta_nm(ptcl_idx, axis);
-        }
-    }
-    current_energy *= 1 / sim.mass;
-
-    // Obtain the scaling factor
-    double scale = singleChainStep(current_energy, 0);
-
-    // Rescale the momenta in normal modes
-    for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
-        for (int axis = 0; axis < NDIM; ++axis) {
-            sim.normal_modes->arr_momenta_nm[glob_idxs(ptcl_idx, axis) + sim.this_bead] = scale * momenta_nm(ptcl_idx, axis);
-        }
-    }
-
-    MPI_Barrier(MPI_COMM_WORLD);
-    sim.normal_modes->updateCartesianMomenta();
-}
-
-/* -------------------------------- */
-
-NoseHooverNpThermostat::NoseHooverNpThermostat(Simulation& _sim, int _nchains) : NoseHooverThermostat(_sim, _nchains) {
+NoseHooverNpThermostat::NoseHooverNpThermostat(Simulation& _sim, bool normal_modes, int _nchains) : NoseHooverThermostat(_sim, normal_modes, _nchains) {
     Q1 = NDIM * Qi;
-#if CALC_ETA
     eta = std::vector<double>(nchains * sim.natoms);
-#endif
     eta_dot = std::vector<double>(nchains * sim.natoms);
     eta_dot_dot = std::vector<double>(nchains * sim.natoms);
     for (int i = 0; i < nchains * sim.natoms; i++) {
-#if CALC_ETA
         eta[i] = 0.0;
-#endif
         eta_dot[i] = 0.0;
         eta_dot_dot[i] = 0.0;
     }
@@ -234,12 +216,13 @@ NoseHooverNpThermostat::NoseHooverNpThermostat(Simulation& _sim, int _nchains) :
 #endif
 }
 
-void NoseHooverNpThermostat::step() {
+void NoseHooverNpThermostat::momentaUpdate() {
     for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
         // Calculates the current energy in the system
         double current_energy = 0.0;
         for (int axis = 0; axis < NDIM; ++axis) {
-            current_energy += sim.momenta(ptcl_idx, axis) * sim.momenta(ptcl_idx, axis);
+            double momentum_for_calc = coupling->getMomentumForCalc(ptcl_idx, axis);
+            current_energy += momentum_for_calc * momentum_for_calc;
         }
         current_energy *= 1 / sim.mass;
         
@@ -248,58 +231,30 @@ void NoseHooverNpThermostat::step() {
 
         // Rescale the momenta
         for (int axis = 0; axis < NDIM; ++axis) {
-            sim.momenta(ptcl_idx, axis) *= scale;
+            double momentum_for_calc = coupling->getMomentumForCalc(ptcl_idx, axis);
+            double& momentum_for_update = coupling->getMomentumForUpdate(ptcl_idx, axis);
+            momentum_for_update = momentum_for_calc * scale;
         }
     }   
 }
 
-/* -------------------------------- */
-
-NoseHooverNpThermostatNM::NoseHooverNpThermostatNM(Simulation& _sim, int _nchains) : NoseHooverNpThermostat(_sim, _nchains) {}
-
-void NoseHooverNpThermostatNM::step() {
-    // MPI communcation
-    sim.normal_modes->shareData();
-    MPI_Barrier(MPI_COMM_WORLD);
-
+double NoseHooverNpThermostat::getAdditionToH() {
+    double additionToH = 0;
     for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
-        std::vector<int> glob_idxs(NDIM);
-        std::vector<double> momenta_nm(NDIM);
-
-        // Calculates the current energy in the system
-        double current_energy = 0.0;
-        for (int axis = 0; axis < NDIM; ++axis) {
-            glob_idxs[axis] = sim.normal_modes->globIndexAtom(axis, ptcl_idx);
-            momenta_nm[axis] = sim.normal_modes->momentumCarToNM(glob_idxs[axis]);
-            current_energy += momenta_nm[axis] * momenta_nm[axis];
-        }
-        current_energy *= 1 / sim.mass;
-
-        // Obtain the scaling factor
-        double scale = singleChainStep(current_energy, ptcl_idx * nchains);
-
-        // Rescale the momenta in normal modes
-        for (int axis = 0; axis < NDIM; ++axis) {
-            sim.normal_modes->arr_momenta_nm[glob_idxs[axis] + sim.this_bead] = scale * momenta_nm[axis];
-        }
+        additionToH += singleChainGetAdditionToH(NDIM, ptcl_idx * nchains);
     }
-
-    MPI_Barrier(MPI_COMM_WORLD);
-    sim.normal_modes->updateCartesianMomenta();
+    return additionToH;
 }
+
 /* -------------------------------- */
 
-NoseHooverNpDimThermostat::NoseHooverNpDimThermostat(Simulation& _sim, int _nchains) : NoseHooverThermostat(_sim, _nchains) {
+NoseHooverNpDimThermostat::NoseHooverNpDimThermostat(Simulation& _sim, bool normal_modes, int _nchains) : NoseHooverThermostat(_sim, normal_modes, _nchains) {
     Q1 = Qi;
-#if CALC_ETA
     eta = std::vector<double>(nchains * sim.natoms * NDIM);
-#endif
     eta_dot = std::vector<double>(nchains * sim.natoms * NDIM);
     eta_dot_dot = std::vector<double>(nchains * sim.natoms * NDIM);
     for (int i = 0; i < nchains * sim.natoms * NDIM; i++) {
-#if CALC_ETA
         eta[i] = 0.0;
-#endif
         eta_dot[i] = 0.0;
         eta_dot_dot[i] = 0.0;
     }
@@ -310,48 +265,32 @@ NoseHooverNpDimThermostat::NoseHooverNpDimThermostat(Simulation& _sim, int _ncha
 #endif
 }
 
-void NoseHooverNpDimThermostat::step() {
+void NoseHooverNpDimThermostat::momentaUpdate() {
     
     for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
+            double momentum_for_calc = coupling->getMomentumForCalc(ptcl_idx, axis);
             // Calculates the current energy in the system
-            double current_energy = sim.momenta(ptcl_idx, axis) * sim.momenta(ptcl_idx, axis) / sim.mass;
+            double current_energy = momentum_for_calc * momentum_for_calc / sim.mass;
 
             // Obtain the scaling factor
             double scale = singleChainStep(current_energy, (ptcl_idx * NDIM + axis) * nchains);
 
             // Rescale the momentum
-            sim.momenta(ptcl_idx, axis) *= scale;
+            double& momentum_for_update = coupling->getMomentumForUpdate(ptcl_idx, axis);
+            momentum_for_update = momentum_for_calc * scale;
         }
     }   
 }
 
-/* -------------------------------- */
-
-NoseHooverNpDimThermostatNM::NoseHooverNpDimThermostatNM(Simulation& _sim, int _nchains) : NoseHooverNpDimThermostat(_sim, _nchains) {}
-
-void NoseHooverNpDimThermostatNM::step() {
-
-    // MPI communcation
-    sim.normal_modes->shareData();
-    MPI_Barrier(MPI_COMM_WORLD);
-    
+double NoseHooverNpDimThermostat::getAdditionToH() {
+    double additionToH = 0;
     for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
-            const int glob_idx = sim.normal_modes->globIndexAtom(axis, ptcl_idx);
-            double momentum_nm = sim.normal_modes->momentumCarToNM(glob_idx);
-
-            // Calculates the current energy in the system
-            double current_energy = momentum_nm * momentum_nm / sim.mass;
- 
-            // Obtain the scaling factor
-            double scale = singleChainStep(current_energy, (ptcl_idx * NDIM + axis) * nchains);
- 
-            // Rescale the momentum in normal modes
-            sim.normal_modes->arr_momenta_nm[glob_idx + sim.this_bead] = scale * momentum_nm;
+            additionToH += singleChainGetAdditionToH(1, (ptcl_idx * NDIM + axis) * nchains);
         }
     }
-
-    MPI_Barrier(MPI_COMM_WORLD);
-    sim.normal_modes->updateCartesianMomenta();
+    return additionToH;
 }
+
+/* -------------------------------- */

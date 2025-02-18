@@ -5,7 +5,7 @@
 #include <array>
 #include <cassert>
 #include "mpi.h"
-
+#include "thermostat_coupling.h"
 #include "state.h"
 #include "observable.h"
 #include "propagator.h"
@@ -80,6 +80,8 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     thermostat_type = std::get<std::string>(param_obj.sim["thermostat_type"]);
     
     // Choose time propagation scheme
+    // CR: extract method
+    // CR: disable normal modes propagator for bosonic
     if (propagator_type == "cartesian") {
         propagator = std::make_unique<VelocityVerletPropagator>(*this);
     } else if (propagator_type == "normal_modes") {
@@ -87,31 +89,17 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     }
 
     // Choose thermostat
-    if (nmthermostat) {
-        if (thermostat_type == "langevin") {
-            thermostat = std::make_unique<LangevinThermostatNM>(*this);
-        } else if (thermostat_type == "nose_hoover") {
-            thermostat = std::make_unique<NoseHooverThermostatNM>(*this, nchains);
-        } else if (thermostat_type == "nose_hoover_np") {
-            thermostat = std::make_unique<NoseHooverNpThermostatNM>(*this, nchains);
-        } else if (thermostat_type == "nose_hoover_np_dim") {
-            thermostat = std::make_unique<NoseHooverNpDimThermostatNM>(*this, nchains);
-        } else if (thermostat_type == "none") {
-            thermostat = std::make_unique<Thermostat>(*this);
-        }
-    }
-    else {
-        if (thermostat_type == "langevin") {
-            thermostat = std::make_unique<LangevinThermostat>(*this);
-        } else if (thermostat_type == "nose_hoover") {
-            thermostat = std::make_unique<NoseHooverThermostat>(*this, nchains);
-        } else if (thermostat_type == "nose_hoover_np") {
-            thermostat = std::make_unique<NoseHooverNpThermostat>(*this, nchains);
-        } else if (thermostat_type == "nose_hoover_np_dim") {
-            thermostat = std::make_unique<NoseHooverNpDimThermostat>(*this, nchains);
-        } else if (thermostat_type == "none") {
-            thermostat = std::make_unique<Thermostat>(*this);
-        }
+    // CR: extract method
+    if (thermostat_type == "langevin") {
+        thermostat = std::make_unique<LangevinThermostat>(*this, nmthermostat);
+    } else if (thermostat_type == "nose_hoover") {
+        thermostat = std::make_unique<NoseHooverThermostat>(*this, nmthermostat, nchains);
+    } else if (thermostat_type == "nose_hoover_np") {
+        thermostat = std::make_unique<NoseHooverNpThermostat>(*this, nmthermostat, nchains);
+    } else if (thermostat_type == "nose_hoover_np_dim") {
+        thermostat = std::make_unique<NoseHooverNpDimThermostat>(*this, nmthermostat, nchains);
+    } else if (thermostat_type == "none") {
+        thermostat = std::make_unique<Thermostat>(*this, nmthermostat);
     }
     // Initialize the coordinate, momenta, and force arrays
     coord = dVec(natoms);
@@ -305,7 +293,6 @@ void Simulation::run() {
         for (const auto& state : states) {
             state->output(step);
         }
-
         thermostat->step();
 
         // If fixcom=true, the center of mass of the ring polymers is fixed during the simulation
@@ -314,7 +301,6 @@ void Simulation::run() {
         }
 
         propagator->step();
-
         thermostat->step();
 
         // Zero momentum after every thermostat step (if needed)

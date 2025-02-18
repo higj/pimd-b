@@ -1,57 +1,46 @@
 #pragma once
 
 #include <vector>
-#include "mpi.h"
 #include "common.h"
-
-// Flag enabling the calculation of the fictive degree of freedom eta in Nose-Hoover thermostats
-// (only its derivatives are required for the true dynamics)
-#ifndef CALC_ETA
-#define CALC_ETA false
-#endif
+#include <memory>
 
 class Simulation;
+class Coupling;
 
 class Thermostat {
 public:
-    explicit Thermostat(Simulation& _sim);
+    explicit Thermostat(Simulation& _sim, bool normal_modes);
     virtual ~Thermostat() = default;
-
-    virtual void step();
+    void step();
+    virtual void momentaUpdate();
+    virtual double getAdditionToH();
 protected:
     Simulation& sim;   // Reference to the simulation object
+    std::unique_ptr<Coupling> coupling;
 };
 
 /* -------------------------------- */
 
 class LangevinThermostat : public Thermostat {
 public:
-    LangevinThermostat(Simulation& _sim);
+    LangevinThermostat(Simulation& _sim, bool normal_modes);
     ~LangevinThermostat() override = default;
 
-    void step() override;
+    void momentaUpdate() override;
+
 protected:
-    double a, b;
-};
-
-/* -------------------------------- */
-
-class LangevinThermostatNM : public LangevinThermostat {
-public:
-    LangevinThermostatNM(Simulation& _sim);
-    ~LangevinThermostatNM() override = default;
-
-    void step() override;
+    double friction_coefficient, noise_coefficient;
 };
 
 /* -------------------------------- */
 
 class NoseHooverThermostat : public Thermostat {
 public:
-    NoseHooverThermostat(Simulation& _sim, int _nchains);
+    NoseHooverThermostat(Simulation& _sim, bool normal_modes, int _nchains);
     ~NoseHooverThermostat() override = default;
 
-    void step() override;
+    void momentaUpdate() override;
+    double getAdditionToH() override; // The equations of motion conserve H + additionToH, where H is the Hamiltonian of the physical system
 protected:
     double singleChainStep(const double& current_energy, const int& index);
     int nchains; // Number of components in each Nose-Hoover chain
@@ -59,55 +48,28 @@ protected:
     double dt2, dt4, dt8;
     double required_energy; // A measure of the required preserved energy (kT times the number of degrees of freedom associated with the chain)
     std::vector<double> eta_dot, eta_dot_dot; // The first and second derivatives of eta
-#if CALC_ETA
     std::vector<double> eta; 
-#endif
-};
-
-/* -------------------------------- */
-
-class NoseHooverThermostatNM : public NoseHooverThermostat {
-public:
-    NoseHooverThermostatNM(Simulation& _sim, int _nchains);
-    ~NoseHooverThermostatNM() override = default;
-
-    void step() override; 
+    double singleChainGetAdditionToH(const int& expected_energy, const int& index);
 };
 
 /* -------------------------------- */
 
 class NoseHooverNpThermostat : public NoseHooverThermostat {
 public:
-    NoseHooverNpThermostat(Simulation& _sim, int _nchains);
+    NoseHooverNpThermostat(Simulation& _sim, bool normal_modes, int _nchains);
     ~NoseHooverNpThermostat() override = default;
 
-    void step() override;
+    void momentaUpdate() override;
+    double getAdditionToH() override; // The equations of motion conserve H + additionToH, where H is the Hamiltonian of the physical system
 };
-/* -------------------------------- */
 
-class NoseHooverNpThermostatNM : public NoseHooverNpThermostat {
-public:
-    NoseHooverNpThermostatNM(Simulation& _sim, int _nchains);
-    ~NoseHooverNpThermostatNM() override = default;
-
-    void step() override;
-};
 /* -------------------------------- */
 
 class NoseHooverNpDimThermostat : public NoseHooverThermostat {
 public:
-    NoseHooverNpDimThermostat(Simulation& _sim, int _nchains);
+    NoseHooverNpDimThermostat(Simulation& _sim, bool normal_modes, int _nchains);
     ~NoseHooverNpDimThermostat() override = default;
 
-    void step() override;
+    void momentaUpdate() override;
+    double getAdditionToH() override; // The equations of motion conserve H + additionToH, where H is the Hamiltonian of the physical system
 };
-/* -------------------------------- */
-
-class NoseHooverNpDimThermostatNM : public NoseHooverNpDimThermostat {
-public: 
-    NoseHooverNpDimThermostatNM(Simulation& _sim, int _nchains);
-    ~NoseHooverNpDimThermostatNM() override = default;
- 
-    void step() override; 
-};
-

@@ -115,7 +115,7 @@ The `propagator` option allows one to specify the time propagation scheme to be 
 
 * `cartesian` (default): plain old velocity verlet time propagation of the original cartesian coordinates and momenta. Works well for both distinguishable and bosonic systems
 
-* `normal_modes`: propagation of the normal modes of the ring polymers, using the symmetric Trotter expansion. Works exceptionally well for distinguishable particles; bosonic normal mode propagation is still in development
+* `normal_modes`: propagation of the normal modes of the ring polymers, using the symmetric Trotter expansion. Currently not available for bosons. 
 
 The `thermostat` option allows one to specify the thermostat to be used during the simulation. Currently, five options are evailable:
 
@@ -130,6 +130,7 @@ The `thermostat` option allows one to specify the thermostat to be used during t
 * `nose_hoover_np_dim`: A unique Nose-Hoover chain coupled to every degree of freedom of any of the N particles in the system
 
 The nmthermostat flag is used to couple the chosen thermostat to the normal modes instead of the Cartesian coordinates (default is false).
+Note that for bosonic pimd, the thermostat is coupled to the normal modes of the seperated ring polymers (the permutation with no exchange).
 
 In the `[output]` section, users can request the output of various quantities related to the state of the system (such as positions, velocities, etc.) 
 The format for this section is `state_name = state_unit`. The key (`state_name`) must correspond to a name of a supported state. 
