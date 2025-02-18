@@ -16,11 +16,11 @@
 #endif
 
 #ifndef MINIM
-#define MINIM false                  // Apply minimum image convention when PBC are used
+#define MINIM true                  // Apply minimum image convention when PBC are used
 #endif
 
 #ifndef WRAP
-#define WRAP false                   // Wrap coordinates when PBC are used
+#define WRAP true                   // Wrap coordinates when PBC are used
 #endif
 
 #ifndef OLD_BOSONIC_ALGORITHM
