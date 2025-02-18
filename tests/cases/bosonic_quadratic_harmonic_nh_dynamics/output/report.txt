@@ -1,0 +1,26 @@
+---------
+Parameters
+---------
+Statistics                              	:	Bosonic
+Bosonic algorithm                       	:	Feldman-Hirshberg
+Time propagation algorithm              	:	cartesian
+Periodic boundary conditions            	:	false
+Dimension                               	:	1
+Seed                                    	:	90846
+Coordinate initialization method        	:	random
+Number of atoms                         	:	8
+Number of beads                         	:	8
+Temperature                             	:	5.802 kelvin
+Linear size of the system               	:	158.7531653396754 angstroms
+Mass                                    	:	0.0005485799049146451 amu
+Total number of MD steps                	:	50000
+Interaction potential name              	:	free
+External potential name                 	:	harmonic
+---------
+Features
+---------
+Minimum image convention                	:	false
+Wrapping of coordinates                 	:	false
+Using i-Pi convention                   	:	true
+---------
+Wall time                               	:	00:00:00
