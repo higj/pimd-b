@@ -15,12 +15,12 @@
 
 #if CARROUSEL_BOSONIC_ALGORITHM
 #include "bosonic_exchange_carrousel.h"
-#else
-#if OLD_BOSONIC_ALGORITHM
+#elif OLD_BOSONIC_ALGORITHM
 #include "old_bosonic_exchange.h"
+#elif SHUFFLE_BOSONIC_ALGORITHM
+#include "bosonic_exchange_shuffle.h"
 #else
 #include "bosonic_exchange.h"
-#endif
 #endif
 
 Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, unsigned int seed) :
@@ -119,10 +119,8 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     next_coord = dVec(natoms);
     momenta = dVec(natoms);
     forces = dVec(natoms);
-
     initializePositions(coord, param_obj.sim);
     initializeMomenta(momenta, param_obj.sim);
-
     // Initialize the potential based on the input
     external_potential_name = std::get<std::string>(param_obj.external_pot["name"]);
     interaction_potential_name = std::get<std::string>(param_obj.interaction_pot["name"]);
@@ -141,22 +139,19 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
 
     // Update the coordinate arrays of neighboring particles
     updateNeighboringCoordinates();
-
     bosonic = bosonic && (nbeads > 1); // Bosonic exchange is only possible for P>1
     is_bosonic_bead = bosonic && (this_bead == 0 || this_bead == nbeads - 1);
-
     if (is_bosonic_bead) {
 #if CARROUSEL_BOSONIC_ALGORITHM
     bosonic_exchange = std::make_unique<BosonicExchangeCarrousel>(*this);
-#else
-#if OLD_BOSONIC_ALGORITHM
+#elif OLD_BOSONIC_ALGORITHM
         bosonic_exchange = std::make_unique<OldBosonicExchange>(*this);
+#elif SHUFFLE_BOSONIC_ALGORITHM
+        bosonic_exchange = std::make_unique<BosonicExchangeShuffle>(*this);
 #else
         bosonic_exchange = std::make_unique<BosonicExchange>(*this);
 #endif
-#endif
     }
-
     initializeStates(param_obj.states);
     initializeObservables(param_obj.observables);
     normal_modes = std::make_unique<NormalModes>(*this);

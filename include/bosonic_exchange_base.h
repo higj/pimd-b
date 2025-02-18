@@ -29,6 +29,8 @@ public:
     virtual double getLongestProbability() = 0;
 
     virtual void printBosonicDebug() = 0;
+    
+    std::vector<int> indexes;
 
 protected:
     virtual void assignFirstLast(dVec& x_first_bead, dVec& x_last_bead) const;
@@ -50,6 +52,5 @@ protected:
     virtual void assignIndirectionCoords();
     dVec indirection_x;
     dVec indirection_x_prev;
-    dVec indirection_x_next;
-    std::vector<int> indexes; 
+    dVec indirection_x_next; 
 };

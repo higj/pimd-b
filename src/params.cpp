@@ -56,7 +56,7 @@ Params::Params(const std::string& filename, const int& rank) : reader(filename) 
     if (!labelInArray(init_pos_type, allowed_coord_init_methods))
         throw std::invalid_argument(std::format("The specified coordinate initialization method ({}) is not supported!",
                                                 init_pos_type));
-    
+
     if (init_pos_type == "xyz") {
         try {
             const int dummy = 0;  // Dummy variable for std::make_format_args lvalue reference shenanigans
@@ -80,7 +80,7 @@ Params::Params(const std::string& filename, const int& rank) : reader(filename) 
                   );
         }
     }
-    
+
     sim["init_pos_type"] = init_pos_type;
 
     if (init_pos_type == "xyz") {
@@ -231,7 +231,6 @@ Params::Params(const std::string& filename, const int& rank) : reader(filename) 
             "energy", reader.Get(Sections::EXT_POTENTIAL, "amplitude", "1.0 millielectronvolt"));
         external_pot["phase"] = reader.GetReal(Sections::EXT_POTENTIAL, "phase", 1.0);
     }
-
     /****** Output ******/
     states["positions"] = reader.Get(Sections::OUTPUT, "positions", "off");
     states["velocities"] = reader.Get(Sections::OUTPUT, "velocities", "off");

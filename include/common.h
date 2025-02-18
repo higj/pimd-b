@@ -16,11 +16,11 @@
 #endif
 
 #ifndef MINIM
-#define MINIM false                  // Apply minimum image convention when PBC are used
+#define MINIM true                  // Apply minimum image convention when PBC are used
 #endif
 
 #ifndef WRAP
-#define WRAP false                   // Wrap coordinates when PBC are used
+#define WRAP true                   // Wrap coordinates when PBC are used
 #endif
 
 #ifndef OLD_BOSONIC_ALGORITHM
@@ -29,6 +29,10 @@
 
 #ifndef CARROUSEL_BOSONIC_ALGORITHM
 #define CARROUSEL_BOSONIC_ALGORITHM false  // Enable the new carrousel bosonic algorithm?
+#endif
+
+#ifndef SHUFFLE_BOSONIC_ALGORITHM
+#define SHUFFLE_BOSONIC_ALGORITHM true  // Enable the new carrousel bosonic algorithm?
 #endif
 
 // In the "i-Pi convention" [J. Chem. Phys. 133, 124104 (2010); also J. Chem. Phys. 74, 4078-4095 (1981)], 
