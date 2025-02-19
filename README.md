@@ -3,7 +3,7 @@
 
 ## Introduction 
 
-**PIMD-B++** is a lightweight program for performing Boltzmannonic and bosonic path integral molecular dynamics simulations. For the theory behind the bosonic algorithm consult the [Wiki](https://github.com/higj/pimd-b/wiki/Bosonic-algorithm) page.
+**PIMD-B++** is a lightweight program for performing Boltzmannonic and bosonic path integral molecular dynamics simulations. For the theory behind the bosonic algorithm consult the [Wiki](https://github.com/higj/pimd-b/wiki/Bosonic-algorithm) page. Software design was inspired by [i-PI](https://github.com/i-pi/i-pi/tree/main) and Adrian Del Maestro's [PIMC code](https://github.com/DelMaestroGroup/pimc).
 
 ## Installation
 

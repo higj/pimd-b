@@ -625,6 +625,7 @@ void Simulation::printReport(double wall_time) const {
     report_file << formattedReportLine("Wall time", std::format("{:%T}",
         std::chrono::duration<double>(wall_time)
     ));
+    report_file << formattedReportLine("Wall time per step (sec)", std::format("{:.5e}", wall_time / steps));
 
     report_file.close();
 }

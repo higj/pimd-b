@@ -1,9 +1,17 @@
+/*
+ * This implementation is adapted from a similar code in i-PI.
+ * Original source: https://github.com/i-pi/i-pi/blob/main/ipi/utils/units.py
+ * License: MIT
+ *
+ * Copyright (c) [2014-2015] [i-PI developers]
+ * This adaptation follows the terms of the original license.
+ */
+
 #include <stdexcept>
 #include <regex>
 #include <ranges>
 
 #include "units.h"
-
 
 namespace Units {
     std::tuple<std::string, std::string> separatePrefixUnit(const std::string& unit) {
