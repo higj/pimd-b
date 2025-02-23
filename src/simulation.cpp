@@ -817,6 +817,8 @@ void Simulation::initializeObservables(const StringMap& sim_params) {
     if (bosonic) {
         addObservableIfEnabled(sim_params, "bosonic", "bosonic");
     }
+
+    addObservableIfEnabled(sim_params, "gsf", "gsf");
 }
 
 /**
