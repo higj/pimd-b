@@ -123,7 +123,7 @@ The value (`state_unit`) specifies the unit to which the output must be converte
 will not be printed. By default, all states are set to `false`. If set to `true` (or, equivalently, `on`), the state will be printed in default (atomic) units, assuming the quantity is not dimensionless. Otherwise, the user 
 must specify the desired unit.
 
-Currently, three state *types* are supported:
+Currently, the following state *types* are supported:
 
 * `positions`: Prints the instantaneous coordinates of the beads.
 * `velocities`: Prints the instantaneous velocities of the beads.
@@ -131,11 +131,12 @@ Currently, three state *types* are supported:
 
 In the `[observables]` section, users can specify which physical observables should be evaluated and printed in `simulation.out`. The format for this section is `observable_name = observable_unit`. The key (`observable_name`) must correspond to a name of a supported observable. For the value (`observable_unit`), users can indicate the units to which the results should be converted (if the observable is not dimensionless), or use `off` if the observable should not be calculated at all (this is the default setting for all observables except `energy`). For dimensionless estimators, users may leave the value empty or specify `none` as the unit.
 
-Currently, three observable *types* are supported:
+Currently, the following observable *types* are supported:
 
 * `energy`: Calculates the quantum energy of the system using different estimators. Currently, the thermodynamic (primitive), virial, and potential energy estimators are supported.
 * `classical`: Calculates observables related to the classical ring-polymer system, such as the kinetic energy (due to the fictitious momenta), spring energies, and temperature.
 * `bosonic`: Calculates the probabilities of two types of topologies: where all particles are separate and where all particles are connected (dimensionless estimator). Printed *only* in bosonic simulations.
+* `gsf`: Calculates observables associated with the action resulting from the generalized Suzuki factorization (GSF). The central quantity is $\ln w_{\mathrm{GSF}}$, where $w_{\mathrm{GSF}}$ is the statistical weight that is used for re-weighting the observables in the GSF scheme (see J. Chem. Phys. 135, 064104 (2011)). In addition, it calculates the potential energy estimator at odd imaginary-time slices, based on the operator method.
 
 Internally, the simulation uses atomic units. However, the input parameters may be provided in the units of your choosing (e.g., electron-volts for energy).
 
