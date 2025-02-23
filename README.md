@@ -110,7 +110,7 @@ Similarly, the `initial_velocity` option gives the user the ability to initializ
 
 The `size` option defines the linear size of the system. Currently, only cube geometry is supported. In the absence of periodic boundary conditions, `size` only affects the way initial positions are generated. However, if periodic boundary conditions are enabled, the system size also affects the cutoff distance for interactions, as well as the estimators. Also, the coordinates may be wrapped in this case, and minimum image convention can potentially be employed, if such functionality is desired.
 
-The `propagator` option allows one to specify the time propagation scheme to be used during the simulation. Currently, two options are evailable:
+The `propagator` option allows one to specify the time propagation scheme to be used during the simulation. Currently, the following options are available:
 
 * `cartesian` (default): plain old velocity verlet time propagation of the original cartesian coordinates and momenta. Works well for both distinguishable and bosonic systems
 
