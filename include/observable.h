@@ -86,3 +86,13 @@ public:
 
     void calculate() override;
 };
+
+
+/* -------------------------------- */
+
+class GSFActionObservable : public Observable {
+public:
+    GSFActionObservable(const Simulation& _sim, int _freq, const std::string& _out_unit);
+
+    void calculate() override;
+};
