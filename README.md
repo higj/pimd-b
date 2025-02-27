@@ -3,11 +3,11 @@
 
 ## Introduction 
 
-**PIMD-B++** is a lightweight program for performing Boltzmannonic and bosonic path integral molecular dynamics simulations. For the theory behind the bosonic algorithm consult the [Wiki](https://github.com/higj/pimd-b/wiki/Bosonic-algorithm) page.
+**PIMD-B++** is a lightweight program for path integral molecular dynamics simulations of bosons and distinguishable particles. For the theoretical background of the bosonic algorithm, refer to the [Wiki](https://github.com/higj/pimd-b/wiki/Bosonic-algorithm). The software design is inspired by [i-PI](https://github.com/i-pi/i-pi/) and Adrian Del Maestro's [PIMC code](https://github.com/DelMaestroGroup/pimc). The code adheres to the C++20 standard.
 
 ## Installation
 
-The only required library for this program is MPI (for parallelization). The code is written in accordance with the C++20 standard.
+This program requires MPI for parallel execution. Detailed compilation instructions can be found on the project's [Wiki page](https://github.com/higj/pimd-b/wiki/Instructions-for-compiling).
 
 ### Installing on power
 
@@ -86,6 +86,8 @@ classical = off
 bosonic = off
 ```
 
+### Potentials
+
 Currently, the following potentials are available:
 
 * **External potentials**: `free`, `harmonic`, `double_well` and `cosine`
@@ -97,13 +99,15 @@ requires the `omega` parameter that sets the angular frequency of the oscillator
 All pair interaction potentials require the `cutoff` parameter. By default, the cutoff distance is set to a negative value, which tells the program to calculate all interactions, regardless of the distance between a given pair of particles. Setting cutoff to zero will disable interactions altogether.
 A positive cutoff aborts the calculation of the interaction force if the inter-particle distance is larger than the specified cutoff distance.
 
-The `initial_position` option allows to specify the method of initialization for the bead coordinates. Currently, three options are available:
+### Initialization
+
+The `initial_position` option allows to specify the method of initialization for the bead coordinates. Currently, the following options are available:
 
 * `random` (default): samples random positions in each Cartesian direction from a uniform distribution on the interval $[-L/2, L/2]$, where $L$ is the linear size of the system.
 * `xyz(<filename>.xyz)`: initializes the coordinates based on the provided `.xyz` file. A given particle is initialized at the same location across all imaginary time-slices (beads).
 * `xyz(<filename_format>)`: if the provided filename is a [Python format string](https://docs.python.org/3/library/string.html#formatspec), the indices of the imaginary time-slices (starting with either 0 or 1, automatically detected from the available files) are substituted as the format argument, and the resulting filenames are then used to initialize the coordinates. The formatted string can contain only a single replacement field.
 
-Similarly, the `initial_velocity` option gives the user the ability to initialize the bead velocities. Three options are available as of now:
+Similarly, the `initial_velocity` option gives the user the ability to initialize the bead velocities. Currently, the following options are available:
 
 * `random` (default): samples velocities from the Maxwell-Boltzmann distribution at the given temperature of the simulation.
 * `manual`: the velocities are initialized from the files `init/vel_XX.dat` where `XX` symbolizes the two-digit index of the imaginary time-slice, starting from 01.
@@ -111,26 +115,32 @@ Similarly, the `initial_velocity` option gives the user the ability to initializ
 
 The `size` option defines the linear size of the system. Currently, only cube geometry is supported. In the absence of periodic boundary conditions, `size` only affects the way initial positions are generated. However, if periodic boundary conditions are enabled, the system size also affects the cutoff distance for interactions, as well as the estimators. Also, the coordinates may be wrapped in this case, and minimum image convention can potentially be employed, if such functionality is desired.
 
-The `propagator` option allows one to specify the time propagation scheme to be used during the simulation. Currently, two options are evailable:
+### Propagators
+
+The `propagator` option allows one to specify the time propagation scheme to be used during the simulation. Currently, the following options are available:
 
 * `cartesian` (default): plain old velocity verlet time propagation of the original cartesian coordinates and momenta. Works well for both distinguishable and bosonic systems
 
 * `normal_modes`: propagation of the normal modes of the ring polymers, using the symmetric Trotter expansion. Currently not available for bosons. 
 
-The `thermostat` option allows one to specify the thermostat to be used during the simulation. Currently, five options are evailable:
+### Thermostats
 
-* `none`: No thermostat, performs an NVE simulation
+The `thermostat` option allows one to specify the thermostat to be used during the simulation. Currently, the following options are available:
+
+* `none`: No thermostat. Performs an NVE simulation
 
 * `langevin`: A Langevin thermostat
 
-* `nose_hoover`: A single Nose-Hoover chain coupled to all the system
+* `nose_hoover`: A single Nosé–Hoover chain coupled to the entire system
 
-* `nose_hoover_np`: A unique Nose-Hoover chain coupled to each one of the N particles in the system
+* `nose_hoover_np`: A unique Nosé–Hoover chain coupled to each one of the $N$ particles in the system
 
-* `nose_hoover_np_dim`: A unique Nose-Hoover chain coupled to every degree of freedom of any of the N particles in the system
+* `nose_hoover_np_dim`: A unique Nosé–Hoover chain coupled to every degree of freedom of any of the $N$ particles in the system
 
-The nmthermostat flag is used to couple the chosen thermostat to the normal modes instead of the Cartesian coordinates (default is false).
-Note that for bosonic pimd, the thermostat is coupled to the normal modes of the seperated ring polymers (the permutation with no exchange).
+The `nmthermostat` flag is used to couple the chosen thermostat to the normal modes instead of the Cartesian coordinates (default is `false`).
+Note that for bosonic PIMD, the thermostat is coupled to the normal modes of the seperated ring polymers (corresponding to the identity permutation, with no exchange).
+
+### States and observables
 
 In the `[output]` section, users can request the output of various quantities related to the state of the system (such as positions, velocities, etc.) 
 The format for this section is `state_name = state_unit`. The key (`state_name`) must correspond to a name of a supported state. 
@@ -138,7 +148,7 @@ The value (`state_unit`) specifies the unit to which the output must be converte
 will not be printed. By default, all states are set to `false`. If set to `true` (or, equivalently, `on`), the state will be printed in default (atomic) units, assuming the quantity is not dimensionless. Otherwise, the user 
 must specify the desired unit.
 
-Currently, three state *types* are supported:
+Currently, the following state *types* are supported:
 
 * `positions`: Prints the instantaneous coordinates of the beads.
 * `velocities`: Prints the instantaneous velocities of the beads.
@@ -146,13 +156,16 @@ Currently, three state *types* are supported:
 
 In the `[observables]` section, users can specify which physical observables should be evaluated and printed in `simulation.out`. The format for this section is `observable_name = observable_unit`. The key (`observable_name`) must correspond to a name of a supported observable. For the value (`observable_unit`), users can indicate the units to which the results should be converted (if the observable is not dimensionless), or use `off` if the observable should not be calculated at all (this is the default setting for all observables except `energy`). For dimensionless estimators, users may leave the value empty or specify `none` as the unit.
 
-Currently, three observable *types* are supported:
+Currently, the following observable *types* are supported:
 
 * `energy`: Calculates the quantum energy of the system using different estimators. Currently, the thermodynamic (primitive), virial, and potential energy estimators are supported.
 * `classical`: Calculates observables related to the classical ring-polymer system, such as the kinetic energy (due to the fictitious momenta), spring energies, and temperature.
 * `bosonic`: Calculates the probabilities of two types of topologies: where all particles are separate and where all particles are connected (dimensionless estimator). Printed *only* in bosonic simulations.
+* `gsf`: Calculates observables associated with the action resulting from the generalized Suzuki factorization (GSF). The central quantity is $\ln w_{\mathrm{GSF}}$, where $w_{\mathrm{GSF}}$ is the statistical weight that is used for re-weighting the observables in the GSF scheme (see J. Chem. Phys. 135, 064104 (2011)). In addition, it calculates the potential energy estimator at odd imaginary-time slices, based on the operator method.
 
 Internally, the simulation uses atomic units. However, the input parameters may be provided in the units of your choosing (e.g., electron-volts for energy).
+
+### Overview of input options
 
 The following options are available in the `[simulation]` and `[system]` sections of the configuration file:
 

@@ -1,3 +1,12 @@
+/*
+ * This implementation is adapted from a similar code in i-PI.
+ * Original source: https://github.com/i-pi/i-pi/blob/main/ipi/utils/units.py
+ * License: MIT
+ *
+ * Copyright (c) [2014-2015] [i-PI developers]
+ * This adaptation follows the terms of the original license.
+ */
+
 #pragma once
 
 #include <unordered_map>

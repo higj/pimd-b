@@ -187,6 +187,23 @@ public:
     }
 
     /**
+     * Overload the addition operator for vector addition.
+     *
+     * @param other Vector array to be added.
+     * @return New vector resulting from the addition.
+     */
+    VectorArray<T, dim> operator+(const VectorArray<T, dim>& other) const {
+        VectorArray<T, dim> result(*this);  // Create a copy of the current VectorArray
+
+        // Perform element-wise addition
+        for (int i = 0; i < size(); ++i) {
+            result.raw()[i] += other[i];
+        }
+
+        return result;
+    }
+
+    /**
      * Overload the multiplication operator for scalar multiplication (from the right-hand side).
      *
      * @param rhs_scalar Scalar value to multiply the vector by.
