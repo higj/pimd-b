@@ -45,6 +45,7 @@ private:
     StringsList allowed_coord_init_methods;   // Allowed coordinate initialization methods
     StringsList allowed_vel_init_methods;     // Allowed velocity initialization methods
     StringsList allowed_propagators;          // Allowed time propagation algorithms
+    StringsList allowed_thermostats;          // Allowed thermostat names
 
     /// @todo Consider refactoring this method to a more general utility class (maybe to units)?
     static StringsList splitString(const std::string& line, char delimiter = ' ');

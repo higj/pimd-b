@@ -11,10 +11,11 @@
 #include "potential.h"
 #include "bosonic_exchange_base.h"
 
-
+class NormalModes;
 class State;
 class Observable;
 class Propagator;
+class Thermostat;
 
 class Simulation
 {
@@ -24,6 +25,7 @@ public:
     double dt;          // Timestep
     double size;        // Linear system size (TODO: Add support for Ly, Lz,...)
     double gamma;       // Friction constant of the Langevin thermostat
+    int    nchains;     // Number of Nose-Hoover chains
     double threshold;   // Percentage of steps to throw away (thermalization)
 
     int natoms;         // Number of atoms in the system
@@ -32,10 +34,10 @@ public:
     long sfreq;         // Save frequency (how often the observables are recorded)
     long steps;         // Total number of MD steps
 
-    bool enable_t;      // Enable the thermostat?
     bool bosonic;       // Is the simulation bosonic?
     bool fixcom;        // Fix the center of mass?
     bool pbc;           // Enable periodic boundary conditions?
+    bool nmthermostat;  // Couple thermostat to normal modes
 
     bool out_pos;       // Output trajectories?
     bool out_vel;       // Output velocities?
@@ -82,8 +84,10 @@ public:
     double sampleMaxwellBoltzmann();
     
     std::unique_ptr<Propagator> propagator;
-    
-    void langevinStep();
+    std::unique_ptr<Thermostat> thermostat;
+
+    std::unique_ptr<NormalModes> normal_modes;
+
     void run();
 
     std::unique_ptr<Potential> ext_potential;
@@ -108,6 +112,7 @@ public:
     int this_bead;   // Current process id ("rank" of MPI_Comm_rank)
     int nproc;       // Number of processes ("size" of MPI_Comm_size)
     unsigned int params_seed;
+    std::string thermostat_type;
 
 private:
     int md_step;

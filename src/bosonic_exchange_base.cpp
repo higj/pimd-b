@@ -34,7 +34,7 @@ void BosonicExchangeBase::getBeadsSeparation(const dVec& x1, int l1, const dVec&
     for (int axis = 0; axis < NDIM; ++axis) {
         double dx = x2(l2, axis) - x1(l1, axis);
 #if MINIM
-        if (pbc)
+        if (sim.pbc)
             applyMinimumImage(dx, sim.size);
 #endif
         diff[axis] = dx;

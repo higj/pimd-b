@@ -1,6 +1,5 @@
 ﻿#include <cstring>
 #include "mpi.h"
-
 #include "params.h"
 #include "simulation.h"
 
@@ -51,10 +50,8 @@ int main(int argc, char** argv) {
 
             // Load the simulation parameters from the configuration file
             Params params(config_filename, rank);
-
             // Initialize the random number generator seed based on the current time
             Simulation sim(rank, size, params, static_cast<unsigned int>(time(nullptr)));
-
             sim.run();
         }
     } catch (const std::invalid_argument& ex) {
