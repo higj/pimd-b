@@ -38,12 +38,9 @@ void printProgress(int this_step, int total_steps, int this_rank, int out_rank) 
     }
 }
 
-void applyMinimumImage(double& dx, double L) {
-    dx -= L * floor(dx / L + 0.5);
-}
-
-void periodicWrap(double& x, double L) {
-    x -= L * std::nearbyint(x / L);
+// Apply mic for distances and wrapping for coordinates
+void applyMinimumImage(double& x, double L) {
+    x -= L * floor(x / L + 0.5);
 }
 
 void loadTrajectories(const std::string& xyz_filename, dVec& destination) {

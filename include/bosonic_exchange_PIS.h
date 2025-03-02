@@ -10,4 +10,7 @@ public:
 
 protected:
     void assignIndirectionCoords() override;
+    // double current_measure;
+    // double measure_shuffle(std::vector<int>& suggested_indexes) const;
+    int get_next_index(int current_index, std::vector<int>& suggested_indexes) const;
 };

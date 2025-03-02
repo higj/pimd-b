@@ -10,11 +10,6 @@ void parseArguments(int arg_num, char** arg_arr, std::string& conf_filename, boo
     for (int i = 1; i < arg_num; ++i) {
         if (std::strcmp(arg_arr[i], "--dim") == 0) {
             printInfo(std::format("Program was compiled for {}-dimensional systems", NDIM), info_flag, rank);
-        } else if (std::strcmp(arg_arr[i], "--bosonic_alg") == 0) {
-            if constexpr (OLD_BOSONIC_ALGORITHM)
-                printInfo("Program was compiled with naive bosonic algorithm.", info_flag, rank);
-            else
-                printInfo("Program was compiled with quadratic bosonic algorithm.", info_flag, rank);
         } else if (std::strcmp(arg_arr[i], "-in") == 0) {
             // Check if there is another argument after "-in"
             if (i + 1 < arg_num) {

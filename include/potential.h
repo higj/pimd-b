@@ -1,12 +1,15 @@
 #pragma once
 
 #include "common.h"
+class Simulation;
 
 /* -------------- Basic potential class -------------- */
 class Potential {
 public:
-    Potential();
+    Potential(Simulation& _sim);
     virtual ~Potential() = default;
+
+    virtual dVec getGradV(const dVec& x);
 
     // Potential
     virtual double V(const dVec& x) {
@@ -26,12 +29,14 @@ public:
     // Tail correction
     /// @todo Implement the tail correction
     double tailV;
+private:
+    Simulation& sim;
 };
 
 /* -------------- Isotropic harmonic potential -------------- */
 class HarmonicPotential : public Potential {
 public:
-    HarmonicPotential(double mass, double omega);
+    HarmonicPotential(Simulation& _sim, double mass, double omega);
     ~HarmonicPotential() override = default;
 
     // Potential
@@ -52,7 +57,7 @@ private:
 /* -------------- Isotropic double well potential -------------- */
 class DoubleWellPotential : public Potential {
 public:
-    DoubleWellPotential(double mass, double strength, double loc);
+    DoubleWellPotential(Simulation& _sim, double mass, double strength, double loc);
     ~DoubleWellPotential() override = default;
 
     // Potential
@@ -73,7 +78,7 @@ private:
 /* -------------- Isotropic cosine potential -------------- */
 class CosinePotential : public Potential {
 public:
-    CosinePotential(double amplitude, double wavelength, double phase);
+    CosinePotential(Simulation& _sim, double amplitude, double wavelength, double phase);
     ~CosinePotential() override = default;
 
     // Potential
@@ -95,7 +100,7 @@ private:
 /* -------------- Dipole potential -------------- */
 class DipolePotential : public Potential {
 public:
-    DipolePotential(double strength);
+    DipolePotential(Simulation& _sim, double strength);
     ~DipolePotential() override = default;
 
     // Potential
@@ -114,7 +119,7 @@ private:
 /* -------------- Aziz potential -------------- */
 class AzizPotential : public Potential {
 public:
-    AzizPotential();
+    AzizPotential(Simulation& _sim);
     ~AzizPotential() override = default;
 
     // Potential

@@ -1,11 +1,27 @@
 #include "potential.h"
+#include "simulation.h"
 #include <numbers>
 #include <cmath>
+#include <iostream>
 
-Potential::Potential() : tailV(0.0) {}
+Potential::Potential(Simulation& _sim) : tailV(0.0), sim(_sim) {}
+
+dVec Potential::getGradV(const dVec& x) {
+    if (sim.getStep() < sim.start_potential_activation) {
+        return dVec(x.len());
+    }
+    
+    dVec tempr = gradV(x);
+    if (sim.getStep() >= sim.finish_potential_activation) {
+        return tempr;
+    }
+    const double prefactor = (sim.getStep() - sim.start_potential_activation) / double(sim.finish_potential_activation - sim.start_potential_activation);
+    std::cout << prefactor << " ";
+    return prefactor * tempr;
+}
 
 // Isotropic harmonic potential
-HarmonicPotential::HarmonicPotential(double mass, double omega) : mass(mass), omega(omega) {
+HarmonicPotential::HarmonicPotential(Simulation& _sim, double mass, double omega) : mass(mass), omega(omega), Potential(_sim) {
     k = mass * omega * omega;
 }
 
@@ -32,8 +48,8 @@ double HarmonicPotential::laplacianV(const dVec& x) {
 }
 
 // Double-well potential
-DoubleWellPotential::DoubleWellPotential(double mass, double strength, double loc)
-    : mass(mass), strength(strength), loc(loc) {}
+DoubleWellPotential::DoubleWellPotential(Simulation& _sim, double mass, double strength, double loc)
+    : mass(mass), strength(strength), loc(loc), Potential(_sim) {}
 
 double DoubleWellPotential::V(const dVec& x) {
     double potential = 0.0;
@@ -77,8 +93,8 @@ double DoubleWellPotential::laplacianV(const dVec& x) {
 }
 
 // Cosine potential
-CosinePotential::CosinePotential(double amplitude, double wavelength, double phase)
-    : amplitude(amplitude), wavelength(wavelength), phase(phase) {
+CosinePotential::CosinePotential(Simulation& _sim, double amplitude, double wavelength, double phase)
+    : amplitude(amplitude), wavelength(wavelength), phase(phase), Potential(_sim) {
     k = 2 * std::numbers::pi / wavelength;
 }
 
@@ -116,7 +132,7 @@ double CosinePotential::laplacianV(const dVec& x) {
 }
 
 // Dipole potential
-DipolePotential::DipolePotential(double strength) : strength(strength) {}
+DipolePotential::DipolePotential(Simulation& _sim, double strength) : strength(strength), Potential(_sim) {}
 
 double DipolePotential::V(const dVec& x) {
     double potential = 0.0;
@@ -166,7 +182,7 @@ double DipolePotential::laplacianV(const dVec& x) {
 }
 
 // Aziz potential
-AzizPotential::AzizPotential() {
+AzizPotential::AzizPotential(Simulation& _sim) : Potential(_sim) {
     // Aziz potential (HFDHE2) parameters, based on [J. Chem. Phys. 70, 4330-4342 (1979)].
     // The dimensional quantities (rm and epsilon) are in atomic units.
     rm = 5.60738;            // 5.60738 Bohr = 2.9673 Angstrom

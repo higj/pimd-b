@@ -171,8 +171,21 @@ Params::Params(const std::string& filename, const int& rank) : reader(filename) 
     sim["thermostat_type"] = thermostat_type;
     
     if (!labelInArray(thermostat_type, allowed_thermostats))
-        throw std::invalid_argument(std::format("The specified thermostat ({}) is not supported!", propagator_type));
-        
+        throw std::invalid_argument(std::format("The specified thermostat ({}) is not supported!", thermostat_type));
+
+    // Implemented bosonic exhcange elgorithms:
+    // "factorial": naive algorithm that scales like N!
+    // "feldman_hirshberg": Algorithm from Feldman & Hirshberg (doi 10.1063/5.0173749)
+    // "carrousel": The indexing of the particles shifts each timestep by 1 like a carrousel
+    // "shuffle": The indexing of the particles is shuffled each timestep
+    // "PIS": The indexing of the particles is shuffled each timestep with a probabilistic algorithm
+    allowed_exchange_algorithms = { "factorial", "feldman_hirshberg", "carrousel", "shuffle", "PIS" };
+    std::string exchange_algorithm_type = reader.GetString(Sections::SIMULATION, "exchange_algorithm", "feldman_hirshberg");
+    sim["exchange_algorithm_type"] = exchange_algorithm_type;
+    
+    if (!labelInArray(exchange_algorithm_type, allowed_exchange_algorithms))
+        throw std::invalid_argument(std::format("The specified exchange algorithm ({}) is not supported!", exchange_algorithm_type));
+
     /* System params */
     sys["temperature"] = getQuantity("temperature", reader.Get(Sections::SYSTEM, "temperature", "1.0 kelvin"));
     if (double temp = std::get<double>(sys["temperature"]); temp <= 0.0) {
@@ -204,6 +217,8 @@ Params::Params(const std::string& filename, const int& rank) : reader(filename) 
 
     interaction_pot["name"] = interaction_name;
     interaction_pot["cutoff"] = getQuantity("length", reader.Get(Sections::INT_POTENTIAL, "cutoff", "-1.0 angstrom"));
+    interaction_pot["start_potential_activation"] = reader.GetInteger(Sections::INT_POTENTIAL, "start_potential_activation", 0);
+    interaction_pot["finish_potential_activation"] = reader.GetInteger(Sections::INT_POTENTIAL, "finish_potential_activation", 0);
 
     if (interaction_name == "free") {
         // In the special case of free particles, the cutoff distance is set to zero

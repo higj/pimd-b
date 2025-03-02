@@ -19,22 +19,6 @@
 #define MINIM true                  // Apply minimum image convention when PBC are used
 #endif
 
-#ifndef WRAP
-#define WRAP true                   // Wrap coordinates when PBC are used
-#endif
-
-#ifndef OLD_BOSONIC_ALGORITHM
-#define OLD_BOSONIC_ALGORITHM false  // Enable the old bosonic algorithm that scales as O(N!)?
-#endif
-
-#ifndef CARROUSEL_BOSONIC_ALGORITHM
-#define CARROUSEL_BOSONIC_ALGORITHM false  // Enable the new carrousel bosonic algorithm?
-#endif
-
-#ifndef SHUFFLE_BOSONIC_ALGORITHM
-#define SHUFFLE_BOSONIC_ALGORITHM true  // Enable the new carrousel bosonic algorithm?
-#endif
-
 // In the "i-Pi convention" [J. Chem. Phys. 133, 124104 (2010); also J. Chem. Phys. 74, 4078-4095 (1981)], 
 // the Boltzmann exponents have the form exp[-(beta/P)H], where H is the classical Hamiltonian of the 
 // ring polymers. This results in a canonical distribution at P times the physical temperature.
@@ -265,18 +249,8 @@ void printError(const std::string& msg, int this_rank, const std::string& err_ty
 // Print a progress bar
 void printProgress(int this_step, int total_steps, int this_rank, int out_rank = 0);
 
-// To handle periodic boundary conditions, we employ the Class C storage
-// concept [Z. Phys. Chem. 227 (2013) 345-352], allowing atoms to move
-// outside the primary simulation box. That is, the coordinates are not folded
-// into the simulation box. Instead, we account for the PBC when calculating the
-// distances between particles (or any spatial vector differences).
-// This is done using Algorithm C4. It calculates the remainder of dx
-// on the interval [-L/2, L/2].
-void applyMinimumImage(double& dx, double L);
-//void applyMinimumImage(dVec& dx_arr, double L);
 
-void periodicWrap(double& x, double L);
-//void periodicWrap(dVec& pos_arr, double L);
+void applyMinimumImage(double& x, double L);
 
 /**
  * Load particle positions from an .xyz file to the destination vector.

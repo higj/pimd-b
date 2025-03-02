@@ -13,15 +13,11 @@
 #include "normal_modes.h"
 #include "simulation.h"
 
-#if CARROUSEL_BOSONIC_ALGORITHM
 #include "bosonic_exchange_carrousel.h"
-#elif OLD_BOSONIC_ALGORITHM
 #include "old_bosonic_exchange.h"
-#elif SHUFFLE_BOSONIC_ALGORITHM
 #include "bosonic_exchange_shuffle.h"
-#else
 #include "bosonic_exchange.h"
-#endif
+#include "bosonic_exchange_PIS.h"
 
 Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, unsigned int seed) :
     bosonic_exchange(nullptr),
@@ -89,7 +85,6 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     }
 
     // Choose thermostat
-    // CR: extract method
     if (thermostat_type == "langevin") {
         thermostat = std::make_unique<LangevinThermostat>(*this, nmthermostat);
     } else if (thermostat_type == "nose_hoover") {
@@ -112,6 +107,8 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     // Initialize the potential based on the input
     external_potential_name = std::get<std::string>(param_obj.external_pot["name"]);
     interaction_potential_name = std::get<std::string>(param_obj.interaction_pot["name"]);
+    getVariant(param_obj.interaction_pot["start_potential_activation"], start_potential_activation);
+    getVariant(param_obj.interaction_pot["finish_potential_activation"], finish_potential_activation);
 
     // If the interaction potential is set to "free", then the cutoff distance is meaningless
     int_pot_cutoff = (interaction_potential_name == "free") ? 0.0 : std::get<double>(param_obj.interaction_pot["cutoff"]);
@@ -130,15 +127,18 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     bosonic = bosonic && (nbeads > 1); // Bosonic exchange is only possible for P>1
     is_bosonic_bead = bosonic && (this_bead == 0 || this_bead == nbeads - 1);
     if (is_bosonic_bead) {
-#if CARROUSEL_BOSONIC_ALGORITHM
-    bosonic_exchange = std::make_unique<BosonicExchangeCarrousel>(*this);
-#elif OLD_BOSONIC_ALGORITHM
-        bosonic_exchange = std::make_unique<OldBosonicExchange>(*this);
-#elif SHUFFLE_BOSONIC_ALGORITHM
-        bosonic_exchange = std::make_unique<BosonicExchangeShuffle>(*this);
-#else
-        bosonic_exchange = std::make_unique<BosonicExchange>(*this);
-#endif
+        exchange_algorithm_type = std::get<std::string>(param_obj.sim["exchange_algorithm_type"]);
+        if (exchange_algorithm_type == "factorial") {
+            bosonic_exchange = std::make_unique<OldBosonicExchange>(*this);
+        } else if (exchange_algorithm_type == "feldman_hirshberg") {
+            bosonic_exchange = std::make_unique<BosonicExchange>(*this);
+        } else if (exchange_algorithm_type == "carrousel") {
+            bosonic_exchange = std::make_unique<BosonicExchangeCarrousel>(*this);
+        } else if (exchange_algorithm_type == "shuffle") {
+            bosonic_exchange = std::make_unique<BosonicExchangeShuffle>(*this);     
+        } else if (exchange_algorithm_type == "PIS") {
+            bosonic_exchange = std::make_unique<BosonicExchangePIS>(*this);     
+        }
     }
     initializeStates(param_obj.states);
     initializeObservables(param_obj.observables);
@@ -477,7 +477,7 @@ void Simulation::updateSpringForces(dVec& spring_force_arr) const {
  */
 void Simulation::updatePhysicalForces(dVec& physical_force_arr) const {
     // Calculate the external forces acting on the particles
-    physical_force_arr = (-1.0) * ext_potential->gradV(coord);
+    physical_force_arr = (-1.0) * ext_potential->getGradV(coord);
 
     if (int_pot_cutoff != 0.0) {
         for (int ptcl_one = 0; ptcl_one < natoms; ++ptcl_one) {
@@ -492,7 +492,7 @@ void Simulation::updatePhysicalForces(dVec& physical_force_arr) const {
                 // We use the convention that when cutoff < 0 then the interaction is
                 // calculated for all distances.
                 if (const double distance = diff.norm(); distance < int_pot_cutoff || int_pot_cutoff < 0.0) {
-                    dVec force_on_one = (-1.0) * int_potential->gradV(diff);
+                    dVec force_on_one = (-1.0) * int_potential->getGradV(diff);
 
                     for (int axis = 0; axis < NDIM; ++axis) {
                         physical_force_arr(ptcl_one, axis) += force_on_one(0, axis);
@@ -609,7 +609,6 @@ void Simulation::printReport(double wall_time) const {
 
     report_file << "---------\nFeatures\n---------\n";
     report_file << formattedReportLine("Minimum image convention", MINIM);
-    report_file << formattedReportLine("Wrapping of coordinates", WRAP);
     report_file << formattedReportLine("Using i-Pi convention", IPI_CONVENTION);
 
     report_file << "---------\n";
@@ -661,36 +660,36 @@ void Simulation::zeroMomentum() {
 std::unique_ptr<Potential> Simulation::initializePotential(const std::string& potential_name,
                                                            const VariantMap& potential_options) {
     if (potential_name == "free") {
-        return std::make_unique<Potential>();
+        return std::make_unique<Potential>(*this);
     }
 
     if (potential_name == "harmonic") {
         double omega = std::get<double>(potential_options.at("omega"));
-        return std::make_unique<HarmonicPotential>(mass, omega);
+        return std::make_unique<HarmonicPotential>(*this, mass, omega);
     }
 
     if (potential_name == "double_well") {
         double strength = std::get<double>(potential_options.at("strength"));
         double loc = std::get<double>(potential_options.at("location"));
-        return std::make_unique<DoubleWellPotential>(mass, strength, loc);
+        return std::make_unique<DoubleWellPotential>(*this, mass, strength, loc);
     }
 
     if (potential_name == "dipole") {
         double strength = std::get<double>(potential_options.at("strength"));
-        return std::make_unique<DipolePotential>(strength);
+        return std::make_unique<DipolePotential>(*this, strength);
     }
 
     if (potential_name == "cosine") {
         double amplitude = std::get<double>(potential_options.at("amplitude"));
         double phase = std::get<double>(potential_options.at("phase"));
-        return std::make_unique<CosinePotential>(amplitude, size, phase);
+        return std::make_unique<CosinePotential>(*this, amplitude, size, phase);
     }
 
     if (potential_name == "aziz") {
-        return std::make_unique<AzizPotential>();
+        return std::make_unique<AzizPotential>(*this);
     }
 
-    return std::make_unique<Potential>();
+    return std::make_unique<Potential>(*this);
 }
 
 /**

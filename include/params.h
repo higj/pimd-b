@@ -46,6 +46,7 @@ private:
     StringsList allowed_vel_init_methods;     // Allowed velocity initialization methods
     StringsList allowed_propagators;          // Allowed time propagation algorithms
     StringsList allowed_thermostats;          // Allowed thermostat names
+    StringsList allowed_exchange_algorithms;  // Allowed exchange algorithms
 
     /// @todo Consider refactoring this method to a more general utility class (maybe to units)?
     static StringsList splitString(const std::string& line, char delimiter = ' ');

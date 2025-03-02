@@ -39,6 +39,10 @@ void Propagator::coordsStep() {
     for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
             sim.coord(ptcl_idx, axis) += sim.dt * sim.momenta(ptcl_idx, axis) / sim.mass;
+#if MINIM
+            if (sim.pbc)
+                applyMinimumImage(sim.coord(ptcl_idx, axis), sim.size);
+#endif
         }
     }
 }

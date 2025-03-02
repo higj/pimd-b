@@ -85,6 +85,7 @@ public:
     
     std::unique_ptr<Propagator> propagator;
     std::unique_ptr<Thermostat> thermostat;
+    std::string thermostat_type;
 
     std::unique_ptr<NormalModes> normal_modes;
 
@@ -112,7 +113,8 @@ public:
     int this_bead;   // Current process id ("rank" of MPI_Comm_rank)
     int nproc;       // Number of processes ("size" of MPI_Comm_size)
     unsigned int params_seed;
-    std::string thermostat_type;
+
+    int start_potential_activation, finish_potential_activation;
 
 private:
     int md_step;
@@ -122,6 +124,7 @@ private:
     std::string init_pos_type;
     std::string init_vel_type;
     std::string propagator_type;
+    std::string exchange_algorithm_type;
 
     void printDebug(const std::string& text, int target_bead = 0) const;
 };
