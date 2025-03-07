@@ -1,8 +1,9 @@
 #include "propagator.h"
-#include <numbers>
 #include "normal_modes.h"
 #include "simulation.h"
 #include "common.h"
+
+#include <numbers>
 
 Propagator::Propagator(Simulation& _sim) : sim(_sim) {
 }

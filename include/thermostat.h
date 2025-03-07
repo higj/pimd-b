@@ -1,7 +1,6 @@
 #pragma once
 
 #include <vector>
-#include "common.h"
 #include <memory>
 
 class Simulation;
@@ -49,7 +48,7 @@ protected:
     double required_energy; // A measure of the required preserved energy (kT times the number of degrees of freedom associated with the chain)
     std::vector<double> eta_dot, eta_dot_dot; // The first and second derivatives of eta
     std::vector<double> eta; 
-    double singleChainGetAdditionToH(const int& expected_energy, const int& index);
+    double singleChainGetAdditionToH(const int& ndof, const int& index);
 };
 
 /* -------------------------------- */

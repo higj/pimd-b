@@ -22,6 +22,7 @@ class Simulation
 public:
     double temperature;
     double beta;        // Thermodynamic beta 1/(kB*T)
+    double thermo_beta; // Inverse temperature at which the simulation is actually performed ("thermostat beta")
     double dt;          // Timestep
     double size;        // Linear system size (TODO: Add support for Ly, Lz,...)
     double gamma;       // Friction constant of the Langevin thermostat

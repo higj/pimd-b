@@ -1,9 +1,10 @@
 #include "thermostat.h"
-#include <numbers>
 #include "simulation.h"
 #include "common.h"
 #include "normal_modes.h"
 #include "thermostat_coupling.h"
+
+#include <numbers>
 
 Thermostat::Thermostat(Simulation& _sim, bool normal_modes) : sim(_sim) {
     // Choose coupling (Cartesian coords or normal modes of distinguishable ring polymers)
@@ -31,15 +32,8 @@ double Thermostat::getAdditionToH() {
 /* -------------------------------- */
 
 LangevinThermostat::LangevinThermostat(Simulation& _sim, bool normal_modes) : Thermostat(_sim, normal_modes) {
-    // CR: this->a
     friction_coefficient = exp(-0.5 * sim.gamma * sim.dt);
-#if IPI_CONVENTION
-    // CR: this->b
-    noise_coefficient = sqrt((1 - friction_coefficient * friction_coefficient) * sim.mass * sim.nbeads / sim.beta);
-#else
-    // CR: this->b
-    noise_coefficient = sqrt((1 - friction_coefficient * friction_coefficient) * sim.mass / sim.beta);
-#endif
+    noise_coefficient = sqrt((1 - friction_coefficient * friction_coefficient) * sim.mass / sim.thermo_beta);
 }
 
 void LangevinThermostat::momentaUpdate() {
@@ -61,23 +55,29 @@ void LangevinThermostat::momentaUpdate() {
 NoseHooverThermostat::NoseHooverThermostat(Simulation& _sim, bool normal_modes, int _nchains) : Thermostat(
     _sim, normal_modes) {
     nchains = _nchains;
+
+    // Q1 and Qi (where i>1) are the masses of the extended variables. The choice
+    // is based on Sec. 2.5 in Martyna, G. J. et al. (1996), Mol. Phys., 87(5), pp. 1117-1157.
+    // For the fluctuation frequency, we choose the spring frequency of the ring polymers.
 #if IPI_CONVENTION
+    /// TODO: Explain why there is no division by nbeads
     Qi = Constants::hbar * Constants::hbar * sim.beta;
 #else
     Qi = Constants::hbar * Constants::hbar * sim.beta / sim.nbeads;
 #endif
+    // Q1/Qi should be equal to the number of degrees of freedom (NDOF).
+    // In the absence of constraints, NDOF=NDIM*natoms.
     Q1 = NDIM * sim.natoms * Qi;
+
     eta = std::vector<double>(nchains, 0.0);
     eta_dot = std::vector<double>(nchains, 0.0);
     eta_dot_dot = std::vector<double>(nchains, 0.0);
+
     dt2 = 0.5 * sim.dt;
     dt4 = 0.25 * sim.dt;
     dt8 = 0.125 * sim.dt;
-#if IPI_CONVENTION
-    required_energy = NDIM * sim.natoms * sim.nbeads / sim.beta;
-#else
-    required_energy = NDIM * sim.natoms / sim.beta;
-#endif
+
+    required_energy = NDIM * sim.natoms / sim.thermo_beta;
 }
 
 // CR: Add a comment explaining what the function does
@@ -85,24 +85,27 @@ double NoseHooverThermostat::getAdditionToH() {
     return singleChainGetAdditionToH(NDIM * sim.natoms, 0);
 }
 
-// CR: Add a comment explaining what the function does.
-// For example, what is "expected_energy", and why is it an integer?
-// Refer to an Equation in the paper, if possible, to make it clear.
-double NoseHooverThermostat::singleChainGetAdditionToH(const int& expected_energy, const int& index) {
+/**
+ * Calculate the contribution of NHC to the conserved quantity.
+ * Corresponds to the difference between the conserved quantity
+ * and the classical Hamiltonian of the ring polymers.
+ *
+ * @param ndof Number of degrees of freedom
+ * @param index Index of the first component in the chain.
+ * @return Energy contribution to the conserved quantity.
+ */
+double NoseHooverThermostat::singleChainGetAdditionToH(const int& ndof, const int& index) {
+    // First, we add the kinetic energy associated with the thermostat.
+    // Note that the momentum of the thermostat is given by Qi*eta_dot.
     double addition_to_H = 0.5 * Q1 * eta_dot[index] * eta_dot[index];
-#if IPI_CONVENTION
-    addition_to_H += expected_energy * eta[index] * sim.nbeads / sim.beta;
-#else
-    additionToH += expected_energy * eta[index] / sim.beta;
-#endif
 
+    // Then, we add the other term that is proportional to kT*eta
+    addition_to_H += ndof * eta[index] / sim.thermo_beta;
+
+    // Similar calculation, but for the rest of the thermostats
     for (int i = 1; i < nchains; i++) {
         addition_to_H += 0.5 * Qi * eta_dot[index + i] * eta_dot[index + i];
-#if IPI_CONVENTION
-        addition_to_H += eta[index + i] * sim.nbeads / sim.beta;
-#else
-        addition_to_H += eta[index + i] / sim.beta;
-#endif
+        addition_to_H += eta[index + i] / sim.thermo_beta;
     }
 
     return addition_to_H;
@@ -113,7 +116,7 @@ void NoseHooverThermostat::momentaUpdate() {
     double current_energy = 0.0;
     for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
-            double momentum_for_calc = coupling->getMomentumForCalc(ptcl_idx, axis);
+            const double momentum_for_calc = coupling->getMomentumForCalc(ptcl_idx, axis);
             current_energy += momentum_for_calc * momentum_for_calc;
         }
     }
@@ -134,8 +137,8 @@ void NoseHooverThermostat::momentaUpdate() {
 
 /**
  * Calculates the scaling factor of the momenta based on
- * Mark E Tuckerman et al 2006 J. Phys. A: Math. Gen. 39 5629
- * and its implementation in LAMMPS
+ * Tuckerman et al. (2006) J. Phys. A: Math. Gen. 39 5629
+ * and its implementation in LAMMPS.
  * 
  * @param current_energy The current energy
  * @param index          The index of the first component in the chain
@@ -174,24 +177,14 @@ double NoseHooverThermostat::singleChainStep(const double& current_energy, const
     for (int i = 1; i < nchains - 1; i++) {
         exp_factor = exp(-dt8 * eta_dot[i + 1 + index]);
         eta_dot[i + index] *= exp_factor;
-#if IPI_CONVENTION
-        eta_dot_dot[i + index] = (Q_former * eta_dot[i - 1 + index] * eta_dot[i - 1 + index] - sim.nbeads / sim.beta) /
-            Qi;
-#else
-        eta_dot_dot[i + index] = (Q_former * eta_dot[i - 1 + index] * eta_dot[i - 1 + index] - 1 / sim.beta) / Qi;
-#endif
+        eta_dot_dot[i + index] = (Q_former * eta_dot[i - 1 + index] * eta_dot[i - 1 + index] - 1 / sim.thermo_beta) / Qi;
         eta_dot[i + index] += eta_dot_dot[i + index] * dt4;
         eta_dot[i + index] *= exp_factor;
         Q_former = Qi;
     }
 
     // Update the derivatives of eta for the last component
-#if IPI_CONVENTION
-    eta_dot_dot[nchains - 1 + index] = (Qi * eta_dot[nchains - 2 + index] * eta_dot[nchains - 2 + index] - sim.nbeads /
-        sim.beta) / Qi;
-#else
-    eta_dot_dot[nchains - 1 + index] = (Qi * eta_dot[nchains - 2 + index] * eta_dot[nchains - 2 + index] - 1 / sim.beta) / Qi;
-#endif
+    eta_dot_dot[nchains - 1 + index] = (Qi * eta_dot[nchains - 2 + index] * eta_dot[nchains - 2 + index] - 1 / sim.thermo_beta) / Qi;
     eta_dot[nchains - 1 + index] += eta_dot_dot[nchains - 1 + index] * dt4;
 
     return scale;
@@ -207,11 +200,7 @@ NoseHooverNpThermostat::NoseHooverNpThermostat(Simulation& _sim, bool normal_mod
     eta_dot = std::vector<double>(eta_length, 0.0);
     eta_dot_dot = std::vector<double>(eta_length, 0.0);
 
-#if IPI_CONVENTION
-    required_energy = NDIM * sim.nbeads / sim.beta;
-#else
-    required_energy = NDIM / sim.beta;
-#endif
+    required_energy = NDIM / sim.thermo_beta;
 }
 
 void NoseHooverNpThermostat::momentaUpdate() {
@@ -255,11 +244,7 @@ NoseHooverNpDimThermostat::NoseHooverNpDimThermostat(Simulation& _sim, bool norm
     eta_dot = std::vector<double>(eta_length, 0.0);
     eta_dot_dot = std::vector<double>(eta_length, 0.0);
 
-#if IPI_CONVENTION
-    required_energy = sim.nbeads / sim.beta;
-#else
-    required_energy = 1 / sim.beta;
-#endif
+    required_energy = 1 / sim.thermo_beta;
 }
 
 void NoseHooverNpDimThermostat::momentaUpdate() {

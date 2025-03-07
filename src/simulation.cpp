@@ -48,19 +48,16 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
 
 #if IPI_CONVENTION
     // i-Pi convention [J. Chem. Phys. 133, 124104 (2010)]
+    thermo_beta = beta / nbeads;
     omega_p = nbeads / (beta * Constants::hbar);
 #else
     // Tuckerman convention
+    thermo_beta = beta;
     omega_p = sqrt(nbeads) / (beta * Constants::hbar);
 #endif
 
     spring_constant = mass * omega_p * omega_p;
-
-    beta_half_k = beta * 0.5 * spring_constant;
-
-#if IPI_CONVENTION
-    beta_half_k /= nbeads;
-#endif
+    beta_half_k = thermo_beta * 0.5 * spring_constant;
 
     // Get the seed from the config file
     getVariant(param_obj.sim["seed"], params_seed);
@@ -253,11 +250,7 @@ void Simulation::genMomentum(dVec& momenta_arr) {
  * @return Sampled velocity from the Maxwell-Boltzmann distribution.
  */
 double Simulation::sampleMaxwellBoltzmann() {
-#if IPI_CONVENTION
-    std::normal_distribution<double> normal(0.0, 1 / sqrt(beta * mass / nbeads));
-#else
-    std::normal_distribution<double> normal(0.0, 1 / sqrt(beta * mass));
-#endif
+    std::normal_distribution<double> normal(0.0, 1 / sqrt(thermo_beta * mass));
 
     return normal(rand_gen);
 }
