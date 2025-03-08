@@ -56,8 +56,9 @@ NoseHooverThermostat::NoseHooverThermostat(Simulation& _sim, bool normal_modes, 
     _sim, normal_modes) {
     nchains = _nchains;
 
-    // Q1 and Qi (where i>1) are the masses of the extended variables. The choice
-    // is based on Sec. 2.5 in Martyna, G. J. et al. (1996), Mol. Phys., 87(5), pp. 1117-1157.
+    // Q1 and Qi (where i>1) are the effective masses of the extended variables, which determine
+    // the time scale on which the heat-bath variables evolve.
+    // The choice is based on Sec. 2.5 in Martyna, G. J. et al. (1996), Mol. Phys., 87(5), pp. 1117-1157.
     // For the fluctuation frequency, we choose the spring frequency of the ring polymers.
 #if IPI_CONVENTION
     /// TODO: Explain why there is no division by nbeads
@@ -90,9 +91,9 @@ double NoseHooverThermostat::getAdditionToH() {
  * Corresponds to the difference between the conserved quantity
  * and the classical Hamiltonian of the ring polymers.
  *
- * @param ndof Number of degrees of freedom
- * @param index Index of the first component in the chain.
- * @return Energy contribution to the conserved quantity.
+ * @param ndof  Number of degrees of freedom
+ * @param index Index of the first component in the chain
+ * @return      Energy contribution to the conserved quantity
  */
 double NoseHooverThermostat::singleChainGetAdditionToH(const int& ndof, const int& index) {
     // First, we add the kinetic energy associated with the thermostat.
