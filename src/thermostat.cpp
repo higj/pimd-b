@@ -121,7 +121,7 @@ void NoseHooverThermostat::momentaUpdate() {
             current_energy += momentum_for_calc * momentum_for_calc;
         }
     }
-    current_energy *= 1 / sim.mass;
+    current_energy /= sim.mass;
 
     // Obtain the scaling factor
     double scale = singleChainStep(current_energy, 0);
