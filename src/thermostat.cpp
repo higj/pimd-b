@@ -31,6 +31,7 @@ double Thermostat::getAdditionToH() {
 
 /* -------------------------------- */
 
+// A class for a Langevin thermostat 
 LangevinThermostat::LangevinThermostat(Simulation& _sim, bool normal_modes) : Thermostat(_sim, normal_modes) {
     friction_coefficient = exp(-0.5 * sim.gamma * sim.dt);
     noise_coefficient = sqrt((1 - friction_coefficient * friction_coefficient) * sim.mass / sim.thermo_beta);
@@ -52,6 +53,7 @@ void LangevinThermostat::momentaUpdate() {
 
 /* -------------------------------- */
 
+// A class for a single Nose-Hoover chain coupled to all degrees of freedom
 NoseHooverThermostat::NoseHooverThermostat(Simulation& _sim, bool normal_modes, int _nchains) : Thermostat(
     _sim, normal_modes) {
     nchains = _nchains;
@@ -60,12 +62,8 @@ NoseHooverThermostat::NoseHooverThermostat(Simulation& _sim, bool normal_modes, 
     // the time scale on which the heat-bath variables evolve.
     // The choice is based on Sec. 2.5 in Martyna, G. J. et al. (1996), Mol. Phys., 87(5), pp. 1117-1157.
     // For the fluctuation frequency, we choose the spring frequency of the ring polymers.
-#if IPI_CONVENTION
-    /// TODO: Explain why there is no division by nbeads
-    Qi = Constants::hbar * Constants::hbar * sim.beta;
-#else
     Qi = Constants::hbar * Constants::hbar * sim.beta / sim.nbeads;
-#endif
+
     // Q1/Qi should be equal to the number of degrees of freedom (NDOF).
     // In the absence of constraints, NDOF=NDIM*natoms.
     Q1 = NDIM * sim.natoms * Qi;
@@ -81,15 +79,18 @@ NoseHooverThermostat::NoseHooverThermostat(Simulation& _sim, bool normal_modes, 
     required_energy = NDIM * sim.natoms / sim.thermo_beta;
 }
 
-// CR: Add a comment explaining what the function does
+/**
+ * Returns the contribution of NHC to the conserved quantity.
+ * Corresponds to the difference between the conserved quantity
+ * and the classical Hamiltonian of the ring polymers.
+*/
+ 
 double NoseHooverThermostat::getAdditionToH() {
     return singleChainGetAdditionToH(NDIM * sim.natoms, 0);
 }
 
 /**
  * Calculate the contribution of NHC to the conserved quantity.
- * Corresponds to the difference between the conserved quantity
- * and the classical Hamiltonian of the ring polymers.
  *
  * @param ndof  Number of degrees of freedom
  * @param index Index of the first component in the chain
@@ -193,6 +194,7 @@ double NoseHooverThermostat::singleChainStep(const double& current_energy, const
 
 /* -------------------------------- */
 
+// A class for a unique Nose-Hoover chain coupled to each particle
 NoseHooverNpThermostat::NoseHooverNpThermostat(Simulation& _sim, bool normal_modes, int _nchains) :
     NoseHooverThermostat(_sim, normal_modes, _nchains) {
     Q1 = NDIM * Qi;
@@ -236,6 +238,7 @@ double NoseHooverNpThermostat::getAdditionToH() {
 
 /* -------------------------------- */
 
+// A class for a unique Nose-Hoover chain coupled to each degrees of freedom
 NoseHooverNpDimThermostat::NoseHooverNpDimThermostat(Simulation& _sim, bool normal_modes, int _nchains) :
     NoseHooverThermostat(_sim, normal_modes, _nchains) {
     Q1 = Qi;
