@@ -19,10 +19,14 @@ Params::Params(const std::string& filename, const int& rank) : reader(filename) 
     if (std::get<double>(sim["gamma"]) < 0)
         sim["gamma"] = 1 / (100.0 * std::get<double>(sim["dt"]));
 
+    sim["nchains"] = reader.GetInteger(Sections::SIMULATION, "nchains", 4);
+
+    if (int nchains = std::get<int>(sim["nchains"]); nchains < 1)
+        throw std::invalid_argument(std::format("The specified number of Nose-Hoover chains ({}) is less than one!", nchains));
+
     sim["steps"] = static_cast<long>(
         std::stod(reader.Get(Sections::SIMULATION, "steps", "1e5")));  // Scientific notation
     sim["sfreq"] = reader.GetLong(Sections::SIMULATION, "sfreq", 1000); /// @todo: Add support for scientific notation
-    sim["enable_t"] = reader.GetBoolean(Sections::SIMULATION, "enable_thermostat", true);
     sim["nbeads"] = reader.GetInteger(Sections::SIMULATION, "nbeads", 4);
 
     if (int nbeads = std::get<int>(sim["nbeads"]); nbeads < 1)
@@ -32,11 +36,15 @@ Params::Params(const std::string& filename, const int& rank) : reader(filename) 
 
     /****** Flags ******/
     // Bosonic or distinguishable simulation?
-    sim["bosonic"] = reader.GetBoolean(Sections::SIMULATION, "bosonic", false);
+    bool bosonic = reader.GetBoolean(Sections::SIMULATION, "bosonic", false);
+    sim["bosonic"] = bosonic;
     // Fix the center of mass?
     sim["fixcom"] = reader.GetBoolean(Sections::SIMULATION, "fixcom", true);
     // Enable periodic boundary conditions?
     sim["pbc"] = reader.GetBoolean(Sections::SIMULATION, "pbc", false);
+    // Couple thermostat to normal modes?
+    bool nmthermostat = reader.GetBoolean(Sections::SIMULATION, "nmthermostat", false);
+    sim["nmthermostat"] = nmthermostat;
 
     std::string init_pos_type, init_pos_specification;
 
@@ -135,11 +143,36 @@ Params::Params(const std::string& filename, const int& rank) : reader(filename) 
     // "normal_modes": a velocity Verlet algorithm that propagates the normal modes
     allowed_propagators = { "cartesian", "normal_modes" };
     std::string propagator_type = reader.GetString(Sections::SIMULATION, "propagator", "cartesian");
+    if (bosonic && propagator_type == "normal_modes") {
+        throw std::invalid_argument("Normal modes propogation is currently not available for bosons!");
+    }
     sim["propagator_type"] = propagator_type;
     
     if (!labelInArray(propagator_type, allowed_propagators))
         throw std::invalid_argument(std::format("The specified time propagator ({}) is not supported!", propagator_type));
 
+    // Implemented thermostats:
+    // "langevin": A langevin themrostat coupled to the Cartesian coordinates
+    // "nose_hoover" A single Nose-Hoover chain coupled to the whole system
+    // "nose_hoover_np" A unique Nose-Hoover chain coupled to each particle
+    // "nose_hoover_np_dim" A unique Nose-Hoover chain coupled to each cartezian coordinate of each particle
+    // "none": No thermostat (NVE simulation)
+    allowed_thermostats = { "langevin", "nose_hoover", "nose_hoover_np", "nose_hoover_np_dim", "none" };
+    std::string thermostat_type = reader.GetString(Sections::SIMULATION, "thermostat", "error");
+    if (thermostat_type == "error") {
+        throw std::invalid_argument("Thermostat must be specified!");
+    }
+    if (nmthermostat && thermostat_type == "none") {
+        throw std::invalid_argument("nmthermostat cannot be used in nve ensemble!");
+    }
+    if ((reader.GetInteger(Sections::SIMULATION, "nchains", -1) != -1) && ((thermostat_type == "none") || (thermostat_type == "langevin"))) {
+        throw std::invalid_argument("nchains can only be used with Nose-Hoover thermostats!");
+    }
+    sim["thermostat_type"] = thermostat_type;
+    
+    if (!labelInArray(thermostat_type, allowed_thermostats))
+        throw std::invalid_argument(std::format("The specified thermostat ({}) is not supported!", propagator_type));
+        
     /* System params */
     sys["temperature"] = getQuantity("temperature", reader.Get(Sections::SYSTEM, "temperature", "1.0 kelvin"));
     if (double temp = std::get<double>(sys["temperature"]); temp <= 0.0) {
