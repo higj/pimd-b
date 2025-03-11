@@ -2,7 +2,7 @@
 #include <numeric>
 #include <algorithm>
 
-#include "old_bosonic_exchange.h"
+#include "bosonic_exchange/old_bosonic_exchange.h"
 #include "simulation.h"
 
 OldBosonicExchange::OldBosonicExchange(const Simulation& _sim) : BosonicExchangeBase(_sim), labels(_sim.natoms) {

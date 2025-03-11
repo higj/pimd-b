@@ -30,33 +30,3 @@ public:
     static std::unique_ptr<State> createQuantity(const std::string& state_type, 
         const Simulation& _sim, int _freq, const std::string& _out_unit);
 };
-
-/* -------------------------------- */
-
-class PositionState : public State {
-public:
-    PositionState(const Simulation& _sim, int _freq, const std::string& _out_unit);
-
-    void initialize() override;
-    void output(int step) override;
-};
-
-/* -------------------------------- */
-
-class VelocityState : public State {
-public:
-    VelocityState(const Simulation& _sim, int _freq, const std::string& _out_unit);
-
-    void initialize() override;
-    void output(int step) override;
-};
-
-/* -------------------------------- */
-
-class ForceState : public State {
-public:
-    ForceState(const Simulation& _sim, int _freq, const std::string& _out_unit);
-
-    void initialize() override;
-    void output(int step) override;
-};

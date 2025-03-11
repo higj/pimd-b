@@ -1,7 +1,7 @@
 #pragma once
 
 #include "common.h"
-#include "bosonic_exchange_base.h"
+#include "bosonic_exchange/bosonic_exchange_base.h"
 
 class OldBosonicExchange final : public BosonicExchangeBase {
 public:

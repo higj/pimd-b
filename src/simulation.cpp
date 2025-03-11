@@ -5,18 +5,12 @@
 #include <array>
 #include <cassert>
 #include "mpi.h"
-#include "thermostat_coupling.h"
-#include "state.h"
-#include "observable.h"
-#include "propagator.h"
-#include "thermostat.h"
+#include "states.h"
+#include "observables.h"
+#include "propagators.h"
+#include "thermostats.h"
 #include "normal_modes.h"
 #include "simulation.h"
-#if OLD_BOSONIC_ALGORITHM
-#include "old_bosonic_exchange.h"
-#else
-#include "bosonic_exchange.h"
-#endif
 
 Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, unsigned int seed) :
     bosonic_exchange(nullptr),
@@ -71,17 +65,12 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     propagator_type = std::get<std::string>(param_obj.sim["propagator_type"]);
     thermostat_type = std::get<std::string>(param_obj.sim["thermostat_type"]);
     
-    // Choose time propagation scheme
-    // CR: extract method
-    // CR: disable normal modes propagator for bosonic
     if (propagator_type == "cartesian") {
         propagator = std::make_unique<VelocityVerletPropagator>(*this);
     } else if (propagator_type == "normal_modes") {
         propagator = std::make_unique<NormalModesPropagator>(*this);
     }
 
-    // Choose thermostat
-    // CR: extract method
     if (thermostat_type == "langevin") {
         thermostat = std::make_unique<LangevinThermostat>(*this, nmthermostat);
     } else if (thermostat_type == "nose_hoover") {

@@ -1,0 +1,14 @@
+#pragma once
+
+#include "observables/observable.h"
+
+class Simulation; // Forward declaration
+
+/* -------------------------------- */
+
+class GSFActionObservable : public Observable {
+public:
+    GSFActionObservable(const Simulation& _sim, int _freq, const std::string& _out_unit);
+
+    void calculate() override;
+};

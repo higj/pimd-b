@@ -1,6 +1,6 @@
 #include <cassert>
 
-#include "bosonic_exchange_base.h"
+#include "bosonic_exchange/bosonic_exchange_base.h"
 #include "simulation.h"
 
 BosonicExchangeBase::BosonicExchangeBase(const Simulation& _sim) :

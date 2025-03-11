@@ -8,8 +8,8 @@
 #include "random_mars.h"
 #include "common.h"
 #include "params.h"
-#include "potential.h"
-#include "bosonic_exchange_base.h"
+#include "potentials.h"
+#include "bosonic_exchange.h"
 
 class NormalModes;
 class State;

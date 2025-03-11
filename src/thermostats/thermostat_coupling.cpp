@@ -1,5 +1,5 @@
 #include <memory>
-#include "thermostat_coupling.h"
+#include "thermostats/thermostat_coupling.h"
 #include "mpi.h"
 #include "normal_modes.h"
 #include "simulation.h"
