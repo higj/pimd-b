@@ -16,7 +16,7 @@ dVec Potential::getGradV(const dVec& x) {
         return tempr;
     }
     const double prefactor = (sim.getStep() - sim.start_potential_activation) / double(sim.finish_potential_activation - sim.start_potential_activation);
-    std::cout << prefactor << " ";
+    // std::cout << prefactor << " ";
     return prefactor * tempr;
 }
 

@@ -25,21 +25,20 @@ protected:
     std::array<double, NDIM> springForceFirstBead(const int l);
     std::array<double, NDIM> springForceLastBead(const int l);
     void evaluateBosonicEnergies();
-    
-private:
+    virtual void evaluateConnectionProbabilities();
+    std::vector<double> connection_probabilities;
+
     void evaluateCycleEnergies();
 
     double getEnk(int m, int k) const;
     void setEnk(int m, int k, double val);
 
-    void evaluateConnectionProbabilities();
     void evaluateVBn();
     void evaluateVBackwards();
 
     std::vector<double> E_kn;
     std::vector<double> V;
     std::vector<double> V_backwards;
-    std::vector<double> connection_probabilities;
 
     std::vector<double> temp_nbosons_array;
 

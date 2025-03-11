@@ -18,6 +18,7 @@
 #include "bosonic_exchange_shuffle.h"
 #include "bosonic_exchange.h"
 #include "bosonic_exchange_PIS.h"
+#include "bosonic_exchange_CPM.h"
 
 Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, unsigned int seed) :
     bosonic_exchange(nullptr),
@@ -138,6 +139,8 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
             bosonic_exchange = std::make_unique<BosonicExchangeShuffle>(*this);     
         } else if (exchange_algorithm_type == "PIS") {
             bosonic_exchange = std::make_unique<BosonicExchangePIS>(*this);     
+        } else if (exchange_algorithm_type == "CPM") {
+            bosonic_exchange = std::make_unique<BosonicExchangeCPM>(*this);     
         }
     }
     initializeStates(param_obj.states);

@@ -179,7 +179,7 @@ Params::Params(const std::string& filename, const int& rank) : reader(filename) 
     // "carrousel": The indexing of the particles shifts each timestep by 1 like a carrousel
     // "shuffle": The indexing of the particles is shuffled each timestep
     // "PIS": The indexing of the particles is shuffled each timestep with a probabilistic algorithm
-    allowed_exchange_algorithms = { "factorial", "feldman_hirshberg", "carrousel", "shuffle", "PIS" };
+    allowed_exchange_algorithms = { "factorial", "feldman_hirshberg", "carrousel", "shuffle", "PIS", "CPM" };
     std::string exchange_algorithm_type = reader.GetString(Sections::SIMULATION, "exchange_algorithm", "feldman_hirshberg");
     sim["exchange_algorithm_type"] = exchange_algorithm_type;
     
