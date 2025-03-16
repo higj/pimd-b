@@ -182,6 +182,7 @@ Params::Params(const std::string& filename, const int& rank) : reader(filename) 
     allowed_exchange_algorithms = { "factorial", "feldman_hirshberg", "carrousel", "shuffle", "PIS", "CPM" };
     std::string exchange_algorithm_type = reader.GetString(Sections::SIMULATION, "exchange_algorithm", "feldman_hirshberg");
     sim["exchange_algorithm_type"] = exchange_algorithm_type;
+    sim["physical_exchange_time"] = reader.GetInteger(Sections::SIMULATION, "physical_exchange_time", 1);
     
     if (!labelInArray(exchange_algorithm_type, allowed_exchange_algorithms))
         throw std::invalid_argument(std::format("The specified exchange algorithm ({}) is not supported!", exchange_algorithm_type));

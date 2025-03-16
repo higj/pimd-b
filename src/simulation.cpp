@@ -139,8 +139,8 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
             bosonic_exchange = std::make_unique<BosonicExchangeShuffle>(*this);     
         } else if (exchange_algorithm_type == "PIS") {
             bosonic_exchange = std::make_unique<BosonicExchangePIS>(*this);     
-        } else if (exchange_algorithm_type == "CPM") {
-            bosonic_exchange = std::make_unique<BosonicExchangeCPM>(*this);     
+        } else if (exchange_algorithm_type == "CPM") {            
+            bosonic_exchange = std::make_unique<BosonicExchangeCPM>(*this, std::get<int>(param_obj.sim["physical_exchange_time"]));     
         }
     }
     initializeStates(param_obj.states);
