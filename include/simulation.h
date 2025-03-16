@@ -73,6 +73,9 @@ public:
 
     void zeroMomentum();
 
+    void initializePropagator(const VariantMap& sim_params);
+    void initializeThermostat(const VariantMap& sim_params);
+    void initializeExchangeAlgorithm();
     void initializePositions(dVec& coord_arr, const VariantMap& sim_params);
     void initializeMomenta(dVec& momentum_arr, const VariantMap& sim_params);
     void addStateIfEnabled(const StringMap& sim_params, const std::string& param_key, const std::string& state_name);
