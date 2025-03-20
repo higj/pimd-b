@@ -41,6 +41,10 @@
 #define IPI_CONVENTION true
 #endif
 
+#ifndef RPC
+#define RPC true
+#endif
+
 // A small number (but not necessarily the smallest)
 constexpr auto EPS = 1.0E-7;
 

@@ -425,7 +425,7 @@ void Simulation::updateSpringForces(dVec& spring_force_arr) const {
  * 
  * @param physical_force_arr Vector to store the physical forces.
  */
-void Simulation::updatePhysicalForces(dVec& physical_force_arr) const {
+void Simulation::updatePhysicalForces(dVec& physical_force_arr) {
     // Calculate the external forces acting on the particles
     physical_force_arr = (-1.0) * ext_potential->gradV(coord);
 

@@ -2,6 +2,9 @@
 #include "mpi.h"
 #include "params.h"
 #include "simulation.h"
+#ifdef RPC
+#include "RPC_simulation.h"
+#endif
 
 void parseArguments(int arg_num, char** arg_arr, std::string& conf_filename, bool& info_flag, const int rank) {
     // Check for command line arguments.
@@ -51,7 +54,11 @@ int main(int argc, char** argv) {
             // Load the simulation parameters from the configuration file
             Params params(config_filename, rank);
             // Initialize the random number generator seed based on the current time
+#ifdef RPC
+            RPCSimulation sim(rank, size, params, static_cast<unsigned int>(time(nullptr)));
+#else
             Simulation sim(rank, size, params, static_cast<unsigned int>(time(nullptr)));
+#endif
             sim.run();
         }
     } catch (const std::invalid_argument& ex) {

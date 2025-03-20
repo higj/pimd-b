@@ -103,7 +103,7 @@ public:
 
     void updateForces();
     void updateSpringForces(dVec& spring_force_arr) const;
-    void updatePhysicalForces(dVec& physical_force_arr) const;
+    virtual void updatePhysicalForces(dVec& physical_force_arr);
 
     double classicalSpringEnergy() const;
 

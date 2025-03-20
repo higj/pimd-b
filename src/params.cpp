@@ -32,6 +32,10 @@ Params::Params(const std::string& filename, const int& rank) : reader(filename) 
     if (int nbeads = std::get<int>(sim["nbeads"]); nbeads < 1)
         throw std::invalid_argument(std::format("The specified number of beads ({}) is less than one!", nbeads));
 
+    sim["nbeads_contructed"] = reader.GetInteger(Sections::SIMULATION, "nbeads_contructed", std::get<int>(sim["nbeads"]));
+    if (int nbeads = std::get<int>(sim["nbeads_contructed"]); nbeads < 1)
+        throw std::invalid_argument(std::format("The specified number of beads ({}) is less than one!", nbeads));
+
     sim["seed"] = static_cast<unsigned int>(std::stod(reader.Get(Sections::SIMULATION, "seed", "1234")));
 
     /****** Flags ******/
@@ -204,7 +208,9 @@ Params::Params(const std::string& filename, const int& rank) : reader(filename) 
 
     interaction_pot["name"] = interaction_name;
     interaction_pot["cutoff"] = getQuantity("length", reader.Get(Sections::INT_POTENTIAL, "cutoff", "-1.0 angstrom"));
-
+    interaction_pot["RPC_cutoff"] = getQuantity("length", reader.Get(Sections::INT_POTENTIAL, "RPC_cutoff", "-1.0 angstrom"));
+    if (std::get<double>(interaction_pot["cutoff"]) < std::get<double>(interaction_pot["RPC_cutoff"]))
+        throw std::invalid_argument("RPC_cutoff must be smaller shorter than cutoff!");
     if (interaction_name == "free") {
         // In the special case of free particles, the cutoff distance is set to zero
         interaction_pot["cutoff"] = 0.0;
