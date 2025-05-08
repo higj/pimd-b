@@ -387,7 +387,7 @@ void Simulation::updateNeighboringCoordinates() {
  * In the bosonic case, by default, the forces are evaluated using the algorithm 
  * described in https://doi.org/10.1063/5.0173749. It is also possible to perform the
  * bosonic simulation using the original (inefficient) algorithm, that takes into
- * account all the N! permutations, by setting OLD_BOSONIC_ALGORITHM to true.
+ * account all the N! permutations, by setting FACTORIAL_BOSONIC_ALGORITHM to true.
  * 
  * @param spring_force_arr Vector to store the spring forces.
  */
@@ -527,7 +527,7 @@ void Simulation::printReport(double wall_time) const {
         report_file << formattedReportLine("Statistics", "Bosonic");
         std::string bosonic_alg_name = "Feldman-Hirshberg";
 
-#if OLD_BOSONIC_ALGORITHM
+#if FACTORIAL_BOSONIC_ALGORITHM
         bosonic_alg_name = "Naive";
 #endif
 
@@ -691,8 +691,8 @@ void Simulation::initializeExchangeAlgorithm() {
     is_bosonic_bead = bosonic && (this_bead == 0 || this_bead == nbeads - 1);
 
     if (is_bosonic_bead) {
-#if OLD_BOSONIC_ALGORITHM
-        bosonic_exchange = std::make_unique<OldBosonicExchange>(*this);
+#if FACTORIAL_BOSONIC_ALGORITHM
+        bosonic_exchange = std::make_unique<FactorialBosonicExchange>(*this);
 #else
         bosonic_exchange = std::make_unique<BosonicExchange>(*this);
 #endif

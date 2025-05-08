@@ -3,10 +3,10 @@
 #include "common.h"
 #include "bosonic_exchange/bosonic_exchange_base.h"
 
-class OldBosonicExchange final : public BosonicExchangeBase {
+class FactorialBosonicExchange final : public BosonicExchangeBase {
 public:
-    OldBosonicExchange(const Simulation& _sim);
-    ~OldBosonicExchange() override = default;
+    FactorialBosonicExchange(const Simulation& _sim);
+    ~FactorialBosonicExchange() override = default;
 
     double effectivePotential() override;
     void prepare() override;

@@ -36,7 +36,7 @@
             "inherits": "x64-debug",
           "cacheVariables": {
             "CMAKE_BUILD_TYPE": "Release",
-            "OLD_BOSONIC_ALGORITHM": "0",
+            "FACTORIAL_BOSONIC_ALGORITHM": "0",
             "NDIM": "3"
           }
         },

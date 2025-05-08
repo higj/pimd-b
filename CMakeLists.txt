@@ -46,9 +46,9 @@ if (NOT NDIM)
 endif()
 add_definitions(-D NDIM=${NDIM})
 
-# Determine if we want to compile with the old (inefficient) bosonic algorithm
-set(OLD_BOSONIC_ALGORITHM false CACHE BOOL "Set to true to compile with the original bosonic algorithm")
+# Determine if we want to compile with the naive (factorially-scaling) bosonic algorithm
+set(FACTORIAL_BOSONIC_ALGORITHM false CACHE BOOL "Set to true to compile with the naive bosonic algorithm")
 
-if (OLD_BOSONIC_ALGORITHM)
-    add_compile_definitions(OLD_BOSONIC_ALGORITHM)
+if (FACTORIAL_BOSONIC_ALGORITHM)
+    add_compile_definitions(FACTORIAL_BOSONIC_ALGORITHM)
 endif()
