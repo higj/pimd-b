@@ -57,7 +57,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - alg_type_name: old-bosonic
+          - alg_type_name: naive-bosonic
             alg_type_val: 1
           - alg_type_name: new-bosonic
             alg_type_val: 0
@@ -76,7 +76,7 @@ jobs:
           key: ${{runner.os}}-openmpi-${{env.OPENMPI_VER}}
 
       - name: Configure CMake
-        run: cmake -B ${{github.workspace}}/${{env.build_folder_name}} -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DNDIM=${{env.NDIM}} -DOLD_BOSONIC_ALGORITHM=${{matrix.alg_type_val}} -DCMAKE_CXX_COMPILER=g++-13 -DCMAKE_C_COMPILER=gcc-13 -DMPI_HOME=/home/${USER}/.openmpi
+        run: cmake -B ${{github.workspace}}/${{env.build_folder_name}} -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DNDIM=${{env.NDIM}} -DFACTORIAL_BOSONIC_ALGORITHM=${{matrix.alg_type_val}} -DCMAKE_CXX_COMPILER=g++-13 -DCMAKE_C_COMPILER=gcc-13 -DMPI_HOME=/home/${USER}/.openmpi
 
       - name: Build
         run: cmake --build ${{github.workspace}}/${{env.build_folder_name}} --config ${{env.BUILD_TYPE}}
@@ -91,7 +91,7 @@ jobs:
         run: |
           export OPENMPI_BIN=/home/${USER}/.openmpi/bin/
           if [ "${{ matrix.alg_type_val }}" = "1" ]; then
-              python ${{github.workspace}}/tests/main.py ${{github.workspace}}/${{env.build_folder_name}} ${{github.workspace}}/tests/cases --old-bosonic
+              python ${{github.workspace}}/tests/main.py ${{github.workspace}}/${{env.build_folder_name}} ${{github.workspace}}/tests/cases --factorial
           else
               python ${{github.workspace}}/tests/main.py ${{github.workspace}}/${{env.build_folder_name}} ${{github.workspace}}/tests/cases
           fi

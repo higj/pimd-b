@@ -275,7 +275,7 @@ def test_forces(output_folder, test_folder):
     return True
 
 
-def run_tests(executable_dir, tests_dir, is_old_bosonic):
+def run_tests(executable_dir, tests_dir, is_factorial_bosonic):
     # Navigate to the directory containing test cases
     os.chdir(tests_dir)
     
@@ -283,10 +283,10 @@ def run_tests(executable_dir, tests_dir, is_old_bosonic):
     out_folder = Path.cwd() / 'output'
     out_path = out_folder / out_filename
     
-    # If old_bosonic is True, iterate over any test case whose folder does not have the prefix "bosonic_quadratic".
-    # If old_bosonic is False, iterate over any test case whose folder does not have the prefix "bosonic_factorial".
+    # If factorial_bosonic is True, iterate over any test case whose folder does not have the prefix "bosonic_quadratic".
+    # If factorial_bosonic is False, iterate over any test case whose folder does not have the prefix "bosonic_factorial".
     
-    excluded_bosonic_prefix = "bosonic_quadratic" if is_old_bosonic else "bosonic_factorial"
+    excluded_bosonic_prefix = "bosonic_quadratic" if is_factorial_bosonic else "bosonic_factorial"
     test_cases = [test_case for test_case in tests_dir.iterdir() if test_case.is_dir() and not test_case.name.startswith(excluded_bosonic_prefix)]
     
     # Iterate over each test case folder
@@ -329,14 +329,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='PIMD-B++ tests')
     parser.add_argument('executable_dir', type=Path, help='Directory containing the executable')
     parser.add_argument('tests_dir', type=Path, help='Directory containing the test cases')
-    parser.add_argument('--old-bosonic', default=False, action=argparse.BooleanOptionalAction, 
-                        help='Mark if the executable was compiled with the old bosonic algorithm')
+    parser.add_argument('--factorial', default=False, action=argparse.BooleanOptionalAction, 
+                        help='Mark if the executable was compiled with the naive (factorially-scaling) bosonic algorithm')
 
     args = parser.parse_args()
 
     executable_dir = Path(args.executable_dir)
     tests_dir = Path(args.tests_dir)
-    is_old_bosonic = args.old_bosonic
+    is_factorial_bosonic = args.factorial
     
     # Run tests
-    run_tests(executable_dir, tests_dir, is_old_bosonic)
+    run_tests(executable_dir, tests_dir, is_factorial_bosonic)

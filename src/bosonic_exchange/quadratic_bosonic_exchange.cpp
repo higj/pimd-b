@@ -2,7 +2,7 @@
 #include <fstream>
 #include <cmath>
 
-#include "bosonic_exchange.h"
+#include "bosonic_exchange/quadratic_bosonic_exchange.h"
 #include "simulation.h"
 
 BosonicExchange::BosonicExchange(const Simulation& _sim) : BosonicExchangeBase(_sim),

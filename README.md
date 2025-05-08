@@ -24,7 +24,7 @@ cmake -DCMAKE_BUILD_TYPE=Release -D NDIM=1 ..
 Note that in this example, we compile a binary for 1D systems. Change `NDIM` to the desired dimension. Currently, the following CMake cache entries are available:
 
 * `-D NDIM=<DIM>` sets the number of spatial dimensions
-* `-D OLD_BOSONIC_ALGORITHM=1` to build with the naive bosonic PIMD algorithm, which scales as $\mathcal{O}(N!)$. By default, the program uses the [Feldman-Hirshberg](https://arxiv.org/abs/2305.18025) algorithm, which scales as $\mathcal{O}(N^2+PN)$.
+* `-D FACTORIAL_BOSONIC_ALGORITHM=1` to build with the naive bosonic PIMD algorithm, which scales as $\mathcal{O}(N!)$. By default, the program uses the [Feldman-Hirshberg](https://arxiv.org/abs/2305.18025) algorithm, which scales as $\mathcal{O}(N^2+PN)$.
 
 Finally, to compile the binaries, use
 ```bash

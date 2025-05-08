@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <ranges>
 #include <fstream>
 #include <filesystem>
@@ -5,18 +6,12 @@
 #include <array>
 #include <cassert>
 #include "mpi.h"
-#include "thermostat_coupling.h"
-#include "state.h"
-#include "observable.h"
-#include "propagator.h"
-#include "thermostat.h"
+#include "states.h"
+#include "observables.h"
+#include "propagators.h"
+#include "thermostats.h"
 #include "normal_modes.h"
 #include "simulation.h"
-#if OLD_BOSONIC_ALGORITHM
-#include "old_bosonic_exchange.h"
-#else
-#include "bosonic_exchange.h"
-#endif
 
 Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, unsigned int seed) :
     bosonic_exchange(nullptr),
@@ -31,12 +26,9 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     getVariant(param_obj.sim["threshold"], threshold);
     threshold *= steps;  // Threshold in terms of steps
 
-    getVariant(param_obj.sim["gamma"], gamma);
-    getVariant(param_obj.sim["nchains"], nchains);
     getVariant(param_obj.sim["bosonic"], bosonic);
     getVariant(param_obj.sim["fixcom"], fixcom);
     getVariant(param_obj.sim["pbc"], pbc);
-    getVariant(param_obj.sim["nmthermostat"], nmthermostat);
 
     getVariant(param_obj.sys["temperature"], temperature);
     getVariant(param_obj.sys["natoms"], natoms);
@@ -68,31 +60,12 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
 
     init_pos_type = std::get<std::string>(param_obj.sim["init_pos_type"]);
     init_vel_type = std::get<std::string>(param_obj.sim["init_vel_type"]);
-    propagator_type = std::get<std::string>(param_obj.sim["propagator_type"]);
-    thermostat_type = std::get<std::string>(param_obj.sim["thermostat_type"]);
-    
-    // Choose time propagation scheme
-    // CR: extract method
-    // CR: disable normal modes propagator for bosonic
-    if (propagator_type == "cartesian") {
-        propagator = std::make_unique<VelocityVerletPropagator>(*this);
-    } else if (propagator_type == "normal_modes") {
-        propagator = std::make_unique<NormalModesPropagator>(*this);
-    }
 
-    // Choose thermostat
-    // CR: extract method
-    if (thermostat_type == "langevin") {
-        thermostat = std::make_unique<LangevinThermostat>(*this, nmthermostat);
-    } else if (thermostat_type == "nose_hoover") {
-        thermostat = std::make_unique<NoseHooverThermostat>(*this, nmthermostat, nchains);
-    } else if (thermostat_type == "nose_hoover_np") {
-        thermostat = std::make_unique<NoseHooverNpThermostat>(*this, nmthermostat, nchains);
-    } else if (thermostat_type == "nose_hoover_np_dim") {
-        thermostat = std::make_unique<NoseHooverNpDimThermostat>(*this, nmthermostat, nchains);
-    } else if (thermostat_type == "none") {
-        thermostat = std::make_unique<Thermostat>(*this, nmthermostat);
-    }
+    // Initialize the propagator, thermostat, and exchange algorithm
+    initializePropagator(param_obj.sim);
+    initializeThermostat(param_obj.sim);
+    initializeExchangeAlgorithm();
+
     // Initialize the coordinate, momenta, and force arrays
     coord = dVec(natoms);
     prev_coord = dVec(natoms);
@@ -121,17 +94,6 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
 
     // Update the coordinate arrays of neighboring particles
     updateNeighboringCoordinates();
-
-    bosonic = bosonic && (nbeads > 1); // Bosonic exchange is only possible for P>1
-    is_bosonic_bead = bosonic && (this_bead == 0 || this_bead == nbeads - 1);
-
-    if (is_bosonic_bead) {
-#if OLD_BOSONIC_ALGORITHM
-        bosonic_exchange = std::make_unique<OldBosonicExchange>(*this);
-#else
-        bosonic_exchange = std::make_unique<BosonicExchange>(*this);
-#endif
-    }
 
     initializeStates(param_obj.states);
     initializeObservables(param_obj.observables);
@@ -183,8 +145,7 @@ void Simulation::uniformParticleGrid(dVec& pos_arr) const {
         num_nn_grid(0, i) = static_cast<int>(std::ceil((size / init_side) - EPS));
 
         // Make sure we have at least one grid box
-        if (num_nn_grid(0, i) < 1)
-            num_nn_grid(0, i) = 1;
+        num_nn_grid(0, i) = std::max(num_nn_grid(0, i), 1);
 
         // Compute the actual size of the grid
         size_nn_grid(0, i) = size / (1.0 * num_nn_grid(0, i));
@@ -426,7 +387,7 @@ void Simulation::updateNeighboringCoordinates() {
  * In the bosonic case, by default, the forces are evaluated using the algorithm 
  * described in https://doi.org/10.1063/5.0173749. It is also possible to perform the
  * bosonic simulation using the original (inefficient) algorithm, that takes into
- * account all the N! permutations, by setting OLD_BOSONIC_ALGORITHM to true.
+ * account all the N! permutations, by setting FACTORIAL_BOSONIC_ALGORITHM to true.
  * 
  * @param spring_force_arr Vector to store the spring forces.
  */
@@ -566,7 +527,7 @@ void Simulation::printReport(double wall_time) const {
         report_file << formattedReportLine("Statistics", "Bosonic");
         std::string bosonic_alg_name = "Feldman-Hirshberg";
 
-#if OLD_BOSONIC_ALGORITHM
+#if FACTORIAL_BOSONIC_ALGORITHM
         bosonic_alg_name = "Naive";
 #endif
 
@@ -681,6 +642,61 @@ std::unique_ptr<Potential> Simulation::initializePotential(const std::string& po
     }
 
     return std::make_unique<Potential>();
+}
+
+/**
+ * Initializes the propagator based on the input parameters.
+ *
+ * @param sim_params Simulation parameters object containing information about the propagator.
+ */
+void Simulation::initializePropagator(const VariantMap& sim_params) {
+    propagator_type = std::get<std::string>(sim_params.at("propagator_type"));
+    
+    if (propagator_type == "cartesian") {
+        propagator = std::make_unique<VelocityVerletPropagator>(*this);
+    } else if (propagator_type == "normal_modes") {
+        propagator = std::make_unique<NormalModesPropagator>(*this);
+    }
+}
+
+/**
+ * Initializes the thermostat based on the input parameters.
+ *
+ * @param sim_params Simulation parameters object containing information about the thermostat.
+ */
+void Simulation::initializeThermostat(const VariantMap& sim_params) {
+    thermostat_type = std::get<std::string>(sim_params.at("thermostat_type"));
+    getVariant(sim_params.at("nmthermostat"), nmthermostat);
+    getVariant(sim_params.at("nchains"), nchains);
+    getVariant(sim_params.at("gamma"), gamma);
+
+    if (thermostat_type == "langevin") {
+        thermostat = std::make_unique<LangevinThermostat>(*this, nmthermostat);
+    } else if (thermostat_type == "nose_hoover") {
+        thermostat = std::make_unique<NoseHooverThermostat>(*this, nmthermostat, nchains);
+    } else if (thermostat_type == "nose_hoover_np") {
+        thermostat = std::make_unique<NoseHooverNpThermostat>(*this, nmthermostat, nchains);
+    } else if (thermostat_type == "nose_hoover_np_dim") {
+        thermostat = std::make_unique<NoseHooverNpDimThermostat>(*this, nmthermostat, nchains);
+    } else if (thermostat_type == "none") {
+        thermostat = std::make_unique<Thermostat>(*this, nmthermostat);
+    }
+}
+
+/**
+ * Initializes the bosonic exchange algorithm.
+ */
+void Simulation::initializeExchangeAlgorithm() {
+    bosonic = bosonic && (nbeads > 1); // Bosonic exchange is only possible for P>1
+    is_bosonic_bead = bosonic && (this_bead == 0 || this_bead == nbeads - 1);
+
+    if (is_bosonic_bead) {
+#if FACTORIAL_BOSONIC_ALGORITHM
+        bosonic_exchange = std::make_unique<FactorialBosonicExchange>(*this);
+#else
+        bosonic_exchange = std::make_unique<BosonicExchange>(*this);
+#endif
+    }
 }
 
 /**

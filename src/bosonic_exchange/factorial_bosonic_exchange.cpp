@@ -2,10 +2,10 @@
 #include <numeric>
 #include <algorithm>
 
-#include "old_bosonic_exchange.h"
+#include "bosonic_exchange/factorial_bosonic_exchange.h"
 #include "simulation.h"
 
-OldBosonicExchange::OldBosonicExchange(const Simulation& _sim) : BosonicExchangeBase(_sim), labels(_sim.natoms) {
+FactorialBosonicExchange::FactorialBosonicExchange(const Simulation& _sim) : BosonicExchangeBase(_sim), labels(_sim.natoms) {
     // Fill the labels array with numbers from 0 to nbosons-1
     std::iota(labels.begin(), labels.end(), 0);
 
@@ -16,7 +16,7 @@ OldBosonicExchange::OldBosonicExchange(const Simulation& _sim) : BosonicExchange
 /**
  * @brief Recalculates the smallest exterior spring energy after each coordinate update.
  */
-void OldBosonicExchange::prepare() {
+void FactorialBosonicExchange::prepare() {
     e_shift = getMinExteriorSpringEnergy();
 }
 
@@ -30,7 +30,7 @@ void OldBosonicExchange::prepare() {
  * @param ptcl_idx Index of the particle associated with the first bead.
  * @return Index of the particle associated with the neighboring P bead.
  */
-int OldBosonicExchange::firstBeadNeighbor(int ptcl_idx) const {
+int FactorialBosonicExchange::firstBeadNeighbor(int ptcl_idx) const {
     return std::distance(labels.begin(), std::ranges::find(labels, ptcl_idx));
 }
 
@@ -44,7 +44,7 @@ int OldBosonicExchange::firstBeadNeighbor(int ptcl_idx) const {
  * @param ptcl_idx Index of the particle associated with the last bead.
  * @return Index of the particle associated with the neighboring 1 bead.
  */
-int OldBosonicExchange::lastBeadNeighbor(int ptcl_idx) const {
+int FactorialBosonicExchange::lastBeadNeighbor(int ptcl_idx) const {
     return labels[ptcl_idx];
 }
 
@@ -55,7 +55,7 @@ int OldBosonicExchange::lastBeadNeighbor(int ptcl_idx) const {
  *
  * @return The smallest exterior spring energy contribution due to a permutation.
  */
-double OldBosonicExchange::getMinExteriorSpringEnergy() {
+double FactorialBosonicExchange::getMinExteriorSpringEnergy() {
     dVec x_first_bead(nbosons);
     dVec x_last_bead(nbosons);
 
@@ -88,7 +88,7 @@ double OldBosonicExchange::getMinExteriorSpringEnergy() {
  *
  * @return Effective bosonic exchange potential.
  */
-double OldBosonicExchange::effectivePotential() {
+double FactorialBosonicExchange::effectivePotential() {
     dVec x_first_bead(nbosons);
     dVec x_last_bead(nbosons);
 
@@ -118,7 +118,7 @@ double OldBosonicExchange::effectivePotential() {
  *
  * @param[out] f Spring forces acting on the particles at time-slice P.
  */
-void OldBosonicExchange::springForceLastBead(dVec& f) {
+void FactorialBosonicExchange::springForceLastBead(dVec& f) {
     const dVec x_first_bead = x_next;
     const dVec x_last_bead = x;
 
@@ -176,7 +176,7 @@ void OldBosonicExchange::springForceLastBead(dVec& f) {
  *
  * @param[out] f Spring forces acting on the particles at time-slice 1.
  */
-void OldBosonicExchange::springForceFirstBead(dVec& f) {
+void FactorialBosonicExchange::springForceFirstBead(dVec& f) {
     const dVec x_first_bead = x;
     const dVec x_last_bead = x_prev;
 
@@ -234,7 +234,7 @@ void OldBosonicExchange::springForceFirstBead(dVec& f) {
  *
  * @return Probability of a configuration corresponding to the identity permutation.
  */
-double OldBosonicExchange::getDistinctProbability() {
+double FactorialBosonicExchange::getDistinctProbability() {
     /// @todo Currently not implemented
     return 0.0;
 }
@@ -246,7 +246,7 @@ double OldBosonicExchange::getDistinctProbability() {
  *
  * @return Probability of a configuration where all the particles are connected.
  */
-double OldBosonicExchange::getLongestProbability() {
+double FactorialBosonicExchange::getLongestProbability() {
     /// @todo Currently not implemented
     return 0.0;
 }
@@ -256,7 +256,7 @@ double OldBosonicExchange::getLongestProbability() {
  *
  * @return Weighted average of exterior spring energies over all permutations. 
  */
-double OldBosonicExchange::primEstimator() {
+double FactorialBosonicExchange::primEstimator() {
     dVec x_first_bead(nbosons);
     dVec x_last_bead(nbosons);
 
@@ -292,7 +292,7 @@ double OldBosonicExchange::primEstimator() {
     return (-1.0) * bosonic_spring_energy;
 }
 
-void OldBosonicExchange::printBosonicDebug() {
+void FactorialBosonicExchange::printBosonicDebug() {
     /// @todo Currently not implemented
     return;
 }

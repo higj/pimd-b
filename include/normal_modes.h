@@ -2,7 +2,6 @@
 
 #include <vector>
 #include "mpi.h"
-#include "common.h"
 
 class Simulation;
 
