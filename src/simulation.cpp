@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <ranges>
 #include <fstream>
 #include <filesystem>
@@ -144,8 +145,7 @@ void Simulation::uniformParticleGrid(dVec& pos_arr) const {
         num_nn_grid(0, i) = static_cast<int>(std::ceil((size / init_side) - EPS));
 
         // Make sure we have at least one grid box
-        if (num_nn_grid(0, i) < 1)
-            num_nn_grid(0, i) = 1;
+        num_nn_grid(0, i) = std::max(num_nn_grid(0, i), 1);
 
         // Compute the actual size of the grid
         size_nn_grid(0, i) = size / (1.0 * num_nn_grid(0, i));
