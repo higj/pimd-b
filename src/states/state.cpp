@@ -1,8 +1,5 @@
 #include "states.h"
 #include "simulation.h"
-#include "units.h"
-
-#include <sstream>
 
 /**
  * @brief Generic state class constructor

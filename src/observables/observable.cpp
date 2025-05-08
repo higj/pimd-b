@@ -1,6 +1,5 @@
 #include "observables.h"
 #include "simulation.h"
-#include "units.h"
 #include <ranges>
 #include "mpi.h"
 

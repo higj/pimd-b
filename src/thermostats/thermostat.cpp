@@ -1,10 +1,6 @@
 #include "thermostats/thermostat.h"
 #include "simulation.h"
-#include "common.h"
-#include "normal_modes.h"
 #include "thermostats/thermostat_coupling.h"
-
-#include <numbers>
 
 Thermostat::Thermostat(Simulation& _sim, bool normal_modes) : sim(_sim) {
     // Choose coupling (Cartesian coords or normal modes of distinguishable ring polymers)
