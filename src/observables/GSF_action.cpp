@@ -1,4 +1,4 @@
-#include "observables/GSF_action.h"
+#include "observables/gsf_action.h"
 #include "simulation.h"
 #include "units.h"
 #include <ranges>
