@@ -55,7 +55,7 @@ public:
     Simulation(const int& rank, const int& nproc, Params& param_obj, unsigned int seed = static_cast<unsigned int>(time(nullptr)));
     ~Simulation();
 
-    dVec coord, momenta, forces;
+    dVec coord, momenta, forces, spring_forces, physical_forces;
     dVec prev_coord, next_coord;
 
     int getStep() const;
@@ -72,7 +72,7 @@ public:
 
     void zeroMomentum();
 
-    void initializePropagator(const VariantMap& sim_params);
+    void initializePropagator(Params& param_obj);
     void initializeThermostat(Params& param_obj);
     void initializeExchangeAlgorithm();
     void initializePositions(dVec& coord_arr, const VariantMap& sim_params);
@@ -102,8 +102,8 @@ public:
     std::string interaction_potential_name;
 
     void updateForces();
-    void updateSpringForces(dVec& spring_force_arr) const;
-    void updatePhysicalForces(dVec& physical_force_arr) const;
+    void updateSpringForces();
+    void updatePhysicalForces();
 
     double classicalSpringEnergy() const;
 
