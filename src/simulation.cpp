@@ -95,7 +95,7 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     // Update the coordinate arrays of neighboring particles
     updateNeighboringCoordinates();
 
-    initializeStates(param_obj.states);
+    initializeStates(param_obj);
     initializeObservables(param_obj.observables);
 }
 
@@ -228,7 +228,7 @@ void Simulation::run() {
     ObservablesLogger obs_logger(Output::MAIN_FILENAME, this_bead, observables);
 
     for (const auto& state : states) {
-        state->initialize();
+        state->initialize(this_bead);
     }
 
     // Main loop performing molecular dynamics steps
@@ -760,18 +760,20 @@ void Simulation::initializeMomenta(dVec& momentum_arr, const VariantMap& sim_par
  * Initializes a state based on the input parameters. Initialization occurs only if the
  * state is enabled, i.e., if the units are not set to "off" or "false".
  *
+ * @param param_obj Params object with all parameters of the simulation.
  * @param sim_params Simulation parameters object containing information about the states.
+ *                   Passes it in addition to param_obj for an implicit convesion to StringMap.
  * @param param_key Key of the parameter in the simulation parameters object.
  * @param state_name Name of the state.
  */
-void Simulation::addStateIfEnabled(const StringMap& sim_params, const std::string& param_key, const std::string& state_name) {
-    if (const std::string& units = sim_params.at(param_key); units != "off" && units != "false") {
+void Simulation::addStateIfEnabled(Params& param_obj, const std::string& param_key, const std::string& state_name) {
+    if (const std::string& units = param_obj.states.at(param_key); units != "off" && units != "false") {
         if (units == "on" || units == "true" || units == "none") {
             // In the case of "none", it is expected that the State object quantities will not have units,
             // and therefore providing "atomic_unit" as the units in this case is simply a placeholder.
-            states.push_back(StateFactory::createQuantity(state_name, *this, sfreq, "atomic_unit"));
+            states.push_back(StateFactory::createQuantity(state_name, *this, param_obj, sfreq, "atomic_unit"));
         } else {
-            states.push_back(StateFactory::createQuantity(state_name, *this, sfreq, units));
+            states.push_back(StateFactory::createQuantity(state_name, *this, param_obj, sfreq, units));
         }
     }
 }
@@ -779,12 +781,12 @@ void Simulation::addStateIfEnabled(const StringMap& sim_params, const std::strin
 /**
  * Method for initializing all the requested states.
  *
- * @param sim_params Simulation parameters object containing information about the states.
+ * @param param_obj Params object with all parameters of the simulation.
  */
-void Simulation::initializeStates(const StringMap& sim_params) {
-    addStateIfEnabled(sim_params, "positions", "position");
-    addStateIfEnabled(sim_params, "velocities", "velocity");
-    addStateIfEnabled(sim_params, "forces", "force");
+void Simulation::initializeStates(Params& param_obj) {
+    addStateIfEnabled(param_obj, "positions", "position");
+    addStateIfEnabled(param_obj, "velocities", "velocity");
+    addStateIfEnabled(param_obj, "forces", "force");
 }
 
 /**
