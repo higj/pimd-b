@@ -77,8 +77,8 @@ public:
     void initializeExchangeAlgorithm();
     void initializePositions(dVec& coord_arr, const VariantMap& sim_params);
     void initializeMomenta(dVec& momentum_arr, const VariantMap& sim_params);
-    void addStateIfEnabled(const StringMap& sim_params, const std::string& param_key, const std::string& state_name);
-    void initializeStates(const StringMap& sim_params);
+    void addStateIfEnabled(Params& param_obj, const std::string& param_key, const std::string& state_name);
+    void initializeStates(Params& param_obj);
     void addObservableIfEnabled(const StringMap& sim_params, const std::string& param_key, const std::string& observable_name);
     void initializeObservables(const StringMap& sim_params);
     std::unique_ptr<Potential> initializePotential(const std::string& potential_name,
