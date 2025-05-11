@@ -12,7 +12,7 @@ LangevinThermostat::LangevinThermostat(Coupling& coupling, Params& param_obj, in
     getVariant(param_obj.sim["gamma"], gamma);
     friction_coefficient = exp(-0.5 * gamma * dt);
     noise_coefficient = sqrt((1 - friction_coefficient * friction_coefficient) * mass / thermo_beta);
-    int params_seed;
+    unsigned int params_seed;
     getVariant(param_obj.sim["seed"], params_seed);
     mars_gen = std::make_unique<RanMars>(params_seed + rank);
 }

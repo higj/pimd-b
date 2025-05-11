@@ -233,7 +233,6 @@ void Simulation::run() {
     // Main loop performing molecular dynamics steps
     for (int step = 0; step <= steps; ++step) {
         setStep(step);
-
         for (const auto& observable : observables) {
             observable->resetValues();
         }
@@ -249,6 +248,7 @@ void Simulation::run() {
         }
 
         propagator->step();
+
         thermostat->step();
 
         // Zero momentum after every thermostat step (if needed)
