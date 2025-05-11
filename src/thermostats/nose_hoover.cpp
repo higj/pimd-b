@@ -7,29 +7,29 @@
 #include <numbers>
 
 // A class for a single Nose-Hoover chain coupled to all degrees of freedom
-NoseHooverThermostat::NoseHooverThermostat(Simulation& _sim, bool normal_modes, int _nchains) : Thermostat(
-    _sim, normal_modes) {
-    nchains = _nchains;
+NoseHooverThermostat::NoseHooverThermostat(Coupling& coupling, Params& param_obj) : Thermostat(
+    coupling, param_obj) {
+    getVariant(param_obj.sim["nchains"], nchains);
 
     // Q1 and Qi (where i>1) are the effective masses of the extended variables, which determine
     // the time scale on which the heat-bath variables evolve.
     // The choice is based on Sec. 2.5 in Martyna, G. J. et al. (1996), Mol. Phys., 87(5), pp. 1117-1157.
     // For the fluctuation frequency, we choose the spring frequency of the ring polymers.
-    Qi = Constants::hbar * Constants::hbar * sim.beta / sim.nbeads;
+    Qi = Constants::hbar * Constants::hbar * beta / nbeads;
 
     // Q1/Qi should be equal to the number of degrees of freedom (NDOF).
     // In the absence of constraints, NDOF=NDIM*natoms.
-    Q1 = NDIM * sim.natoms * Qi;
+    Q1 = NDIM * natoms * Qi;
 
     eta = std::vector<double>(nchains, 0.0);
     eta_dot = std::vector<double>(nchains, 0.0);
     eta_dot_dot = std::vector<double>(nchains, 0.0);
 
-    dt2 = 0.5 * sim.dt;
-    dt4 = 0.25 * sim.dt;
-    dt8 = 0.125 * sim.dt;
+    dt2 = 0.5 * dt;
+    dt4 = 0.25 * dt;
+    dt8 = 0.125 * dt;
 
-    required_energy = NDIM * sim.natoms / sim.thermo_beta;
+    required_energy = NDIM * natoms / thermo_beta;
 }
 
 /**
@@ -39,7 +39,7 @@ NoseHooverThermostat::NoseHooverThermostat(Simulation& _sim, bool normal_modes, 
 */
  
 double NoseHooverThermostat::getAdditionToH() {
-    return singleChainGetAdditionToH(NDIM * sim.natoms, 0);
+    return singleChainGetAdditionToH(NDIM * natoms, 0);
 }
 
 /**
@@ -55,12 +55,12 @@ double NoseHooverThermostat::singleChainGetAdditionToH(const int& ndof, const in
     double addition_to_H = 0.5 * Q1 * eta_dot[index] * eta_dot[index];
 
     // Then, we add the other term that is proportional to kT*eta
-    addition_to_H += ndof * eta[index] / sim.thermo_beta;
+    addition_to_H += ndof * eta[index] / thermo_beta;
 
     // Similar calculation, but for the rest of the thermostats
     for (int i = 1; i < nchains; i++) {
         addition_to_H += 0.5 * Qi * eta_dot[index + i] * eta_dot[index + i];
-        addition_to_H += eta[index + i] / sim.thermo_beta;
+        addition_to_H += eta[index + i] / thermo_beta;
     }
 
     return addition_to_H;
@@ -69,22 +69,22 @@ double NoseHooverThermostat::singleChainGetAdditionToH(const int& ndof, const in
 void NoseHooverThermostat::momentaUpdate() {
     // Calculates the current energy in the system
     double current_energy = 0.0;
-    for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
+    for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
-            const double momentum_for_calc = coupling->getMomentumForCalc(ptcl_idx, axis);
+            const double momentum_for_calc = coupling.getMomentumForCalc(ptcl_idx, axis);
             current_energy += momentum_for_calc * momentum_for_calc;
         }
     }
-    current_energy /= sim.mass;
+    current_energy /= mass;
 
     // Obtain the scaling factor
     double scale = singleChainStep(current_energy, 0);
 
     // Rescale the momenta
-    for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
+    for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
-            double momentum_for_calc = coupling->getMomentumForCalc(ptcl_idx, axis);
-            double& momentum_for_update = coupling->getMomentumForUpdate(ptcl_idx, axis);
+            double momentum_for_calc = coupling.getMomentumForCalc(ptcl_idx, axis);
+            double& momentum_for_update = coupling.getMomentumForUpdate(ptcl_idx, axis);
             momentum_for_update = momentum_for_calc * scale;
         }
     }
@@ -132,14 +132,14 @@ double NoseHooverThermostat::singleChainStep(const double& current_energy, const
     for (int i = 1; i < nchains - 1; i++) {
         exp_factor = exp(-dt8 * eta_dot[i + 1 + index]);
         eta_dot[i + index] *= exp_factor;
-        eta_dot_dot[i + index] = (Q_former * eta_dot[i - 1 + index] * eta_dot[i - 1 + index] - 1 / sim.thermo_beta) / Qi;
+        eta_dot_dot[i + index] = (Q_former * eta_dot[i - 1 + index] * eta_dot[i - 1 + index] - 1 / thermo_beta) / Qi;
         eta_dot[i + index] += eta_dot_dot[i + index] * dt4;
         eta_dot[i + index] *= exp_factor;
         Q_former = Qi;
     }
 
     // Update the derivatives of eta for the last component
-    eta_dot_dot[nchains - 1 + index] = (Qi * eta_dot[nchains - 2 + index] * eta_dot[nchains - 2 + index] - 1 / sim.thermo_beta) / Qi;
+    eta_dot_dot[nchains - 1 + index] = (Qi * eta_dot[nchains - 2 + index] * eta_dot[nchains - 2 + index] - 1 / thermo_beta) / Qi;
     eta_dot[nchains - 1 + index] += eta_dot_dot[nchains - 1 + index] * dt4;
 
     return scale;
@@ -148,34 +148,34 @@ double NoseHooverThermostat::singleChainStep(const double& current_energy, const
 /* -------------------------------- */
 
 // A class for a unique Nose-Hoover chain coupled to each particle
-NoseHooverNpThermostat::NoseHooverNpThermostat(Simulation& _sim, bool normal_modes, int _nchains) :
-    NoseHooverThermostat(_sim, normal_modes, _nchains) {
+NoseHooverNpThermostat::NoseHooverNpThermostat(Coupling& coupling, Params& param_obj) : 
+    NoseHooverThermostat(coupling, param_obj) {
     Q1 = NDIM * Qi;
-    int eta_length = nchains * sim.natoms;
+    int eta_length = nchains * natoms;
     eta = std::vector<double>(eta_length, 0.0);
     eta_dot = std::vector<double>(eta_length, 0.0);
     eta_dot_dot = std::vector<double>(eta_length, 0.0);
 
-    required_energy = NDIM / sim.thermo_beta;
+    required_energy = NDIM / thermo_beta;
 }
 
 void NoseHooverNpThermostat::momentaUpdate() {
-    for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
+    for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
         // Calculates the current energy in the system
         double current_energy = 0.0;
         for (int axis = 0; axis < NDIM; ++axis) {
-            double momentum_for_calc = coupling->getMomentumForCalc(ptcl_idx, axis);
+            double momentum_for_calc = coupling.getMomentumForCalc(ptcl_idx, axis);
             current_energy += momentum_for_calc * momentum_for_calc;
         }
-        current_energy /= sim.mass;
+        current_energy /= mass;
 
         // Obtain the scaling factor
         double scale = singleChainStep(current_energy, ptcl_idx * nchains);
 
         // Rescale the momenta
         for (int axis = 0; axis < NDIM; ++axis) {
-            double momentum_for_calc = coupling->getMomentumForCalc(ptcl_idx, axis);
-            double& momentum_for_update = coupling->getMomentumForUpdate(ptcl_idx, axis);
+            double momentum_for_calc = coupling.getMomentumForCalc(ptcl_idx, axis);
+            double& momentum_for_update = coupling.getMomentumForUpdate(ptcl_idx, axis);
             momentum_for_update = momentum_for_calc * scale;
         }
     }
@@ -183,7 +183,7 @@ void NoseHooverNpThermostat::momentaUpdate() {
 
 double NoseHooverNpThermostat::getAdditionToH() {
     double additionToH = 0;
-    for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
+    for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
         additionToH += singleChainGetAdditionToH(NDIM, ptcl_idx * nchains);
     }
     return additionToH;
@@ -192,30 +192,30 @@ double NoseHooverNpThermostat::getAdditionToH() {
 /* -------------------------------- */
 
 // A class for a unique Nose-Hoover chain coupled to each degrees of freedom
-NoseHooverNpDimThermostat::NoseHooverNpDimThermostat(Simulation& _sim, bool normal_modes, int _nchains) :
-    NoseHooverThermostat(_sim, normal_modes, _nchains) {
+NoseHooverNpDimThermostat::NoseHooverNpDimThermostat(Coupling& coupling, Params& param_obj) : 
+    NoseHooverThermostat(coupling, param_obj) {
     Q1 = Qi;
 
-    int eta_length = nchains * sim.natoms * NDIM;
+    int eta_length = nchains * natoms * NDIM;
     eta = std::vector<double>(eta_length, 0.0);
     eta_dot = std::vector<double>(eta_length, 0.0);
     eta_dot_dot = std::vector<double>(eta_length, 0.0);
 
-    required_energy = 1 / sim.thermo_beta;
+    required_energy = 1 / thermo_beta;
 }
 
 void NoseHooverNpDimThermostat::momentaUpdate() {
-    for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
+    for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
-            double momentum_for_calc = coupling->getMomentumForCalc(ptcl_idx, axis);
+            double momentum_for_calc = coupling.getMomentumForCalc(ptcl_idx, axis);
             // Calculates the current energy in the system
-            double current_energy = momentum_for_calc * momentum_for_calc / sim.mass;
+            double current_energy = momentum_for_calc * momentum_for_calc / mass;
 
             // Obtain the scaling factor
             double scale = singleChainStep(current_energy, (ptcl_idx * NDIM + axis) * nchains);
 
             // Rescale the momentum
-            double& momentum_for_update = coupling->getMomentumForUpdate(ptcl_idx, axis);
+            double& momentum_for_update = coupling.getMomentumForUpdate(ptcl_idx, axis);
             momentum_for_update = momentum_for_calc * scale;
         }
     }
@@ -223,7 +223,7 @@ void NoseHooverNpDimThermostat::momentaUpdate() {
 
 double NoseHooverNpDimThermostat::getAdditionToH() {
     double additionToH = 0;
-    for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
+    for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
             additionToH += singleChainGetAdditionToH(1, (ptcl_idx * NDIM + axis) * nchains);
         }

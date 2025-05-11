@@ -49,21 +49,20 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
 #endif
 
     spring_constant = mass * omega_p * omega_p;
-    beta_half_k = thermo_beta * 0.5 * spring_constant;
 
     // Get the seed from the config file
     getVariant(param_obj.sim["seed"], params_seed);
 
     // Based on the provided seed, make sure each process has a unique seed
     rand_gen.seed(params_seed + rank);
-    mars_gen = std::make_unique<RanMars>(params_seed + rank);
 
     init_pos_type = std::get<std::string>(param_obj.sim["init_pos_type"]);
     init_vel_type = std::get<std::string>(param_obj.sim["init_vel_type"]);
 
+    normal_modes = std::make_unique<NormalModes>(*this);
     // Initialize the propagator, thermostat, and exchange algorithm
     initializePropagator(param_obj.sim);
-    initializeThermostat(param_obj.sim);
+    initializeThermostat(param_obj);
     initializeExchangeAlgorithm();
 
     // Initialize the coordinate, momenta, and force arrays
@@ -97,7 +96,6 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
 
     initializeStates(param_obj.states);
     initializeObservables(param_obj.observables);
-    normal_modes = std::make_unique<NormalModes>(*this);
 }
 
 Simulation::~Simulation() = default;
@@ -664,22 +662,27 @@ void Simulation::initializePropagator(const VariantMap& sim_params) {
  *
  * @param sim_params Simulation parameters object containing information about the thermostat.
  */
-void Simulation::initializeThermostat(const VariantMap& sim_params) {
-    thermostat_type = std::get<std::string>(sim_params.at("thermostat_type"));
-    getVariant(sim_params.at("nmthermostat"), nmthermostat);
-    getVariant(sim_params.at("nchains"), nchains);
-    getVariant(sim_params.at("gamma"), gamma);
+void Simulation::initializeThermostat(Params& param_obj) {
+    thermostat_type = std::get<std::string>(param_obj.sim["thermostat_type"]);
+    getVariant(param_obj.sim["nmthermostat"], nmthermostat);
+
+    // Choose coupling (Cartesian coords or normal modes of distinguishable ring polymers)
+    if (nmthermostat) {
+        thermostat_coupling = std::make_unique<NMCoupling>(momenta, *normal_modes, this_bead);
+    } else {
+        thermostat_coupling = std::make_unique<CartesianCoupling>(momenta);
+    }
 
     if (thermostat_type == "langevin") {
-        thermostat = std::make_unique<LangevinThermostat>(*this, nmthermostat);
+        thermostat = std::make_unique<LangevinThermostat>(*thermostat_coupling, param_obj, this_bead);
     } else if (thermostat_type == "nose_hoover") {
-        thermostat = std::make_unique<NoseHooverThermostat>(*this, nmthermostat, nchains);
+        thermostat = std::make_unique<NoseHooverThermostat>(*thermostat_coupling, param_obj);
     } else if (thermostat_type == "nose_hoover_np") {
-        thermostat = std::make_unique<NoseHooverNpThermostat>(*this, nmthermostat, nchains);
+        thermostat = std::make_unique<NoseHooverNpThermostat>(*thermostat_coupling, param_obj);
     } else if (thermostat_type == "nose_hoover_np_dim") {
-        thermostat = std::make_unique<NoseHooverNpDimThermostat>(*this, nmthermostat, nchains);
+        thermostat = std::make_unique<NoseHooverNpDimThermostat>(*thermostat_coupling, param_obj);
     } else if (thermostat_type == "none") {
-        thermostat = std::make_unique<Thermostat>(*this, nmthermostat);
+        thermostat = std::make_unique<Thermostat>(*thermostat_coupling, param_obj);
     }
 }
 

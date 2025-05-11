@@ -5,7 +5,6 @@
 #include <ctime>
 #include <memory>
 
-#include "random_mars.h"
 #include "common.h"
 #include "params.h"
 #include "potentials.h"
@@ -16,6 +15,7 @@ class State;
 class Observable;
 class Propagator;
 class Thermostat;
+class Coupling;
 
 class Simulation
 {
@@ -51,7 +51,6 @@ public:
     std::vector<std::unique_ptr<State>> states;
 
     std::mt19937 rand_gen;
-    std::unique_ptr<RanMars> mars_gen;
 
     Simulation(const int& rank, const int& nproc, Params& param_obj, unsigned int seed = static_cast<unsigned int>(time(nullptr)));
     ~Simulation();
@@ -74,7 +73,7 @@ public:
     void zeroMomentum();
 
     void initializePropagator(const VariantMap& sim_params);
-    void initializeThermostat(const VariantMap& sim_params);
+    void initializeThermostat(Params& param_obj);
     void initializeExchangeAlgorithm();
     void initializePositions(dVec& coord_arr, const VariantMap& sim_params);
     void initializeMomenta(dVec& momentum_arr, const VariantMap& sim_params);
@@ -89,6 +88,7 @@ public:
     
     std::unique_ptr<Propagator> propagator;
     std::unique_ptr<Thermostat> thermostat;
+    std::unique_ptr<Coupling> thermostat_coupling;
 
     std::unique_ptr<NormalModes> normal_modes;
 
