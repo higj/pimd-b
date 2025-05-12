@@ -13,7 +13,9 @@ public:
     virtual void preForceStep() = 0;
     virtual void postForceStep() = 0;
 protected:
-    dVec& coord, momenta, forces;
+    dVec& coord;
+    dVec& momenta;
+    dVec& forces;
     int natoms;
     double mass;
     double dt;
