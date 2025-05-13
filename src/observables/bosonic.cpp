@@ -1,13 +1,14 @@
 #include "observables/bosonic.h"
-#include "simulation.h"
+#include "bosonic_exchange.h"
 #include <ranges>
-#include "mpi.h"
 
 /**
  * @brief Bosonic observable class constructor.
  */
-BosonicObservable::BosonicObservable(const Simulation& _sim, int _freq, const std::string& _out_unit) :
-    Observable(_sim, _freq, _out_unit) {
+BosonicObservable::BosonicObservable(Params& param_obj, int _freq, const std::string& _out_unit, 
+                                     int this_bead, BosonicExchangeBase& bosonic_exchange) :
+    Observable(param_obj, _freq, _out_unit, this_bead), bosonic_exchange(bosonic_exchange) {
+    getVariant(param_obj.sim["bosonic"], bosonic);
     initialize({ "prob_dist", "prob_all" });
 }
 
@@ -15,8 +16,8 @@ BosonicObservable::BosonicObservable(const Simulation& _sim, int _freq, const st
  * @brief Calculates quantities pertaining to bosonic exchange.
  */
 void BosonicObservable::calculate() {
-    if (sim.this_bead == 0 && sim.bosonic) {
-        quantities["prob_dist"] = sim.bosonic_exchange->getDistinctProbability();
-        quantities["prob_all"] = sim.bosonic_exchange->getLongestProbability();
+    if (this_bead == 0 && bosonic) {
+        quantities["prob_dist"] = bosonic_exchange.getDistinctProbability();
+        quantities["prob_all"] = bosonic_exchange.getLongestProbability();
     }
 }

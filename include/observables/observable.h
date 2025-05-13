@@ -4,16 +4,17 @@
 #include <memory>
 #include <vector>
 #include <fstream>
-
+#include "params.h"
 #include "ordered_map.h"
 
+class Params; // Forward declaration
 class Simulation; // Forward declaration
 
 /* -------------------------------- */
 
 class Observable {
 public:
-    explicit Observable(const Simulation& _sim, int _freq, const std::string& _out_unit);
+    explicit Observable(Params& param_obj, int _freq, const std::string& _out_unit, int this_bead);
     virtual void calculate() = 0;
     virtual ~Observable() = default;
 
@@ -23,17 +24,17 @@ public:
     tsl::ordered_map<std::string, double> quantities;
 
 protected:
-    const Simulation& sim; // Reference to the simulation object
     int freq;              // Frequency at which the observable is recorded
     std::string out_unit;  // Units of the output quantities
+    int this_bead;
 };
 
 /* -------------------------------- */
 
 class ObservableFactory {
 public:
-    static std::unique_ptr<Observable> createQuantity(const std::string& observable_type, const Simulation& _sim, int _freq,
-        const std::string& _out_unit);
+    static std::unique_ptr<Observable> createQuantity(Simulation& sim, Params& param_obj, const std::string& observable_type, int _freq,
+        const std::string& _out_unit, int this_bead);
 };
 
 /* -------------------------------- */
