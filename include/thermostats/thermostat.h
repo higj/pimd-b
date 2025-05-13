@@ -2,18 +2,23 @@
 
 #include <vector>
 #include <memory>
+#include "params.h"
 
-class Simulation;
 class Coupling;
 
 class Thermostat {
 public:
-    explicit Thermostat(Simulation& _sim, bool normal_modes);
+    explicit Thermostat(Coupling& coupling, Params& param_obj);
     virtual ~Thermostat() = default;
     void step();
     virtual void momentaUpdate();
     virtual double getAdditionToH();
 protected:
-    Simulation& sim;   // Reference to the simulation object
-    std::unique_ptr<Coupling> coupling;
+    Coupling& coupling;
+    int natoms;
+    double mass;
+    double dt;
+    int nbeads;
+    double beta;
+    double thermo_beta;
 };

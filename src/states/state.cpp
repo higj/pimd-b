@@ -4,8 +4,10 @@
 /**
  * @brief Generic state class constructor
  */
-State::State(const Simulation& _sim, int _freq, const std::string& _out_unit) :
-    sim(_sim), freq(_freq), out_unit(_out_unit) {
+State::State(Params& param_obj, int _freq, const std::string& _out_unit) :
+    freq(_freq), out_unit(_out_unit) {
+    getVariant(param_obj.sim["nbeads"], nbeads);
+    getVariant(param_obj.sys["natoms"], natoms);
 }
 
 /**
@@ -28,15 +30,16 @@ State::~State() {
  * @throw std::invalid_argument If the state type is unknown
  */
 std::unique_ptr<State> StateFactory::createQuantity(const std::string& state_type,
-    const Simulation& _sim,
+    Simulation& sim, 
+    Params& param_obj,
     int _freq,
     const std::string& _out_unit) {
     if (state_type == "position") {
-        return std::make_unique<PositionState>(_sim, _freq, _out_unit);
+        return std::make_unique<PositionState>(param_obj, _freq, _out_unit, sim.coord);
     } else if (state_type == "velocity") {
-        return std::make_unique<VelocityState>(_sim, _freq, _out_unit);
+        return std::make_unique<VelocityState>(param_obj, _freq, _out_unit, sim.momenta);
     } else if (state_type == "force") {
-        return std::make_unique<ForceState>(_sim, _freq, _out_unit);
+        return std::make_unique<ForceState>(param_obj, _freq, _out_unit, sim.forces);
     } else {
         throw std::invalid_argument("Unknown state type.");
     }

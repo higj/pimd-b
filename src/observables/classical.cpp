@@ -1,16 +1,20 @@
 #include "observables/classical.h"
-#include "simulation.h"
 #include "thermostats.h"
+#include "bosonic_exchange.h"
 #include "units.h"
 #include <ranges>
-#include "mpi.h"
+#include <iostream>
 
 /**
  * @brief Classical observable class constructor.
  */
-ClassicalObservable::ClassicalObservable(const Simulation& _sim, int _freq, const std::string& _out_unit) :
-    Observable(_sim, _freq, _out_unit) {
-    if (sim.thermostat_type == "nose_hoover" || sim.thermostat_type == "nose_hoover_np" || sim.thermostat_type == "nose_hoover_np_dim") {
+ClassicalObservable::ClassicalObservable(Params& param_obj, int _freq, const std::string& _out_unit, int this_bead, 
+                                         dVec& prev_coord, dVec& coord, BosonicExchangeBase& bosonic_exchange, Thermostat& thermostat, dVec& momenta) :
+    EnergyObservable(param_obj, _freq, _out_unit, this_bead, prev_coord, coord, bosonic_exchange), 
+    thermostat(thermostat), 
+    momenta(momenta) {
+    thermostat_type = std::get<std::string>(param_obj.sim["thermostat_type"]);
+    if (thermostat_type == "nose_hoover" || thermostat_type == "nose_hoover_np" || thermostat_type == "nose_hoover_np_dim") {
         initialize({ "temperature", "cl_kinetic", "cl_spring", "nh_energy" });
     }
     else {
@@ -21,8 +25,8 @@ ClassicalObservable::ClassicalObservable(const Simulation& _sim, int _freq, cons
 void ClassicalObservable::calculate() {
     calculateKineticEnergy();
     calculateSpringEnergy();
-    if (sim.thermostat_type == "nose_hoover" || sim.thermostat_type == "nose_hoover_np" || sim.thermostat_type == "nose_hoover_np_dim") {
-        quantities["nh_energy"] = Units::convertToUser("energy", out_unit, sim.thermostat->getAdditionToH());
+    if (thermostat_type == "nose_hoover" || thermostat_type == "nose_hoover_np" || thermostat_type == "nose_hoover_np_dim") {
+        quantities["nh_energy"] = Units::convertToUser("energy", out_unit, thermostat.getAdditionToH());
     }
 }
 
@@ -32,13 +36,13 @@ void ClassicalObservable::calculate() {
 void ClassicalObservable::calculateKineticEnergy() {
     double kinetic_energy = 0.0;
 
-    for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
+    for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
-            kinetic_energy += sim.momenta(ptcl_idx, axis) * sim.momenta(ptcl_idx, axis);
+            kinetic_energy += momenta(ptcl_idx, axis) * momenta(ptcl_idx, axis);
         }
     }
 
-    kinetic_energy *= 0.5 / sim.mass;
+    kinetic_energy *= 0.5 / mass;
     quantities["cl_kinetic"] = Units::convertToUser("energy", out_unit, kinetic_energy);
 
     // Temperature is calculated according to Tolman's equipartition theorem as the average kinetic 
@@ -46,14 +50,14 @@ void ClassicalObservable::calculateKineticEnergy() {
     // See [J. Chem. Theory Comput. 2019, 15, 1, 84-94.] for a discussion on the topic.
 
     /// @todo When zeroing the center of mass motion, the number of degrees of freedom must be reduced by NDIM.
-    double dof = NDIM * sim.natoms * sim.nbeads;
+    double dof = NDIM * natoms * nbeads;
     double temperature = 2.0 * kinetic_energy / (dof * Constants::kB);
 
     // In the i-Pi convention, the ring-polymer simulation is performed at a temperature that is P times higher
     // than the actual (quantum) temperature. Therefore, to ensure the quantum temperature is calculated correctly,
     // one must divide the classical temperature by the number of beads.
 #if IPI_CONVENTION
-    temperature /= sim.nbeads;
+    temperature /= nbeads;
 #endif
 
     /// @todo Allow conversion to different temperature units
@@ -68,11 +72,10 @@ void ClassicalObservable::calculateKineticEnergy() {
 void ClassicalObservable::calculateSpringEnergy() {
     double spring_energy;
 
-    if (sim.this_bead == 0 && sim.bosonic) {
-        spring_energy = sim.bosonic_exchange->effectivePotential();
+    if (this_bead == 0 && bosonic) {
+        spring_energy = bosonic_exchange.effectivePotential();
     } else {
-        spring_energy = sim.classicalSpringEnergy();
+        spring_energy = classicalSpringEnergy();
     }
-
     quantities["cl_spring"] = Units::convertToUser("energy", out_unit, spring_energy);
 }

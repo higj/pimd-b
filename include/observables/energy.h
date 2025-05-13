@@ -1,18 +1,28 @@
 #pragma once
 
 #include "observables/observable.h"
+#include "common.h"
 
-class Simulation; // Forward declaration
-
+class BosonicExchangeBase; // Forward declaration
 /* -------------------------------- */
 
 class EnergyObservable : public Observable {
 public:
-    EnergyObservable(const Simulation& _sim, int _freq, const std::string& _out_unit);
+    EnergyObservable(Params& param_obj, int _freq, const std::string& _out_unit, int this_bead, 
+                     dVec& prev_coord, dVec& coord, BosonicExchangeBase& bosonic_exchange);
 
     void calculate() override;
 
-private:
-    void calculateKinetic();
-    void calculatePotential();
+protected:
+    double classicalSpringEnergy() const;
+    int nbeads;
+    int natoms;
+    bool bosonic;
+    bool pbc;
+    double spring_constant;
+    double size;
+    double mass;
+    dVec& prev_coord;
+    dVec& coord;
+    BosonicExchangeBase& bosonic_exchange;
 };

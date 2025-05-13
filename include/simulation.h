@@ -5,7 +5,6 @@
 #include <ctime>
 #include <memory>
 
-#include "random_mars.h"
 #include "common.h"
 #include "params.h"
 #include "potentials.h"
@@ -16,6 +15,7 @@ class State;
 class Observable;
 class Propagator;
 class Thermostat;
+class Coupling;
 
 class Simulation
 {
@@ -51,12 +51,11 @@ public:
     std::vector<std::unique_ptr<State>> states;
 
     std::mt19937 rand_gen;
-    std::unique_ptr<RanMars> mars_gen;
 
     Simulation(const int& rank, const int& nproc, Params& param_obj, unsigned int seed = static_cast<unsigned int>(time(nullptr)));
     ~Simulation();
 
-    dVec coord, momenta, forces;
+    dVec coord, momenta, forces, spring_forces, physical_forces;
     dVec prev_coord, next_coord;
 
     int getStep() const;
@@ -73,22 +72,23 @@ public:
 
     void zeroMomentum();
 
-    void initializePropagator(const VariantMap& sim_params);
-    void initializeThermostat(const VariantMap& sim_params);
-    void initializeExchangeAlgorithm();
+    void initializePropagator(Params& param_obj);
+    void initializeThermostat(Params& param_obj);
+    void initializeExchangeAlgorithm(Params& param_obj);
     void initializePositions(dVec& coord_arr, const VariantMap& sim_params);
     void initializeMomenta(dVec& momentum_arr, const VariantMap& sim_params);
-    void addStateIfEnabled(const StringMap& sim_params, const std::string& param_key, const std::string& state_name);
-    void initializeStates(const StringMap& sim_params);
-    void addObservableIfEnabled(const StringMap& sim_params, const std::string& param_key, const std::string& observable_name);
-    void initializeObservables(const StringMap& sim_params);
+    void addStateIfEnabled(Params& param_obj, const std::string& param_key, const std::string& state_name);
+    void initializeStates(Params& param_obj);
+    void addObservableIfEnabled(Params& param_obj, const std::string& param_key, const std::string& observable_name);
+    void initializeObservables(Params& param_obj);
     std::unique_ptr<Potential> initializePotential(const std::string& potential_name,
                                                    const VariantMap& potential_options);
 
     double sampleMaxwellBoltzmann();
-    
+    double classicalSpringEnergy() const;
     std::unique_ptr<Propagator> propagator;
     std::unique_ptr<Thermostat> thermostat;
+    std::unique_ptr<Coupling> thermostat_coupling;
 
     std::unique_ptr<NormalModes> normal_modes;
 
@@ -102,16 +102,12 @@ public:
     std::string interaction_potential_name;
 
     void updateForces();
-    void updateSpringForces(dVec& spring_force_arr) const;
-    void updatePhysicalForces(dVec& physical_force_arr) const;
-
-    double classicalSpringEnergy() const;
+    void updateSpringForces();
+    void updatePhysicalForces();
 
     void getNextCoords(dVec& next);
     void getPrevCoords(dVec& prev);
     void updateNeighboringCoordinates();
-
-    dVec getSeparation(int first_ptcl, int second_ptcl, bool minimum_image = false) const;
 
     int this_bead;   // Current process id ("rank" of MPI_Comm_rank)
     int nproc;       // Number of processes ("size" of MPI_Comm_size)

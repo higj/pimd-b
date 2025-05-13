@@ -5,7 +5,7 @@
 
 class BosonicExchange final : public BosonicExchangeBase {
 public:
-    BosonicExchange(const Simulation& _sim);
+    BosonicExchange(Params& param_obj, const dVec& coord, const dVec& prev_coord, const dVec& next_coord, const int this_bead);
     ~BosonicExchange() override = default;
 
     double effectivePotential() override;

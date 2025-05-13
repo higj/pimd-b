@@ -3,9 +3,9 @@
 #include <cmath>
 
 #include "bosonic_exchange/quadratic_bosonic_exchange.h"
-#include "simulation.h"
 
-BosonicExchange::BosonicExchange(const Simulation& _sim) : BosonicExchangeBase(_sim),
+BosonicExchange::BosonicExchange(Params& param_obj, const dVec& coord, const dVec& prev_coord, const dVec& next_coord, const int this_bead) : 
+    BosonicExchangeBase(param_obj, coord, prev_coord, next_coord, this_bead),
     E_kn(nbosons * (nbosons + 1) / 2),
     V(nbosons + 1),
     V_backwards(nbosons + 1),
@@ -279,11 +279,9 @@ double BosonicExchange::primEstimator() {
 }
 
 void BosonicExchange::printBosonicDebug() {
-    if (sim.this_bead == 0) {
+    if (this_bead == 0) {
         std::ofstream debug;
         debug.open(std::format("{}/bosonic_debug.log", Output::FOLDER_NAME), std::ios::out | std::ios::app);
-
-        debug << "Step " << sim.getStep() << '\n';
 
         debug << "Bosonic energies:\n";
         for (int m = 1; m < nbosons + 1; ++m) {

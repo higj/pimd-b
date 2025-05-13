@@ -4,44 +4,45 @@
 #include "normal_modes.h"
 #include "simulation.h"
 
-Coupling::Coupling(Simulation& _sim) : sim(_sim) {}
+Coupling::Coupling(dVec& _momenta) : momenta(_momenta) {}
 
 /* -------------------------------- */
 
-CartesianCoupling::CartesianCoupling(Simulation& _sim) : Coupling(_sim) {}
+CartesianCoupling::CartesianCoupling(dVec& _momenta) : Coupling(_momenta) {}
 
 void CartesianCoupling::mpiCommunication() {}
 
 double CartesianCoupling::getMomentumForCalc(const int ptcl_idx, const int axis) {
-    return sim.momenta(ptcl_idx, axis);
+    return momenta(ptcl_idx, axis);
 }
 
 double& CartesianCoupling::getMomentumForUpdate(const int ptcl_idx, const int axis) {
-    return sim.momenta(ptcl_idx, axis);
+    return momenta(ptcl_idx, axis);
 } 
 
 void CartesianCoupling::updateCoupledMomenta() {}
 
 /* -------------------------------- */
 
-NMCoupling::NMCoupling(Simulation& _sim) : Coupling(_sim) {}
+NMCoupling::NMCoupling(dVec& _momenta, NormalModes& normal_modes, int this_bead) : 
+    Coupling(_momenta), normal_modes(normal_modes), this_bead(this_bead) {}
 
 void NMCoupling::mpiCommunication() {
-    sim.normal_modes->shareData();
+    normal_modes.shareData();
     MPI_Barrier(MPI_COMM_WORLD);
 }
  
 double NMCoupling::getMomentumForCalc(const int ptcl_idx, const int axis) {
-    const int glob_idx = sim.normal_modes->globIndexAtom(axis, ptcl_idx);
-    return sim.normal_modes->momentumCarToNM(glob_idx);
+    const int glob_idx = normal_modes.globIndexAtom(axis, ptcl_idx);
+    return normal_modes.momentumCarToNM(glob_idx);
 } 
  
 double& NMCoupling::getMomentumForUpdate(const int ptcl_idx, const int axis) {
-    const int glob_idx = sim.normal_modes->globIndexAtom(axis, ptcl_idx);
-    return sim.normal_modes->arr_momenta_nm[glob_idx + sim.this_bead];
+    const int glob_idx = normal_modes.globIndexAtom(axis, ptcl_idx);
+    return normal_modes.arr_momenta_nm[glob_idx + this_bead];
 }
 
 void NMCoupling::updateCoupledMomenta() {
     MPI_Barrier(MPI_COMM_WORLD);
-    sim.normal_modes->updateCartesianMomenta();
+    normal_modes.updateCartesianMomenta();
 }

@@ -1,8 +1,7 @@
 #pragma once
 
 #include "common.h"
-
-class Simulation; // Forward declaration
+#include "params.h"
 
 /**
  * @class BosonicExchangeBase
@@ -15,7 +14,7 @@ class Simulation; // Forward declaration
  */
 class BosonicExchangeBase {
 public:
-    BosonicExchangeBase(const Simulation& _sim);
+    BosonicExchangeBase(Params& param_obj, const dVec& coord, const dVec& prev_coord, const dVec& next_coord, int this_bead);
     virtual ~BosonicExchangeBase() = default;
     BosonicExchangeBase(const BosonicExchangeBase&) = delete;
     BosonicExchangeBase& operator=(const BosonicExchangeBase&) = delete;
@@ -40,13 +39,15 @@ protected:
     virtual void springForceFirstBead(dVec& f) = 0;
     virtual void springForceLastBead(dVec& f) = 0;
 
-    const Simulation& sim; // Reference to the simulation object
-
-    const int nbosons;
-    const int nbeads;
+    int nbosons;
+    int nbeads;
+    int this_bead;
 
     double spring_constant;
     double beta;
+    double size;
+
+    bool pbc;
 
     const dVec& x;
     const dVec& x_prev;

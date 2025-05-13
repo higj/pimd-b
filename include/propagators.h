@@ -1,4 +1,4 @@
 #pragma once
 
-#include "propagators/velocity_verlet.h"
+#include "propagators/cartesian_propagator.h"
 #include "propagators/normal_modes_propagator.h"

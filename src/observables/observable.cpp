@@ -6,8 +6,8 @@
 /**
  * @brief Generic observable class constructor
  */
-Observable::Observable(const Simulation& _sim, int _freq, const std::string& _out_unit) :
-    sim(_sim), freq(_freq), out_unit(_out_unit) {
+Observable::Observable(Params& param_obj, int _freq, const std::string& _out_unit, int this_bead) :
+    freq(_freq), out_unit(_out_unit), this_bead(this_bead) {
 }
 
 /**
@@ -35,23 +35,25 @@ void Observable::resetValues() {
  * @brief Creates an observable object based on the observable type.
  *
  * @param observable_type Type of observable to create
- * @param _sim Simulation object
  * @param _freq Frequency at which the observable is calculated
  * @param _out_unit Output unit of the observable
+ * @param this_bead the rank of the processor
  * @return std::unique_ptr<Observable> Pointer to the created observable object
  * @throw std::invalid_argument If the observable type is unknown
  */
-std::unique_ptr<Observable> ObservableFactory::createQuantity(const std::string& observable_type,
-    const Simulation& _sim, int _freq,
-    const std::string& _out_unit) {
+std::unique_ptr<Observable> ObservableFactory::createQuantity(Simulation& sim, Params& param_obj, const std::string& observable_type,
+    int _freq, const std::string& _out_unit, int this_bead) {
     if (observable_type == "energy") {
-        return std::make_unique<EnergyObservable>(_sim, _freq, _out_unit);
+        return std::make_unique<QuantumObservable>(param_obj, _freq, _out_unit, this_bead,
+                                    sim.prev_coord, sim.coord, *sim.bosonic_exchange, *sim.ext_potential, *sim.int_potential, sim.physical_forces);
     } else if (observable_type == "classical") {
-        return std::make_unique<ClassicalObservable>(_sim, _freq, _out_unit);
+        return std::make_unique<ClassicalObservable>(param_obj, _freq, _out_unit, this_bead,
+                                    sim.prev_coord, sim.coord, *sim.bosonic_exchange, *sim.thermostat, sim.momenta);
     } else if (observable_type == "bosonic") {
-        return std::make_unique<BosonicObservable>(_sim, _freq, _out_unit);
+        return std::make_unique<BosonicObservable>(param_obj, _freq, _out_unit, this_bead, *sim.bosonic_exchange);
     } else if (observable_type == "gsf") {
-        return std::make_unique<GSFActionObservable>(_sim, _freq, _out_unit);
+        return std::make_unique<GSFActionObservable>(param_obj, _freq, _out_unit, this_bead,
+                                    *sim.ext_potential, *sim.int_potential, sim.coord);
     } else {
         throw std::invalid_argument("Unknown observable type.");
     }

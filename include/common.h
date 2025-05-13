@@ -274,6 +274,8 @@ void printError(const std::string& msg, int this_rank, const std::string& err_ty
 // Print a progress bar
 void printProgress(int this_step, int total_steps, int this_rank, int out_rank = 0);
 
+dVec getSeparation(int first_ptcl, int second_ptcl, bool minimum_image, bool pbc, dVec& coord, double size);
+
 // To handle periodic boundary conditions, we employ the Class C storage
 // concept [Z. Phys. Chem. 227 (2013) 345-352], allowing atoms to move
 // outside the primary simulation box. That is, the coordinates are not folded
