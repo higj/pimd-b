@@ -74,7 +74,7 @@ public:
 
     void initializePropagator(Params& param_obj);
     void initializeThermostat(Params& param_obj);
-    void initializeExchangeAlgorithm();
+    void initializeExchangeAlgorithm(Params& param_obj);
     void initializePositions(dVec& coord_arr, const VariantMap& sim_params);
     void initializeMomenta(dVec& momentum_arr, const VariantMap& sim_params);
     void addStateIfEnabled(Params& param_obj, const std::string& param_key, const std::string& state_name);

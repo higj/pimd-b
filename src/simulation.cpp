@@ -76,7 +76,7 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     // Initialize the propagator, thermostat, and exchange algorithm
     initializePropagator(param_obj);
     initializeThermostat(param_obj);
-    initializeExchangeAlgorithm();
+    initializeExchangeAlgorithm(param_obj);
 
     // Initialize the potential based on the input
     external_potential_name = std::get<std::string>(param_obj.external_pot["name"]);
@@ -656,15 +656,15 @@ void Simulation::initializeThermostat(Params& param_obj) {
 /**
  * Initializes the bosonic exchange algorithm.
  */
-void Simulation::initializeExchangeAlgorithm() {
+void Simulation::initializeExchangeAlgorithm(Params& param_obj) {
     bosonic = bosonic && (nbeads > 1); // Bosonic exchange is only possible for P>1
     is_bosonic_bead = bosonic && (this_bead == 0 || this_bead == nbeads - 1);
 
     if (is_bosonic_bead) {
 #if FACTORIAL_BOSONIC_ALGORITHM
-        bosonic_exchange = std::make_unique<FactorialBosonicExchange>(*this);
+        bosonic_exchange = std::make_unique<FactorialBosonicExchange>(param_obj, coord, prev_coord, next_coord, this_bead);
 #else
-        bosonic_exchange = std::make_unique<BosonicExchange>(*this);
+        bosonic_exchange = std::make_unique<BosonicExchange>(param_obj, coord, prev_coord, next_coord, this_bead);
 #endif
     }
 }

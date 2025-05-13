@@ -8,7 +8,8 @@
  */
 GSFActionObservable::GSFActionObservable(Params& param_obj, int _freq, const std::string& _out_unit, int this_bead,
                                          Potential& ext_potential, Potential& int_potential, dVec& coord) :
-    Observable(param_obj, _freq, _out_unit, this_bead), ext_potential(ext_potential), int_potential(int_potential), coord(coord) {
+    Observable(param_obj, _freq, _out_unit, this_bead), 
+    ext_potential(ext_potential), int_potential(int_potential), coord(coord) {
     getVariant(param_obj.sys["natoms"], natoms);
     getVariant(param_obj.sim["nbeads"], nbeads);
     getVariant(param_obj.sim["pbc"], pbc);
