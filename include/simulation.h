@@ -79,13 +79,13 @@ public:
     void initializeMomenta(dVec& momentum_arr, const VariantMap& sim_params);
     void addStateIfEnabled(Params& param_obj, const std::string& param_key, const std::string& state_name);
     void initializeStates(Params& param_obj);
-    void addObservableIfEnabled(const StringMap& sim_params, const std::string& param_key, const std::string& observable_name);
-    void initializeObservables(const StringMap& sim_params);
+    void addObservableIfEnabled(Params& param_obj, const std::string& param_key, const std::string& observable_name);
+    void initializeObservables(Params& param_obj);
     std::unique_ptr<Potential> initializePotential(const std::string& potential_name,
                                                    const VariantMap& potential_options);
 
     double sampleMaxwellBoltzmann();
-    
+    double classicalSpringEnergy() const;
     std::unique_ptr<Propagator> propagator;
     std::unique_ptr<Thermostat> thermostat;
     std::unique_ptr<Coupling> thermostat_coupling;
@@ -105,13 +105,9 @@ public:
     void updateSpringForces();
     void updatePhysicalForces();
 
-    double classicalSpringEnergy() const;
-
     void getNextCoords(dVec& next);
     void getPrevCoords(dVec& prev);
     void updateNeighboringCoordinates();
-
-    dVec getSeparation(int first_ptcl, int second_ptcl, bool minimum_image = false) const;
 
     int this_bead;   // Current process id ("rank" of MPI_Comm_rank)
     int nproc;       // Number of processes ("size" of MPI_Comm_size)

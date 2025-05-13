@@ -12,6 +12,7 @@
 #include "thermostats.h"
 #include "normal_modes.h"
 #include "simulation.h"
+#include <iostream>
 
 Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, unsigned int seed) :
     bosonic_exchange(nullptr),
@@ -97,10 +98,34 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     updateNeighboringCoordinates();
 
     initializeStates(param_obj);
-    initializeObservables(param_obj.observables);
+    initializeObservables(param_obj);
 }
 
 Simulation::~Simulation() = default;
+
+double Simulation::classicalSpringEnergy() const {
+    assert(!bosonic || (bosonic && this_bead != 0));
+
+    double interior_spring_energy = 0.0;
+
+    for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
+        for (int axis = 0; axis < NDIM; ++axis) {
+            double diff = prev_coord(ptcl_idx, axis) - coord(ptcl_idx, axis);
+
+#if MINIM
+            if (pbc) {
+                applyMinimumImage(diff, size);
+            }
+#endif
+
+            interior_spring_energy += diff * diff;
+        }
+    }
+
+    interior_spring_energy *= 0.5 * spring_constant;
+    return interior_spring_energy;
+}
+
 
 int Simulation::getStep() const {
     return md_step;
@@ -429,7 +454,7 @@ void Simulation::updatePhysicalForces() {
             for (int ptcl_two = ptcl_one + 1; ptcl_two < natoms; ++ptcl_two) {
                 // Get the vector distance between the two particles.
                 // Here "diff" contains just one vector of dimension NDIM.
-                dVec diff = getSeparation(ptcl_one, ptcl_two, MINIM);
+                dVec diff = getSeparation(ptcl_one, ptcl_two, MINIM, pbc, coord, size);
 
                 // If the distance between the particles exceeds the cutoff length
                 // then we assume the interaction is negligible and do not bother
@@ -447,63 +472,6 @@ void Simulation::updatePhysicalForces() {
             }
         }
     }
-}
-
-/**
- * Calculates the spring energy contribution of the current and the previous time-slice,
- * provided they are classical, i.e., are not affected by bosonic exchange.
- * If the simulation is bosonic, the function is callable only for the interior connections.
- *
- * @return Classical spring energy contribution of the current and the previous time-slice.
- */
-double Simulation::classicalSpringEnergy() const {
-    assert(!bosonic || (bosonic && this_bead != 0));
-
-    double interior_spring_energy = 0.0;
-
-    for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
-        for (int axis = 0; axis < NDIM; ++axis) {
-            double diff = prev_coord(ptcl_idx, axis) - coord(ptcl_idx, axis);
-
-#if MINIM
-            if (pbc) {
-                applyMinimumImage(diff, size);
-            }
-#endif
-
-            interior_spring_energy += diff * diff;
-        }
-    }
-
-    interior_spring_energy *= 0.5 * spring_constant;
-
-    return interior_spring_energy;
-}
-
-/**
- * Returns the vectorial distance between two particles at the same imaginary timeslice.
- * Mathematically equivalent to r1-r2, where r1 and r2 are the position-vectors
- * of the first and second particles, respectively. In the case of PBC, there is an
- * option to return the minimal distance between the two particles.
- * 
- * @param first_ptcl Index of the first particle.
- * @param second_ptcl Index of the second particle.
- * @param minimum_image Flag determining whether the minimum image convention should be applied.
- * @return Vectorial distance between the two particles.
- */
-dVec Simulation::getSeparation(int first_ptcl, int second_ptcl, bool minimum_image) const {
-    dVec sep;
-
-    for (int axis = 0; axis < NDIM; ++axis) {
-        double diff = coord(first_ptcl, axis) - coord(second_ptcl, axis);
-
-        if (pbc && minimum_image)
-            applyMinimumImage(diff, size);
-
-        sep(0, axis) = diff;
-    }
-
-    return sep;
 }
 
 /**
@@ -791,16 +759,16 @@ void Simulation::initializeStates(Params& param_obj) {
  * Initializes an observable based on the input parameters. Initialization occurs only if the
  * observable is enabled (the units are not set to "off").
  *
- * @param sim_params Simulation parameters object containing information about the observables.
+ * @param param_obj Params object with all parameters of the simulation.
  * @param param_key Key of the parameter in the simulation parameters object.
  * @param observable_name Name of the observable.
  */
-void Simulation::addObservableIfEnabled(const StringMap& sim_params, const std::string& param_key, const std::string& observable_name) {
-    if (const std::string& units = sim_params.at(param_key); units != "off") {
+void Simulation::addObservableIfEnabled(Params& param_obj, const std::string& param_key, const std::string& observable_name) {
+    if (const std::string& units = param_obj.observables.at(param_key); units != "off") {
         if (units == "none") {
-            observables.push_back(ObservableFactory::createQuantity(observable_name, *this, sfreq, ""));
+            observables.push_back(ObservableFactory::createQuantity(*this, param_obj, observable_name, sfreq, "", this_bead));
         } else {
-            observables.push_back(ObservableFactory::createQuantity(observable_name, *this, sfreq, units));
+            observables.push_back(ObservableFactory::createQuantity(*this, param_obj, observable_name, sfreq, units, this_bead));
         }
     }
 }
@@ -808,17 +776,17 @@ void Simulation::addObservableIfEnabled(const StringMap& sim_params, const std::
 /**
  * Method for initializing all the requested observables.
  *
- * @param sim_params Simulation parameters object containing information about the observables.
+ * @param param_obj Params object with all parameters of the simulation.
  */
-void Simulation::initializeObservables(const StringMap& sim_params) {
-    addObservableIfEnabled(sim_params, "energy", "energy");
-    addObservableIfEnabled(sim_params, "classical", "classical");
+void Simulation::initializeObservables(Params& param_obj) {
+    addObservableIfEnabled(param_obj, "energy", "energy");
+    addObservableIfEnabled(param_obj, "classical", "classical");
 
     if (bosonic) {
-        addObservableIfEnabled(sim_params, "bosonic", "bosonic");
+        addObservableIfEnabled(param_obj, "bosonic", "bosonic");
     }
 
-    addObservableIfEnabled(sim_params, "gsf", "gsf");
+    addObservableIfEnabled(param_obj, "gsf", "gsf");
 }
 
 /**
