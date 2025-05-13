@@ -6,7 +6,7 @@ on:
     paths-ignore:
       - '**/README.md'
   pull_request:
-    branches: [ "master" ]
+    branches: [ "master", "test" ]
     paths-ignore:
       - '**/README.md'
 
