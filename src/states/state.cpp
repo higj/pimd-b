@@ -1,5 +1,6 @@
 #include "states.h"
 #include "simulation.h"
+#include "params.h"
 
 /**
  * @brief Generic state class constructor

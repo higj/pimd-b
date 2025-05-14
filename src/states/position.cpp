@@ -1,6 +1,6 @@
 #include "states/position.h"
-#include "simulation.h"
 #include "units.h"
+#include "params.h"
 
 #include <sstream>
 

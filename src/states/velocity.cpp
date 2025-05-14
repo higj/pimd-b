@@ -1,6 +1,6 @@
 #include "states/velocity.h"
-#include "simulation.h"
 #include "units.h"
+#include "params.h"
 
 #include <sstream>
 

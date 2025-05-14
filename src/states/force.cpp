@@ -1,5 +1,4 @@
 #include "states/force.h"
-#include "simulation.h"
 #include "units.h"
 
 #include <sstream>
