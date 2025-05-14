@@ -2,12 +2,12 @@
 
 #include "states/state.h"
 
-class Simulation; // Forward declaration
-
 class PositionState : public State {
 public:
-    PositionState(const Simulation& _sim, int _freq, const std::string& _out_unit);
+    PositionState(Params& param_obj, int _freq, const std::string& _out_unit, dVec& coord);
 
-    void initialize() override;
+    void initialize(int this_bead) override;
     void output(int step) override;
+private:
+    dVec& coord;
 };

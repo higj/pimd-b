@@ -1,11 +1,13 @@
 #include "states.h"
 #include "simulation.h"
+#include "params.h"
 
 /**
  * @brief Generic state class constructor
  */
-State::State(const Simulation& _sim, int _freq, const std::string& _out_unit) :
-    sim(_sim), freq(_freq), out_unit(_out_unit) {
+State::State(Params& param_obj, int _freq, const std::string& _out_unit) :
+    freq(_freq), out_unit(_out_unit) {
+    getVariant(param_obj.sys["natoms"], natoms);
 }
 
 /**
@@ -21,22 +23,22 @@ State::~State() {
  * @brief Creates a state object based on the state type.
  *
  * @param state_type Type of state to create
- * @param _sim Simulation object
  * @param _freq Frequency at which the state is recorded
  * @param _out_unit Output unit of the state
  * @return std::unique_ptr<State> Pointer to the created state object
  * @throw std::invalid_argument If the state type is unknown
  */
 std::unique_ptr<State> StateFactory::createQuantity(const std::string& state_type,
-    const Simulation& _sim,
+    Simulation& _sim,
+    Params& param_obj,
     int _freq,
     const std::string& _out_unit) {
     if (state_type == "position") {
-        return std::make_unique<PositionState>(_sim, _freq, _out_unit);
+        return std::make_unique<PositionState>(param_obj, _freq, _out_unit, _sim.coord);
     } else if (state_type == "velocity") {
-        return std::make_unique<VelocityState>(_sim, _freq, _out_unit);
+        return std::make_unique<VelocityState>(param_obj, _freq, _out_unit, _sim.momenta);
     } else if (state_type == "force") {
-        return std::make_unique<ForceState>(_sim, _freq, _out_unit);
+        return std::make_unique<ForceState>(param_obj, _freq, _out_unit, _sim.forces);
     } else {
         throw std::invalid_argument("Unknown state type.");
     }
