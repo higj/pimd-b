@@ -1,8 +1,8 @@
 #include "propagators/velocity_verlet.h"
 #include "simulation.h"
 
-VelocityVerletPropagator::VelocityVerletPropagator(Simulation& _sim, Params& param_obj, dVec& coord, dVec& momenta, dVec& forces) : 
-    Propagator(_sim, param_obj, coord, momenta, forces) {
+VelocityVerletPropagator::VelocityVerletPropagator(Params& param_obj, dVec& coord, dVec& momenta, dVec& forces) : 
+    Propagator(param_obj, coord, momenta, forces) {
 }
 
 void VelocityVerletPropagator::preForceStep() {

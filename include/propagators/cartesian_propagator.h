@@ -2,11 +2,9 @@
 
 #include "propagators/propagator.h"
 
-class Simulation;
-
 class VelocityVerletPropagator : public Propagator {
 public:
-    VelocityVerletPropagator(Simulation& _sim, Params& param_obj, dVec& coord, dVec& momenta, dVec& forces);
+    VelocityVerletPropagator(Params& param_obj, dVec& coord, dVec& momenta, dVec& forces);
     ~VelocityVerletPropagator() override = default;
 
     void preForceStep() override;

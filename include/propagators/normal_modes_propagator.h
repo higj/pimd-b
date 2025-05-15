@@ -2,12 +2,13 @@
 
 #include "propagators/propagator.h"
 
-class Simulation;
 class NormalModes;
 
 class NormalModesPropagator : public Propagator {
 public:
-    NormalModesPropagator(Simulation& _sim, Params& param_obj, dVec& coord, dVec& momenta, dVec& forces, dVec& physical_forces, dVec& spring_forces);
+    NormalModesPropagator(Params& param_obj, dVec& coord, dVec& momenta, dVec& forces, 
+                          dVec& physical_forces, dVec& spring_forces, dVec& prev_coord, dVec& next_coord,
+                          int this_bead, NormalModes& normal_modes);
     ~NormalModesPropagator() override = default;
 
     void preForceStep() override;
@@ -17,5 +18,13 @@ private:
     double freq, c, s, m_omega;
     dVec& physical_forces;
     dVec& spring_forces;
+    dVec& prev_coord;
+    dVec& next_coord;
+
+    int this_bead, nbeads;
+    double spring_constant;
+    NormalModes& normal_modes;
+    bool bosonic;
+
     void momentaExternalForces();
 };
