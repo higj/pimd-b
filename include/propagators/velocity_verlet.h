@@ -9,7 +9,8 @@ public:
     VelocityVerletPropagator(Simulation& _sim);
     ~VelocityVerletPropagator() override = default;
 
-    void step() override;
+    void preForceStep() override;
+    void postForceStep() override;
 private:
     void momentStep();
     void coordsStep();
