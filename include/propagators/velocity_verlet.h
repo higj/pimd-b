@@ -10,4 +10,7 @@ public:
     ~VelocityVerletPropagator() override = default;
 
     void step() override;
+private:
+    void momentStep();
+    void coordsStep();
 };

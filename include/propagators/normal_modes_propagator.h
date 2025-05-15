@@ -10,7 +10,8 @@ public:
     NormalModesPropagator(Simulation& _sim);
     ~NormalModesPropagator() override = default;
 
-    void step() override;
+    void preForceStep() override;
+    void postForceStep() override;
 
 private:
     double freq, c, s, m_omega;

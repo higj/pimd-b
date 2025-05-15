@@ -16,7 +16,7 @@ NormalModesPropagator::NormalModesPropagator(Simulation& _sim) :
     m_omega = sim.mass * freq;    
 }
 
-void NormalModesPropagator::step() {
+void NormalModesPropagator::preForceStep() {
     // Propagate momenta under external forces
     momentaExternalForces();
 
@@ -61,8 +61,8 @@ void NormalModesPropagator::step() {
             sim.momenta(ptcl_idx, axis) = sim.normal_modes->arr_momenta_cartesian[glob_idx + sim.this_bead];
         }
     }
-    sim.updateNeighboringCoordinates();
-    sim.updateForces();
+}
+void NormalModesPropagator::postForceStep() {
     sim.updatePhysicalForces(ext_forces);
     sim.updateSpringForces(spring_forces);
     

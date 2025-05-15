@@ -248,7 +248,10 @@ void Simulation::run() {
             zeroMomentum();
         }
 
-        propagator->step();
+        propagator->preForceStep();
+        updateNeighboringCoordinates();
+        updateForces();
+        propagator->postForceStep();
 
         thermostat->step();
 
