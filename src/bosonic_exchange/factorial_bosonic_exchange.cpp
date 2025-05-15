@@ -126,12 +126,12 @@ void FactorialBosonicExchange::springForceLastBead(dVec& f) {
     double denom_weight = 0.0;
 
     // Zero the spring forces
-    for (int ptcl_one = 0; ptcl_one < natoms; ++ptcl_one) {
+    for (int ptcl_one = 0; ptcl_one < sim.natoms; ++ptcl_one) {
         for (int axis = 0; axis < NDIM; ++axis) {
             f(ptcl_one, axis) = 0.;
         }
     }
-    
+
     do {
         double weight = 0.0;
 
@@ -191,7 +191,7 @@ void FactorialBosonicExchange::springForceFirstBead(dVec& f) {
     double denom_weight = 0.0;
 
     // Zero the spring forces
-    for (int ptcl_one = 0; ptcl_one < natoms; ++ptcl_one) {
+    for (int ptcl_one = 0; ptcl_one < sim.natoms; ++ptcl_one) {
         for (int axis = 0; axis < NDIM; ++axis) {
             f(ptcl_one, axis) = 0.;
         }
