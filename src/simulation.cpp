@@ -655,7 +655,7 @@ void Simulation::initializePropagator(Params& param_obj) {
     propagator_type = std::get<std::string>(param_obj.sim.at("propagator_type"));
     
     if (propagator_type == "cartesian") {
-        propagator = std::make_unique<VelocityVerletPropagator>(param_obj, coord, momenta, forces);
+        propagator = std::make_unique<CartesianPropagator>(param_obj, coord, momenta, forces);
     } else if (propagator_type == "normal_modes") {
         propagator = std::make_unique<NormalModesPropagator>(param_obj, coord, momenta, forces,
                     spring_forces, physical_forces, prev_coord, next_coord, this_bead, *normal_modes);

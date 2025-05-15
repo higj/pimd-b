@@ -2,10 +2,10 @@
 
 #include "propagators/propagator.h"
 
-class VelocityVerletPropagator : public Propagator {
+class CartesianPropagator : public Propagator {
 public:
-    VelocityVerletPropagator(Params& param_obj, dVec& coord, dVec& momenta, dVec& forces);
-    ~VelocityVerletPropagator() override = default;
+    CartesianPropagator(Params& param_obj, dVec& coord, dVec& momenta, dVec& forces);
+    ~CartesianPropagator() override = default;
 
     void preForceStep() override;
     void postForceStep() override;
