@@ -7,7 +7,7 @@ class NormalModes;
 
 class NormalModesPropagator : public Propagator {
 public:
-    NormalModesPropagator(Simulation& _sim);
+    NormalModesPropagator(Simulation& _sim, Params& param_obj, dVec& coord, dVec& momenta, dVec& forces);
     ~NormalModesPropagator() override = default;
 
     void preForceStep() override;

@@ -4,8 +4,8 @@
 
 #include <numbers>
 
-NormalModesPropagator::NormalModesPropagator(Simulation& _sim) : 
-    Propagator(_sim),
+NormalModesPropagator::NormalModesPropagator(Simulation& _sim, Params& param_obj, dVec& coord, dVec& momenta, dVec& forces) : 
+    Propagator(_sim, param_obj, coord, momenta, forces),
     ext_forces(_sim.natoms),
     spring_forces(_sim.natoms)
 {

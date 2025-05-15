@@ -72,7 +72,7 @@ public:
 
     void zeroMomentum();
 
-    void initializePropagator(const VariantMap& sim_params);
+    void initializePropagator(Params& param_obj);
     void initializeThermostat(Params& param_obj);
     void initializeExchangeAlgorithm();
     void initializePositions(dVec& coord_arr, const VariantMap& sim_params);

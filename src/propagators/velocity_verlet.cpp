@@ -1,7 +1,8 @@
 #include "propagators/velocity_verlet.h"
 #include "simulation.h"
 
-VelocityVerletPropagator::VelocityVerletPropagator(Simulation& _sim) : Propagator(_sim) {
+VelocityVerletPropagator::VelocityVerletPropagator(Simulation& _sim, Params& param_obj, dVec& coord, dVec& momenta, dVec& forces) : 
+    Propagator(_sim, param_obj, coord, momenta, forces) {
 }
 
 void VelocityVerletPropagator::preForceStep() {
@@ -17,17 +18,17 @@ void VelocityVerletPropagator::postForceStep() {
 }
 
 void VelocityVerletPropagator::momentStep() {
-    for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
+    for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
-            sim.momenta(ptcl_idx, axis) += 0.5 * sim.dt * sim.forces(ptcl_idx, axis);
+            momenta(ptcl_idx, axis) += 0.5 * dt * forces(ptcl_idx, axis);
         }
     }
 }
 
 void VelocityVerletPropagator::coordsStep() {
-    for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
+    for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
-            sim.coord(ptcl_idx, axis) += sim.dt * sim.momenta(ptcl_idx, axis) / sim.mass;
+            coord(ptcl_idx, axis) += dt * momenta(ptcl_idx, axis) / mass;
         }
     }
 }

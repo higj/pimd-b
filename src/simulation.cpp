@@ -62,7 +62,7 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
 
     normal_modes = std::make_unique<NormalModes>(*this);
     // Initialize the propagator, thermostat, and exchange algorithm
-    initializePropagator(param_obj.sim);
+    initializePropagator(param_obj);
     initializeThermostat(param_obj);
     initializeExchangeAlgorithm();
 
@@ -649,15 +649,15 @@ std::unique_ptr<Potential> Simulation::initializePotential(const std::string& po
 /**
  * Initializes the propagator based on the input parameters.
  *
- * @param sim_params Simulation parameters object containing information about the propagator.
- */
-void Simulation::initializePropagator(const VariantMap& sim_params) {
-    propagator_type = std::get<std::string>(sim_params.at("propagator_type"));
+ * @param param_obj Params object with all parameters of the simulation.
+ *  */
+void Simulation::initializePropagator(Params& param_obj) {
+    propagator_type = std::get<std::string>(param_obj.sim.at("propagator_type"));
     
     if (propagator_type == "cartesian") {
-        propagator = std::make_unique<VelocityVerletPropagator>(*this);
+        propagator = std::make_unique<VelocityVerletPropagator>(*this, param_obj, coord, momenta, forces);
     } else if (propagator_type == "normal_modes") {
-        propagator = std::make_unique<NormalModesPropagator>(*this);
+        propagator = std::make_unique<NormalModesPropagator>(*this, param_obj, coord, momenta, forces);
     }
 }
 
