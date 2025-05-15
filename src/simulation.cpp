@@ -425,7 +425,12 @@ void Simulation::updateSpringForces() {
  */
 void Simulation::updatePhysicalForces() {
     // Calculate the external forces acting on the particles
-    physical_forces = (-1.0) * ext_potential->gradV(coord);
+    dVec external_forces = (-1.0) * ext_potential->gradV(coord);
+    for (int ptcl_one = 0; ptcl_one < natoms; ++ptcl_one) {
+        for (int axis = 0; axis < NDIM; ++axis) {
+            physical_forces(ptcl_one, axis) = external_forces(ptcl_one, axis);
+        }
+    }
 
     if (int_pot_cutoff != 0.0) {
         for (int ptcl_one = 0; ptcl_one < natoms; ++ptcl_one) {
