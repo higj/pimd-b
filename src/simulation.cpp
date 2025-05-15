@@ -61,10 +61,6 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     init_vel_type = std::get<std::string>(param_obj.sim["init_vel_type"]);
 
     normal_modes = std::make_unique<NormalModes>(*this);
-    // Initialize the propagator, thermostat, and exchange algorithm
-    initializePropagator(param_obj);
-    initializeThermostat(param_obj);
-    initializeExchangeAlgorithm();
 
     // Initialize the coordinate, momenta, and force arrays
     coord = dVec(natoms);
@@ -78,6 +74,11 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     initializePositions(coord, param_obj.sim);
     initializeMomenta(momenta, param_obj.sim);
 
+    // Initialize the propagator, thermostat, and exchange algorithm
+    initializePropagator(param_obj);
+    initializeThermostat(param_obj);
+    initializeExchangeAlgorithm();
+    
     // Initialize the potential based on the input
     external_potential_name = std::get<std::string>(param_obj.external_pot["name"]);
     interaction_potential_name = std::get<std::string>(param_obj.interaction_pot["name"]);
