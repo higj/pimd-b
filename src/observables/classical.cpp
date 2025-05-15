@@ -73,6 +73,5 @@ void ClassicalObservable::calculateSpringEnergy() {
     } else {
         spring_energy = sim.classicalSpringEnergy();
     }
-
     quantities["cl_spring"] = Units::convertToUser("energy", out_unit, spring_energy);
 }

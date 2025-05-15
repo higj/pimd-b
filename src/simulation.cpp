@@ -49,6 +49,7 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
 #endif
 
     spring_constant = mass * omega_p * omega_p;
+    beta_half_k = thermo_beta * 0.5 * spring_constant;
 
     // Get the seed from the config file
     getVariant(param_obj.sim["seed"], params_seed);
@@ -660,7 +661,7 @@ void Simulation::initializePropagator(const VariantMap& sim_params) {
 /**
  * Initializes the thermostat based on the input parameters.
  *
- * @param sim_params Simulation parameters object containing information about the thermostat.
+ * @param param_obj Params object with all parameters of the simulation.
  */
 void Simulation::initializeThermostat(Params& param_obj) {
     thermostat_type = std::get<std::string>(param_obj.sim["thermostat_type"]);
