@@ -413,7 +413,6 @@ void Simulation::updateSpringForces() {
                 applyMinimumImage(diff_next, size);
             }
 #endif
-
             spring_forces(ptcl_idx, axis) = spring_constant * (diff_prev + diff_next);
         }
     }
