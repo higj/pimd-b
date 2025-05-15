@@ -72,6 +72,8 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     next_coord = dVec(natoms);
     momenta = dVec(natoms);
     forces = dVec(natoms);
+    spring_forces = dVec(natoms);
+    physical_forces = dVec(natoms);
 
     initializePositions(coord, param_obj.sim);
     initializeMomenta(momenta, param_obj.sim);
@@ -356,11 +358,9 @@ void Simulation::updateForces() {
     // We distinguish between two types of forces: spring forces between the beads (due to the 
     // classical isomorphism) and the non-spring forces (due to either an external potential 
     // or interactions).
-    dVec spring_forces(natoms);
-    dVec physical_forces(natoms);
 
-    updateSpringForces(spring_forces);
-    updatePhysicalForces(physical_forces);
+    updateSpringForces();
+    updatePhysicalForces();
 
     for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
@@ -390,15 +390,13 @@ void Simulation::updateNeighboringCoordinates() {
  * described in https://doi.org/10.1063/5.0173749. It is also possible to perform the
  * bosonic simulation using the original (inefficient) algorithm, that takes into
  * account all the N! permutations, by setting FACTORIAL_BOSONIC_ALGORITHM to true.
- * 
- * @param spring_force_arr Vector to store the spring forces.
  */
-void Simulation::updateSpringForces(dVec& spring_force_arr) const {
+void Simulation::updateSpringForces() {
     if (is_bosonic_bead) {
         // If the simulation is bosonic and the current bead is either 1 or P, we calculate
         // the exterior spring forces in the appropriate bosonic class.
         bosonic_exchange->prepare();
-        bosonic_exchange->exteriorSpringForce(spring_force_arr);
+        bosonic_exchange->exteriorSpringForce(spring_forces);
         return;
     }
 
@@ -416,7 +414,7 @@ void Simulation::updateSpringForces(dVec& spring_force_arr) const {
             }
 #endif
 
-            spring_force_arr(ptcl_idx, axis) = spring_constant * (diff_prev + diff_next);
+            spring_forces(ptcl_idx, axis) = spring_constant * (diff_prev + diff_next);
         }
     }
 }
@@ -424,12 +422,10 @@ void Simulation::updateSpringForces(dVec& spring_force_arr) const {
 /**
  * Updates the physical forces acting on the particles. This includes both the forces
  * due external potentials and the interaction forces between the particles.
- * 
- * @param physical_force_arr Vector to store the physical forces.
  */
-void Simulation::updatePhysicalForces(dVec& physical_force_arr) const {
+void Simulation::updatePhysicalForces() {
     // Calculate the external forces acting on the particles
-    physical_force_arr = (-1.0) * ext_potential->gradV(coord);
+    physical_forces = (-1.0) * ext_potential->gradV(coord);
 
     if (int_pot_cutoff != 0.0) {
         for (int ptcl_one = 0; ptcl_one < natoms; ++ptcl_one) {
@@ -447,8 +443,8 @@ void Simulation::updatePhysicalForces(dVec& physical_force_arr) const {
                     dVec force_on_one = (-1.0) * int_potential->gradV(diff);
 
                     for (int axis = 0; axis < NDIM; ++axis) {
-                        physical_force_arr(ptcl_one, axis) += force_on_one(0, axis);
-                        physical_force_arr(ptcl_two, axis) -= force_on_one(0, axis);
+                        physical_forces(ptcl_one, axis) += force_on_one(0, axis);
+                        physical_forces(ptcl_two, axis) -= force_on_one(0, axis);
                     }
                 }
             }
@@ -657,7 +653,7 @@ void Simulation::initializePropagator(Params& param_obj) {
     if (propagator_type == "cartesian") {
         propagator = std::make_unique<VelocityVerletPropagator>(*this, param_obj, coord, momenta, forces);
     } else if (propagator_type == "normal_modes") {
-        propagator = std::make_unique<NormalModesPropagator>(*this, param_obj, coord, momenta, forces);
+        propagator = std::make_unique<NormalModesPropagator>(*this, param_obj, coord, momenta, forces, physical_forces, spring_forces);
     }
 }
 

@@ -4,10 +4,11 @@
 
 #include <numbers>
 
-NormalModesPropagator::NormalModesPropagator(Simulation& _sim, Params& param_obj, dVec& coord, dVec& momenta, dVec& forces) : 
+NormalModesPropagator::NormalModesPropagator(Simulation& _sim, Params& param_obj, dVec& coord, dVec& momenta, dVec& forces,
+                                            dVec& ext_forces, dVec& spring_forces) : 
     Propagator(_sim, param_obj, coord, momenta, forces),
-    ext_forces(_sim.natoms),
-    spring_forces(_sim.natoms)
+    ext_forces(ext_forces),
+    spring_forces(spring_forces)
 {
     // Frequencies
     freq = 2 * sim.omega_p * sin(sim.this_bead * std::numbers::pi / sim.nbeads); 
@@ -63,9 +64,6 @@ void NormalModesPropagator::preForceStep() {
     }
 }
 void NormalModesPropagator::postForceStep() {
-    sim.updatePhysicalForces(ext_forces);
-    sim.updateSpringForces(spring_forces);
-    
     // Propagate momenta under external forces
     momentaExternalForces();
 }
