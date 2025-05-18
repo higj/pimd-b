@@ -1,8 +1,6 @@
 #include "propagators/normal_modes_propagator.h"
 #include "normal_modes.h"
-#include "simulation.h"
 #include "params.h"
-
 #include <numbers>
 
 NormalModesPropagator::NormalModesPropagator(Params& param_obj, dVec& coord, dVec& momenta, dVec& forces,
@@ -34,13 +32,12 @@ NormalModesPropagator::NormalModesPropagator(Params& param_obj, dVec& coord, dVe
     c = cos(freq * dt);
     s = sin(freq * dt);
     m_omega = mass * freq;
-    spring_constant = mass * omega_p * omega_p; 
+    spring_constant = mass * omega_p * omega_p;
 }
 
 void NormalModesPropagator::preForceStep() {
     // Propagate momenta under external forces
     momentaExternalForces();
-
     normal_modes.shareData();
 
     MPI_Barrier(MPI_COMM_WORLD);

@@ -78,7 +78,7 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     initializePropagator(param_obj);
     initializeThermostat(param_obj);
     initializeExchangeAlgorithm();
-    
+
     // Initialize the potential based on the input
     external_potential_name = std::get<std::string>(param_obj.external_pot["name"]);
     interaction_potential_name = std::get<std::string>(param_obj.interaction_pot["name"]);
@@ -659,7 +659,7 @@ void Simulation::initializePropagator(Params& param_obj) {
         propagator = std::make_unique<CartesianPropagator>(param_obj, coord, momenta, forces);
     } else if (propagator_type == "normal_modes") {
         propagator = std::make_unique<NormalModesPropagator>(param_obj, coord, momenta, forces,
-                    spring_forces, physical_forces, prev_coord, next_coord, this_bead, *normal_modes);
+                    physical_forces, spring_forces, prev_coord, next_coord, this_bead, *normal_modes);
     }
 }
 

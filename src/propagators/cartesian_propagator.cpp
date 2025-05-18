@@ -1,5 +1,4 @@
 #include "propagators/cartesian_propagator.h"
-#include "simulation.h"
 
 CartesianPropagator::CartesianPropagator(Params& param_obj, dVec& coord, dVec& momenta, dVec& forces) : 
     Propagator(param_obj, coord, momenta, forces) {
