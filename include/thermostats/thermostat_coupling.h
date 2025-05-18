@@ -2,6 +2,8 @@
 
 #include "common.h"
 
+#include <memory>
+
 class NormalModes;
 
 // Classes to support coupling of the thermostat to Cartesian coords or normal modes of distinguishable ring polymers
