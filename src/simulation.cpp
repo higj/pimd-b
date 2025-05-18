@@ -61,7 +61,7 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     init_pos_type = std::get<std::string>(param_obj.sim["init_pos_type"]);
     init_vel_type = std::get<std::string>(param_obj.sim["init_vel_type"]);
 
-    normal_modes = std::make_unique<NormalModes>(*this);
+    normal_modes = std::make_unique<NormalModes>(param_obj, this_bead, coord, momenta);
 
     // Initialize the coordinate, momenta, and force arrays
     coord = dVec(natoms);
