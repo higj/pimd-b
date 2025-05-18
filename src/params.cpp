@@ -69,22 +69,6 @@ void Params::loadSimulationParams(SimulationConfig& config) const {
     config.fixcom = m_reader.GetBoolean(Sections::SIMULATION, "fixcom", true);
     // Enable periodic boundary conditions?
     config.pbc = m_reader.GetBoolean(Sections::SIMULATION, "pbc", false);
-
-    // Define additional parameters based on rudimentary config parameters
-    config.beta = 1.0 / (Constants::kB * config.temperature);
-
-#if IPI_CONVENTION
-    // i-Pi convention [J. Chem. Phys. 133, 124104 (2010)]
-    config.thermo_beta = config.beta / config.nbeads;
-    config.omega_p = config.nbeads / (config.beta * Constants::hbar);
-#else
-    // Tuckerman convention
-    config.thermo_beta = config.beta;
-    config.omega_p = sqrt(config.nbeads) / (config.beta * Constants::hbar);
-#endif
-
-    config.spring_constant = config.mass * config.omega_p * config.omega_p;
-    config.beta_half_k = config.thermo_beta * 0.5 * config.spring_constant;
 }
 
 /**
@@ -130,53 +114,6 @@ void Params::loadPropagatorParams(SimulationConfig& config) const {
  *
  * @param config Config object to load parameters into.
  */
-//void Params::loadThermostatParams(SimulationConfig& config) const {
-//    int nchains = m_reader.GetInteger(Sections::SIMULATION, "nchains", 4);
-//    if (nchains < 1)
-//        throw std::invalid_argument(std::format("Invalid number of Nose-Hoover chains ({}<1)", nchains));
-//
-//    config.thermostat_params["nchains"] = nchains;
-//
-//    // Couple thermostat to normal modes?
-//    bool nmthermostat = m_reader.GetBoolean(Sections::SIMULATION, "nmthermostat", false);
-//
-//    // Implemented thermostats:
-//    //  "langevin": A Langevin thermostat coupled to the Cartesian coordinates
-//    //  "nose_hoover" A single Nose-Hoover chain coupled to the whole system
-//    //  "nose_hoover_np" A unique Nose-Hoover chain coupled to each particle
-//    //  "nose_hoover_np_dim" A unique Nose-Hoover chain coupled to each Cartesian coordinate of each particle
-//    //  "none": No thermostat (NVE simulation)
-//    const StringsList allowed_thermostats = { "langevin", "nose_hoover", "nose_hoover_np", "nose_hoover_np_dim", "none" };
-//
-//    config.thermostat_type = m_reader.GetString(Sections::SIMULATION, "thermostat", "error");
-//
-//    if (!StringUtils::labelInArray(config.thermostat_type, allowed_thermostats))
-//        throw std::invalid_argument(std::format("Unsupported thermostat type ({})", config.thermostat_type));
-//
-//    if (config.thermostat_type == "error")
-//        throw std::invalid_argument("Thermostat must be specified!");
-//
-//    if (nmthermostat && config.thermostat_type == "none")
-//        throw std::invalid_argument("nmthermostat cannot be used in nve ensemble!");
-//
-//    /// TODO: This is a little bit tricky
-//    if ((m_reader.GetInteger(Sections::SIMULATION, "nchains", -1) != -1) && ((config.thermostat_type == "none") || (config.thermostat_type == "langevin"))) {
-//        throw std::invalid_argument("nchains can only be used with Nose-Hoover thermostats!");
-//    }
-//
-//    config.temperature = Units::getQuantity("temperature", m_reader.Get(Sections::SYSTEM, "temperature", "1.0 kelvin"));
-//    if (config.temperature <= 0)
-//        throw std::invalid_argument(std::format("The specified temperature ({0:4.3f} kelvin) is not positive", config.temperature));
-//
-//    config.thermostat_params["nmthermostat"] = nmthermostat;
-//
-//    double gamma = m_reader.GetReal(Sections::SIMULATION, "gamma", -1.0);
-//    if (gamma < 0.0)
-//        gamma = 1 / (100.0 * config.dt);
-//
-//    config.thermostat_params["gamma"] = gamma;
-//}
-
 void Params::loadThermostatParams(SimulationConfig& config) const {
     // Setup allowed thermostats with documentation
     const StringsList allowed_thermostats = {
@@ -195,6 +132,28 @@ void Params::loadThermostatParams(SimulationConfig& config) const {
     if (!StringUtils::labelInArray(config.thermostat_type, allowed_thermostats)) {
         throw std::invalid_argument(std::format("Unsupported thermostat type ({})", config.thermostat_type));
     }
+
+    // Validate temperature. When no thermostat is used, temperature value may still be used for initializing velocities
+    config.temperature = Units::getQuantity("temperature", m_reader.Get(Sections::SYSTEM, "temperature", "1.0 kelvin"));
+    if (config.temperature <= 0) {
+        throw std::invalid_argument(std::format("The specified temperature ({0:4.3f} kelvin) is not positive", config.temperature));
+    }
+
+    // Define additional parameters based on rudimentary config parameters
+    config.beta = 1.0 / (Constants::kB * config.temperature);
+
+#if IPI_CONVENTION
+    // i-Pi convention [J. Chem. Phys. 133, 124104 (2010)]
+    config.thermo_beta = config.beta / config.nbeads;
+    config.omega_p = config.nbeads / (config.beta * Constants::hbar);
+#else
+    // Tuckerman convention
+    config.thermo_beta = config.beta;
+    config.omega_p = sqrt(config.nbeads) / (config.beta * Constants::hbar);
+#endif
+
+    config.spring_constant = config.mass * config.omega_p * config.omega_p;
+    config.beta_half_k = config.thermo_beta * 0.5 * config.spring_constant;
 
     // Determine if this is a Nose-Hoover type thermostat
     const bool is_nose_hoover = config.thermostat_type.find("nose_hoover") != std::string::npos;
@@ -222,12 +181,6 @@ void Params::loadThermostatParams(SimulationConfig& config) const {
     // Only set nmthermostat if we're using a thermostat
     if (config.thermostat_type != "none") {
         config.thermostat_params["nmthermostat"] = nmthermostat;
-    }
-
-    // Validate temperature. When no thermostat is used, temperature value may still be used for initializing velocities
-    config.temperature = Units::getQuantity("temperature", m_reader.Get(Sections::SYSTEM, "temperature", "1.0 kelvin"));
-    if (config.temperature <= 0) {
-        throw std::invalid_argument(std::format("The specified temperature ({0:4.3f} kelvin) is not positive", config.temperature));
     }
 
     // Handle gamma parameter (only relevant for Langevin thermostat)

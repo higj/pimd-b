@@ -654,6 +654,7 @@ void Simulation::printReport(double wall_time) const
     report_file << formattedReportLine("Dimension", NDIM);
     report_file << formattedReportLine("Seed", m_context.config->seed);
     report_file << formattedReportLine("Coordinate initialization method", m_context.config->init_pos_type);
+    report_file << formattedReportLine("Momentum initialization method", m_context.config->init_vel_type);
     report_file << formattedReportLine("Number of atoms", m_context.config->natoms);
     report_file << formattedReportLine("Number of beads", m_context.config->nbeads);
 
