@@ -399,9 +399,9 @@ std::vector<std::shared_ptr<Dump>> Simulation::initializeDumps(
         };
 
         DumpType type = UNKNOWN;
-        if (dump_name == "position") type = POSITION;
-        else if (dump_name == "velocity") type = VELOCITY;
-        else if (dump_name == "force") type = FORCE;
+        if (dump_name == "positions") type = POSITION;
+        else if (dump_name == "velocities") type = VELOCITY;
+        else if (dump_name == "forces") type = FORCE;
 
         switch (type)
         {
