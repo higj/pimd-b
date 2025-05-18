@@ -10,7 +10,7 @@ class NormalModes {
 public:
     NormalModes(Params& param_obj, int this_bead, dVec& coord, dVec& momenta);
     ~NormalModes();
-    std::vector<double> arr_coord_cartesian, arr_coord_nm, arr_momenta_cartesian, arr_momenta_nm;  // Arrays that contain the coordinates and momenta of the WHOLE system in two representations
+    double *arr_coord_cartesian, *arr_coord_nm, *arr_momenta_cartesian, *arr_momenta_nm;  // Arrays that contain the coordinates and momenta of the WHOLE system in two representations
     std::vector<double> cart_to_nm_mat_row, nm_to_cart_mat_row;
     void shareData();
     double coordCarToNM(const int glob_idx);
