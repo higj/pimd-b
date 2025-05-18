@@ -75,7 +75,7 @@ name = free
 name = harmonic
 omega = 3.0 millielectronvolt
 
-[output]
+[dump]
 positions = false
 velocities = false
 forces = false
@@ -142,7 +142,7 @@ Note that for bosonic PIMD, the thermostat is coupled to the normal modes of the
 
 ### Dumps and observables
 
-In the `[output]` section, users can request the output of various quantities related to the state of the system (such as positions, velocities, etc.) 
+In the `[dump]` section, users can request the output of various quantities related to the state of the system (such as positions, velocities, etc.) 
 The format for this section is `dump_name = dump_unit`. The key (`dump_name`) must correspond to a name of a supported dump. 
 The value (`dump_unit`) specifies the unit to which the output must be converted. If set to `false` (or, equivalently, `off`), the quantity will not be dumped. By default, all dumps are set to `false`. If set to `true` (or, equivalently, `on`), the dump will be printed in default (atomic) units, assuming the quantity is not dimensionless. Otherwise, the user 
 must specify the desired unit.

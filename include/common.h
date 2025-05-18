@@ -303,23 +303,6 @@ void applyMinimumImage(double& dx, double L);
 void periodicWrap(double& x, double L);
 //void periodicWrap(dVec& pos_arr, double L);
 
-/**
- * Load particle positions from an .xyz file to the destination vector.
- *
- * @param xyz_filename Name of the .xyz file.
- * @param destination Vector to store the particle positions.
- */
-void loadTrajectories(const std::string& xyz_filename, dVec& destination);
-
-/**
- * Load particle velocities from a file to the destination momenta vector.
- *
- * @param vel_filename Name of the file containing the velocities.
- * @param mass Mass of the particles.
- * @param destination Vector to store the momenta.
- */
-void loadMomenta(const std::string& vel_filename, double mass, dVec& destination);
-
 template <typename T>
 std::string formattedReportLine(const std::string& property_name, const T& value) {
     return std::format("{:<40}\t:\t{}\n", property_name, value);

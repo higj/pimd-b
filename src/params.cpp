@@ -41,9 +41,9 @@ void Params::loadSimulationParams(SimulationConfig& config) const {
     if (config.dt <= 0.0)
         throw std::invalid_argument(std::format("Invalid time-step ({} is not positive)", config.dt));
 
-    config.threshold = m_reader.GetReal(Sections::SIMULATION, "threshold", 0.1);
-    if (config.threshold <= 0.0)
-        throw std::invalid_argument(std::format("Invalid threshold ({} is not positive)", config.threshold));
+    config.threshold = m_reader.GetReal(Sections::SIMULATION, "threshold", 0.0);
+    if (config.threshold < 0)
+        throw std::invalid_argument(std::format("Invalid threshold ({} is negative)", config.threshold));
 
     config.steps = static_cast<long>(std::stod(m_reader.Get(Sections::SIMULATION, "steps", "1e5")));
     if (config.steps < 1)
