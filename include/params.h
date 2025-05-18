@@ -4,6 +4,8 @@
 #include "common.h"
 #include "inireader.h"
 
+#include <memory>
+
 namespace Sections {
     const std::string SYSTEM = "system";
     const std::string SIMULATION = "simulation";
