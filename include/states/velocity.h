@@ -2,12 +2,13 @@
 
 #include "states/state.h"
 
-class Simulation; // Forward declaration
-
 class VelocityState : public State {
 public:
-    VelocityState(const Simulation& _sim, int _freq, const std::string& _out_unit);
+    VelocityState(Params& param_obj, int _freq, const std::string& _out_unit, dVec& momenta);
 
-    void initialize() override;
+    void initialize(int this_bead) override;
     void output(int step) override;
+private:
+    double mass;
+    dVec& momenta;
 };

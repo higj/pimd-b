@@ -1,111 +1,59 @@
 #include "observables/energy.h"
-#include "simulation.h"
-#include "units.h"
-#include <ranges>
-#include "mpi.h"
+#include "params.h"
+#include <numbers>
 
 /**
- * @brief Energy observable class constructor.
+ * @brief Classical observable class constructor.
  */
-EnergyObservable::EnergyObservable(const Simulation& _sim, int _freq, const std::string& _out_unit) :
-    Observable(_sim, _freq, _out_unit) {
-    if (sim.external_potential_name == "free" && sim.interaction_potential_name == "free") {
-        initialize({ "kinetic" });
-    } else if (sim.external_potential_name == "free" || sim.interaction_potential_name == "free") {
-        initialize({ "kinetic", "potential", "virial" });
-    } else {
-        initialize({ "kinetic", "potential", "ext_pot", "int_pot", "virial" });
-    }
-}
-
-void EnergyObservable::calculate() {
-    calculateKinetic();
-    calculatePotential();
-}
-
-/**
- * @brief Calculates the quantum kinetic energy of the system using the primitive kinetic energy estimator.
- * Works both for distinguishable particles and bosons.
- */
-void EnergyObservable::calculateKinetic() {
-    // First, add the constant factor of d*N*P/(2*beta) to the kinetic energy (per bead)
-    quantities["kinetic"] = 0.5 * NDIM * sim.natoms / sim.beta;
-
-    // Then, subtract the spring energies. In the case of bosons, the exterior
-    // spring energy requires separate treatment.
-    if (sim.this_bead == 0 && sim.bosonic) {
-        quantities["kinetic"] += sim.bosonic_exchange->primEstimator();
-    } else {
-        double spring_energy = sim.classicalSpringEnergy();
+EnergyObservable::EnergyObservable(Params& param_obj, int _freq, const std::string& _out_unit, 
+                                   int this_bead, dVec& prev_coord, dVec& coord, BosonicExchangeBase& bosonic_exchange) :
+    Observable(param_obj, _freq, _out_unit, this_bead), prev_coord(prev_coord), coord(coord), bosonic_exchange(bosonic_exchange) {
+    getVariant(param_obj.sys["natoms"], natoms);
+    getVariant(param_obj.sim["nbeads"], nbeads);
+    getVariant(param_obj.sim["bosonic"], bosonic);
+    getVariant(param_obj.sim["pbc"], pbc);
+    getVariant(param_obj.sys["mass"], mass);
+    getVariant(param_obj.sys["size"], size);
+    double temperature;
+    getVariant(param_obj.sys["temperature"], temperature);
 #if IPI_CONVENTION
-        spring_energy /= sim.nbeads;
+    // i-Pi convention [J. Chem. Phys. 133, 124104 (2010)]
+    double omega_p = nbeads * Constants::kB * temperature / Constants::hbar;
+#else
+    // Tuckerman convention
+    double omega_p = sqrt(nbeads) * Constants::kB * temperature / Constants::hbar;
+#endif
+    spring_constant = mass * omega_p * omega_p;
+}
+
+void EnergyObservable::calculate() {}
+
+/**
+ * Calculates the spring energy contribution of the current and the previous time-slice,
+ * provided they are classical, i.e., are not affected by bosonic exchange.
+ * If the simulation is bosonic, the function is callable only for the interior connections.
+ *
+ * @return Classical spring energy contribution of the current and the previous time-slice.
+ */
+double EnergyObservable::classicalSpringEnergy() const {
+    assert(!bosonic || (bosonic && this_bead != 0));
+
+    double interior_spring_energy = 0.0;
+
+    for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
+        for (int axis = 0; axis < NDIM; ++axis) {
+            double diff = prev_coord(ptcl_idx, axis) - coord(ptcl_idx, axis);
+
+#if MINIM
+            if (pbc) {
+                applyMinimumImage(diff, size);
+            }
 #endif
 
-        quantities["kinetic"] -= spring_energy;
-    }
-
-    quantities["kinetic"] = Units::convertToUser("energy", out_unit, quantities["kinetic"]);
-}
-
-/**
- * @brief Calculates the quantum potential energy of the system, based on the potential energy estimator.
- * The potential energy is the sum of the external potential energy and the interaction potential energy
- * across all time-slices, divided by the number of beads. In addition, the method calculates the virial
- * kinetic energy of the system.
- */
-void EnergyObservable::calculatePotential() {
-    double potential = 0.0;  // Total potential energy
-    double virial = 0.0;     // Virial kinetic energy
-    double int_pot = 0.0;    // Potential energy due to interactions
-    double ext_pot = 0.0;    // Potential energy due to external field
-
-    if (sim.external_potential_name != "free") {
-        ext_pot = sim.ext_potential->V(sim.coord);
-        potential += ext_pot;
-
-        dVec physical_forces(sim.natoms);
-        physical_forces = (-1.0) * sim.ext_potential->gradV(sim.coord);
-
-        for (int ptcl_idx = 0; ptcl_idx < sim.natoms; ++ptcl_idx) {
-            for (int axis = 0; axis < NDIM; ++axis) {
-                virial -= sim.coord(ptcl_idx, axis) * physical_forces(ptcl_idx, axis);
-            }
+            interior_spring_energy += diff * diff;
         }
     }
 
-    if (sim.int_pot_cutoff != 0.0) {
-        for (int ptcl_one = 0; ptcl_one < sim.natoms; ++ptcl_one) {
-            for (int ptcl_two = ptcl_one + 1; ptcl_two < sim.natoms; ++ptcl_two) {
-                dVec diff = sim.getSeparation(ptcl_one, ptcl_two, MINIM);  // Vectorial distance
-
-                if (const double distance = diff.norm(); distance < sim.int_pot_cutoff || sim.int_pot_cutoff < 0.0) {
-                    dVec force_on_one = (-1.0) * sim.int_potential->gradV(diff);
-
-                    double int_pot_val = sim.int_potential->V(diff);
-                    potential += int_pot_val;
-                    int_pot += int_pot_val;
-
-                    for (int axis = 0; axis < NDIM; ++axis) {
-                        virial -= sim.coord(ptcl_one, axis) * force_on_one(0, axis);
-                    }
-                }
-            }
-        }
-    }
-
-    if (sim.external_potential_name != "free" && sim.interaction_potential_name != "free") {
-        ext_pot /= sim.nbeads;
-        int_pot /= sim.nbeads;
-
-        quantities["ext_pot"] = Units::convertToUser("energy", out_unit, ext_pot);
-        quantities["int_pot"] = Units::convertToUser("energy", out_unit, int_pot);
-    }
-
-    if (sim.external_potential_name != "free" || sim.interaction_potential_name != "free") {
-        potential /= sim.nbeads;
-        virial *= 0.5 / sim.nbeads;
-
-        quantities["potential"] = Units::convertToUser("energy", out_unit, potential);
-        quantities["virial"] = Units::convertToUser("energy", out_unit, virial);
-    }
+    interior_spring_energy *= 0.5 * spring_constant;
+    return interior_spring_energy;
 }

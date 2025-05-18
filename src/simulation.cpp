@@ -12,6 +12,7 @@
 #include "thermostats.h"
 #include "normal_modes.h"
 #include "simulation.h"
+#include <iostream>
 
 Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, unsigned int seed) :
     bosonic_exchange(nullptr),
@@ -56,15 +57,11 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
 
     // Based on the provided seed, make sure each process has a unique seed
     rand_gen.seed(params_seed + rank);
-    mars_gen = std::make_unique<RanMars>(params_seed + rank);
 
     init_pos_type = std::get<std::string>(param_obj.sim["init_pos_type"]);
     init_vel_type = std::get<std::string>(param_obj.sim["init_vel_type"]);
 
-    // Initialize the propagator, thermostat, and exchange algorithm
-    initializePropagator(param_obj.sim);
-    initializeThermostat(param_obj.sim);
-    initializeExchangeAlgorithm();
+    normal_modes = std::make_unique<NormalModes>(param_obj, this_bead, coord, momenta);
 
     // Initialize the coordinate, momenta, and force arrays
     coord = dVec(natoms);
@@ -72,9 +69,16 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     next_coord = dVec(natoms);
     momenta = dVec(natoms);
     forces = dVec(natoms);
+    spring_forces = dVec(natoms);
+    physical_forces = dVec(natoms);
 
     initializePositions(coord, param_obj.sim);
     initializeMomenta(momenta, param_obj.sim);
+
+    // Initialize the propagator, thermostat, and exchange algorithm
+    initializePropagator(param_obj);
+    initializeThermostat(param_obj);
+    initializeExchangeAlgorithm(param_obj);
 
     // Initialize the potential based on the input
     external_potential_name = std::get<std::string>(param_obj.external_pot["name"]);
@@ -95,12 +99,35 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     // Update the coordinate arrays of neighboring particles
     updateNeighboringCoordinates();
 
-    initializeStates(param_obj.states);
-    initializeObservables(param_obj.observables);
-    normal_modes = std::make_unique<NormalModes>(*this);
+    initializeStates(param_obj);
+    initializeObservables(param_obj);
 }
 
 Simulation::~Simulation() = default;
+
+double Simulation::classicalSpringEnergy() const {
+    assert(!bosonic || (bosonic && this_bead != 0));
+
+    double interior_spring_energy = 0.0;
+
+    for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
+        for (int axis = 0; axis < NDIM; ++axis) {
+            double diff = prev_coord(ptcl_idx, axis) - coord(ptcl_idx, axis);
+
+#if MINIM
+            if (pbc) {
+                applyMinimumImage(diff, size);
+            }
+#endif
+
+            interior_spring_energy += diff * diff;
+        }
+    }
+
+    interior_spring_energy *= 0.5 * spring_constant;
+    return interior_spring_energy;
+}
+
 
 int Simulation::getStep() const {
     return md_step;
@@ -229,13 +256,12 @@ void Simulation::run() {
     ObservablesLogger obs_logger(Output::MAIN_FILENAME, this_bead, observables);
 
     for (const auto& state : states) {
-        state->initialize();
+        state->initialize(this_bead);
     }
 
     // Main loop performing molecular dynamics steps
     for (int step = 0; step <= steps; ++step) {
         setStep(step);
-
         for (const auto& observable : observables) {
             observable->resetValues();
         }
@@ -250,7 +276,11 @@ void Simulation::run() {
             zeroMomentum();
         }
 
-        propagator->step();
+        propagator->preForceStep();
+        updateNeighboringCoordinates();
+        updateForces();
+        propagator->postForceStep();
+
         thermostat->step();
 
         // Zero momentum after every thermostat step (if needed)
@@ -354,11 +384,9 @@ void Simulation::updateForces() {
     // We distinguish between two types of forces: spring forces between the beads (due to the 
     // classical isomorphism) and the non-spring forces (due to either an external potential 
     // or interactions).
-    dVec spring_forces(natoms);
-    dVec physical_forces(natoms);
 
-    updateSpringForces(spring_forces);
-    updatePhysicalForces(physical_forces);
+    updateSpringForces();
+    updatePhysicalForces();
 
     for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
@@ -388,15 +416,13 @@ void Simulation::updateNeighboringCoordinates() {
  * described in https://doi.org/10.1063/5.0173749. It is also possible to perform the
  * bosonic simulation using the original (inefficient) algorithm, that takes into
  * account all the N! permutations, by setting FACTORIAL_BOSONIC_ALGORITHM to true.
- * 
- * @param spring_force_arr Vector to store the spring forces.
  */
-void Simulation::updateSpringForces(dVec& spring_force_arr) const {
+void Simulation::updateSpringForces() {
     if (is_bosonic_bead) {
         // If the simulation is bosonic and the current bead is either 1 or P, we calculate
         // the exterior spring forces in the appropriate bosonic class.
         bosonic_exchange->prepare();
-        bosonic_exchange->exteriorSpringForce(spring_force_arr);
+        bosonic_exchange->exteriorSpringForce(spring_forces);
         return;
     }
 
@@ -413,8 +439,7 @@ void Simulation::updateSpringForces(dVec& spring_force_arr) const {
                 applyMinimumImage(diff_next, size);
             }
 #endif
-
-            spring_force_arr(ptcl_idx, axis) = spring_constant * (diff_prev + diff_next);
+            spring_forces(ptcl_idx, axis) = spring_constant * (diff_prev + diff_next);
         }
     }
 }
@@ -422,19 +447,22 @@ void Simulation::updateSpringForces(dVec& spring_force_arr) const {
 /**
  * Updates the physical forces acting on the particles. This includes both the forces
  * due external potentials and the interaction forces between the particles.
- * 
- * @param physical_force_arr Vector to store the physical forces.
  */
-void Simulation::updatePhysicalForces(dVec& physical_force_arr) const {
+void Simulation::updatePhysicalForces() {
     // Calculate the external forces acting on the particles
-    physical_force_arr = (-1.0) * ext_potential->gradV(coord);
+    dVec external_forces = (-1.0) * ext_potential->gradV(coord);
+    for (int ptcl_one = 0; ptcl_one < natoms; ++ptcl_one) {
+        for (int axis = 0; axis < NDIM; ++axis) {
+            physical_forces(ptcl_one, axis) = external_forces(ptcl_one, axis);
+        }
+    }
 
     if (int_pot_cutoff != 0.0) {
         for (int ptcl_one = 0; ptcl_one < natoms; ++ptcl_one) {
             for (int ptcl_two = ptcl_one + 1; ptcl_two < natoms; ++ptcl_two) {
                 // Get the vector distance between the two particles.
                 // Here "diff" contains just one vector of dimension NDIM.
-                dVec diff = getSeparation(ptcl_one, ptcl_two, MINIM);
+                dVec diff = getSeparation(ptcl_one, ptcl_two, MINIM, pbc, coord, size);
 
                 // If the distance between the particles exceeds the cutoff length
                 // then we assume the interaction is negligible and do not bother
@@ -445,70 +473,13 @@ void Simulation::updatePhysicalForces(dVec& physical_force_arr) const {
                     dVec force_on_one = (-1.0) * int_potential->gradV(diff);
 
                     for (int axis = 0; axis < NDIM; ++axis) {
-                        physical_force_arr(ptcl_one, axis) += force_on_one(0, axis);
-                        physical_force_arr(ptcl_two, axis) -= force_on_one(0, axis);
+                        physical_forces(ptcl_one, axis) += force_on_one(0, axis);
+                        physical_forces(ptcl_two, axis) -= force_on_one(0, axis);
                     }
                 }
             }
         }
     }
-}
-
-/**
- * Calculates the spring energy contribution of the current and the previous time-slice,
- * provided they are classical, i.e., are not affected by bosonic exchange.
- * If the simulation is bosonic, the function is callable only for the interior connections.
- *
- * @return Classical spring energy contribution of the current and the previous time-slice.
- */
-double Simulation::classicalSpringEnergy() const {
-    assert(!bosonic || (bosonic && this_bead != 0));
-
-    double interior_spring_energy = 0.0;
-
-    for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
-        for (int axis = 0; axis < NDIM; ++axis) {
-            double diff = prev_coord(ptcl_idx, axis) - coord(ptcl_idx, axis);
-
-#if MINIM
-            if (pbc) {
-                applyMinimumImage(diff, size);
-            }
-#endif
-
-            interior_spring_energy += diff * diff;
-        }
-    }
-
-    interior_spring_energy *= 0.5 * spring_constant;
-
-    return interior_spring_energy;
-}
-
-/**
- * Returns the vectorial distance between two particles at the same imaginary timeslice.
- * Mathematically equivalent to r1-r2, where r1 and r2 are the position-vectors
- * of the first and second particles, respectively. In the case of PBC, there is an
- * option to return the minimal distance between the two particles.
- * 
- * @param first_ptcl Index of the first particle.
- * @param second_ptcl Index of the second particle.
- * @param minimum_image Flag determining whether the minimum image convention should be applied.
- * @return Vectorial distance between the two particles.
- */
-dVec Simulation::getSeparation(int first_ptcl, int second_ptcl, bool minimum_image) const {
-    dVec sep;
-
-    for (int axis = 0; axis < NDIM; ++axis) {
-        double diff = coord(first_ptcl, axis) - coord(second_ptcl, axis);
-
-        if (pbc && minimum_image)
-            applyMinimumImage(diff, size);
-
-        sep(0, axis) = diff;
-    }
-
-    return sep;
 }
 
 /**
@@ -647,54 +618,60 @@ std::unique_ptr<Potential> Simulation::initializePotential(const std::string& po
 /**
  * Initializes the propagator based on the input parameters.
  *
- * @param sim_params Simulation parameters object containing information about the propagator.
- */
-void Simulation::initializePropagator(const VariantMap& sim_params) {
-    propagator_type = std::get<std::string>(sim_params.at("propagator_type"));
+ * @param param_obj Params object with all parameters of the simulation.
+ *  */
+void Simulation::initializePropagator(Params& param_obj) {
+    propagator_type = std::get<std::string>(param_obj.sim.at("propagator_type"));
     
     if (propagator_type == "cartesian") {
-        propagator = std::make_unique<VelocityVerletPropagator>(*this);
+        propagator = std::make_unique<CartesianPropagator>(param_obj, coord, momenta, forces);
     } else if (propagator_type == "normal_modes") {
-        propagator = std::make_unique<NormalModesPropagator>(*this);
+        propagator = std::make_unique<NormalModesPropagator>(param_obj, coord, momenta, forces,
+                    physical_forces, spring_forces, prev_coord, next_coord, this_bead, *normal_modes);
     }
 }
 
 /**
  * Initializes the thermostat based on the input parameters.
  *
- * @param sim_params Simulation parameters object containing information about the thermostat.
+ * @param param_obj Params object with all parameters of the simulation.
  */
-void Simulation::initializeThermostat(const VariantMap& sim_params) {
-    thermostat_type = std::get<std::string>(sim_params.at("thermostat_type"));
-    getVariant(sim_params.at("nmthermostat"), nmthermostat);
-    getVariant(sim_params.at("nchains"), nchains);
-    getVariant(sim_params.at("gamma"), gamma);
+void Simulation::initializeThermostat(Params& param_obj) {
+    thermostat_type = std::get<std::string>(param_obj.sim["thermostat_type"]);
+    getVariant(param_obj.sim["nmthermostat"], nmthermostat);
+
+    // Choose coupling (Cartesian coords or normal modes of distinguishable ring polymers)
+    if (nmthermostat) {
+        thermostat_coupling = std::make_unique<NMCoupling>(momenta, *normal_modes, this_bead);
+    } else {
+        thermostat_coupling = std::make_unique<CartesianCoupling>(momenta);
+    }
 
     if (thermostat_type == "langevin") {
-        thermostat = std::make_unique<LangevinThermostat>(*this, nmthermostat);
+        thermostat = std::make_unique<LangevinThermostat>(*thermostat_coupling, param_obj, this_bead);
     } else if (thermostat_type == "nose_hoover") {
-        thermostat = std::make_unique<NoseHooverThermostat>(*this, nmthermostat, nchains);
+        thermostat = std::make_unique<NoseHooverThermostat>(*thermostat_coupling, param_obj);
     } else if (thermostat_type == "nose_hoover_np") {
-        thermostat = std::make_unique<NoseHooverNpThermostat>(*this, nmthermostat, nchains);
+        thermostat = std::make_unique<NoseHooverNpThermostat>(*thermostat_coupling, param_obj);
     } else if (thermostat_type == "nose_hoover_np_dim") {
-        thermostat = std::make_unique<NoseHooverNpDimThermostat>(*this, nmthermostat, nchains);
+        thermostat = std::make_unique<NoseHooverNpDimThermostat>(*thermostat_coupling, param_obj);
     } else if (thermostat_type == "none") {
-        thermostat = std::make_unique<Thermostat>(*this, nmthermostat);
+        thermostat = std::make_unique<Thermostat>(*thermostat_coupling, param_obj);
     }
 }
 
 /**
  * Initializes the bosonic exchange algorithm.
  */
-void Simulation::initializeExchangeAlgorithm() {
+void Simulation::initializeExchangeAlgorithm(Params& param_obj) {
     bosonic = bosonic && (nbeads > 1); // Bosonic exchange is only possible for P>1
     is_bosonic_bead = bosonic && (this_bead == 0 || this_bead == nbeads - 1);
 
     if (is_bosonic_bead) {
 #if FACTORIAL_BOSONIC_ALGORITHM
-        bosonic_exchange = std::make_unique<FactorialBosonicExchange>(*this);
+        bosonic_exchange = std::make_unique<FactorialBosonicExchange>(param_obj, coord, prev_coord, next_coord, this_bead);
 #else
-        bosonic_exchange = std::make_unique<BosonicExchange>(*this);
+        bosonic_exchange = std::make_unique<BosonicExchange>(param_obj, coord, prev_coord, next_coord, this_bead);
 #endif
     }
 }
@@ -756,18 +733,20 @@ void Simulation::initializeMomenta(dVec& momentum_arr, const VariantMap& sim_par
  * Initializes a state based on the input parameters. Initialization occurs only if the
  * state is enabled, i.e., if the units are not set to "off" or "false".
  *
+ * @param param_obj Params object with all parameters of the simulation.
  * @param sim_params Simulation parameters object containing information about the states.
+ *                   Passes it in addition to param_obj for an implicit convesion to StringMap.
  * @param param_key Key of the parameter in the simulation parameters object.
  * @param state_name Name of the state.
  */
-void Simulation::addStateIfEnabled(const StringMap& sim_params, const std::string& param_key, const std::string& state_name) {
-    if (const std::string& units = sim_params.at(param_key); units != "off" && units != "false") {
+void Simulation::addStateIfEnabled(Params& param_obj, const std::string& param_key, const std::string& state_name) {
+    if (const std::string& units = param_obj.states.at(param_key); units != "off" && units != "false") {
         if (units == "on" || units == "true" || units == "none") {
             // In the case of "none", it is expected that the State object quantities will not have units,
             // and therefore providing "atomic_unit" as the units in this case is simply a placeholder.
-            states.push_back(StateFactory::createQuantity(state_name, *this, sfreq, "atomic_unit"));
+            states.push_back(StateFactory::createQuantity(state_name, *this, param_obj, sfreq, "atomic_unit"));
         } else {
-            states.push_back(StateFactory::createQuantity(state_name, *this, sfreq, units));
+            states.push_back(StateFactory::createQuantity(state_name, *this, param_obj, sfreq, units));
         }
     }
 }
@@ -775,28 +754,28 @@ void Simulation::addStateIfEnabled(const StringMap& sim_params, const std::strin
 /**
  * Method for initializing all the requested states.
  *
- * @param sim_params Simulation parameters object containing information about the states.
+ * @param param_obj Params object with all parameters of the simulation.
  */
-void Simulation::initializeStates(const StringMap& sim_params) {
-    addStateIfEnabled(sim_params, "positions", "position");
-    addStateIfEnabled(sim_params, "velocities", "velocity");
-    addStateIfEnabled(sim_params, "forces", "force");
+void Simulation::initializeStates(Params& param_obj) {
+    addStateIfEnabled(param_obj, "positions", "position");
+    addStateIfEnabled(param_obj, "velocities", "velocity");
+    addStateIfEnabled(param_obj, "forces", "force");
 }
 
 /**
  * Initializes an observable based on the input parameters. Initialization occurs only if the
  * observable is enabled (the units are not set to "off").
  *
- * @param sim_params Simulation parameters object containing information about the observables.
+ * @param param_obj Params object with all parameters of the simulation.
  * @param param_key Key of the parameter in the simulation parameters object.
  * @param observable_name Name of the observable.
  */
-void Simulation::addObservableIfEnabled(const StringMap& sim_params, const std::string& param_key, const std::string& observable_name) {
-    if (const std::string& units = sim_params.at(param_key); units != "off") {
+void Simulation::addObservableIfEnabled(Params& param_obj, const std::string& param_key, const std::string& observable_name) {
+    if (const std::string& units = param_obj.observables.at(param_key); units != "off") {
         if (units == "none") {
-            observables.push_back(ObservableFactory::createQuantity(observable_name, *this, sfreq, ""));
+            observables.push_back(ObservableFactory::createQuantity(*this, param_obj, observable_name, sfreq, "", this_bead));
         } else {
-            observables.push_back(ObservableFactory::createQuantity(observable_name, *this, sfreq, units));
+            observables.push_back(ObservableFactory::createQuantity(*this, param_obj, observable_name, sfreq, units, this_bead));
         }
     }
 }
@@ -804,17 +783,17 @@ void Simulation::addObservableIfEnabled(const StringMap& sim_params, const std::
 /**
  * Method for initializing all the requested observables.
  *
- * @param sim_params Simulation parameters object containing information about the observables.
+ * @param param_obj Params object with all parameters of the simulation.
  */
-void Simulation::initializeObservables(const StringMap& sim_params) {
-    addObservableIfEnabled(sim_params, "energy", "energy");
-    addObservableIfEnabled(sim_params, "classical", "classical");
+void Simulation::initializeObservables(Params& param_obj) {
+    addObservableIfEnabled(param_obj, "energy", "energy");
+    addObservableIfEnabled(param_obj, "classical", "classical");
 
     if (bosonic) {
-        addObservableIfEnabled(sim_params, "bosonic", "bosonic");
+        addObservableIfEnabled(param_obj, "bosonic", "bosonic");
     }
 
-    addObservableIfEnabled(sim_params, "gsf", "gsf");
+    addObservableIfEnabled(param_obj, "gsf", "gsf");
 }
 
 /**

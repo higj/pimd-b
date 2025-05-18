@@ -38,6 +38,32 @@ void printProgress(int this_step, int total_steps, int this_rank, int out_rank) 
     }
 }
 
+/**
+ * Returns the vectorial distance between two particles at the same imaginary timeslice.
+ * Mathematically equivalent to r1-r2, where r1 and r2 are the position-vectors
+ * of the first and second particles, respectively. In the case of PBC, there is an
+ * option to return the minimal distance between the two particles.
+ * 
+ * @param first_ptcl Index of the first particle.
+ * @param second_ptcl Index of the second particle.
+ * @param minimum_image Flag determining whether the minimum image convention should be applied.
+ * @return Vectorial distance between the two particles.
+ */
+dVec getSeparation(int first_ptcl, int second_ptcl, bool minimum_image, bool pbc, dVec& coord, double size) {
+    dVec sep;
+
+    for (int axis = 0; axis < NDIM; ++axis) {
+        double diff = coord(first_ptcl, axis) - coord(second_ptcl, axis);
+
+        if (pbc && minimum_image)
+            applyMinimumImage(diff, size);
+
+        sep(0, axis) = diff;
+    }
+
+    return sep;
+}
+
 void applyMinimumImage(double& dx, double L) {
     dx -= L * floor(dx / L + 0.5);
 }

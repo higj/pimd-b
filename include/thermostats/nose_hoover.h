@@ -10,7 +10,7 @@ class Coupling;
 
 class NoseHooverThermostat : public Thermostat {
 public:
-    NoseHooverThermostat(Simulation& _sim, bool normal_modes, int _nchains);
+    NoseHooverThermostat(Coupling& coupling, Params& param_obj);
     ~NoseHooverThermostat() override = default;
 
     void momentaUpdate() override;
@@ -30,7 +30,7 @@ protected:
 
 class NoseHooverNpThermostat : public NoseHooverThermostat {
 public:
-    NoseHooverNpThermostat(Simulation& _sim, bool normal_modes, int _nchains);
+    NoseHooverNpThermostat(Coupling& coupling, Params& param_obj);
     ~NoseHooverNpThermostat() override = default;
 
     void momentaUpdate() override;
@@ -41,7 +41,7 @@ public:
 
 class NoseHooverNpDimThermostat : public NoseHooverThermostat {
 public:
-    NoseHooverNpDimThermostat(Simulation& _sim, bool normal_modes, int _nchains);
+    NoseHooverNpDimThermostat(Coupling& coupling, Params& param_obj);
     ~NoseHooverNpDimThermostat() override = default;
 
     void momentaUpdate() override;

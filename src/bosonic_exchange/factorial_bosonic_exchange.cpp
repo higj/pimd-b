@@ -3,9 +3,10 @@
 #include <algorithm>
 
 #include "bosonic_exchange/factorial_bosonic_exchange.h"
-#include "simulation.h"
 
-FactorialBosonicExchange::FactorialBosonicExchange(const Simulation& _sim) : BosonicExchangeBase(_sim), labels(_sim.natoms) {
+FactorialBosonicExchange::FactorialBosonicExchange(Params& param_obj, 
+                const dVec& coord, const dVec& prev_coord, const dVec& next_coord, const int this_bead) : 
+    BosonicExchangeBase(param_obj, coord, prev_coord, next_coord, this_bead), labels(nbosons) {
     // Fill the labels array with numbers from 0 to nbosons-1
     std::iota(labels.begin(), labels.end(), 0);
 
@@ -107,7 +108,7 @@ double FactorialBosonicExchange::effectivePotential() {
             diff2 += getBeadsSeparationSquared(x_first_bead, ptcl_idx, x_last_bead, lastBeadNeighbor(ptcl_idx));
         }
 
-        weights_sum += exp(-sim.beta_half_k * diff2);
+        weights_sum += exp(-beta * 0.5 * spring_constant * diff2);
     } while (std::ranges::next_permutation(labels).found);
 
     return (-1.0 / beta) * log(weights_sum / permutation_counter);
@@ -124,6 +125,13 @@ void FactorialBosonicExchange::springForceLastBead(dVec& f) {
 
     dVec temp_force(nbosons);
     double denom_weight = 0.0;
+
+    // Zero the spring forces
+    for (int ptcl_one = 0; ptcl_one < nbosons; ++ptcl_one) {
+        for (int axis = 0; axis < NDIM; ++axis) {
+            f(ptcl_one, axis) = 0.;
+        }
+    }
 
     do {
         double weight = 0.0;
@@ -182,6 +190,13 @@ void FactorialBosonicExchange::springForceFirstBead(dVec& f) {
 
     dVec temp_force(nbosons);
     double denom_weight = 0.0;
+
+    // Zero the spring forces
+    for (int ptcl_one = 0; ptcl_one < nbosons; ++ptcl_one) {
+        for (int axis = 0; axis < NDIM; ++axis) {
+            f(ptcl_one, axis) = 0.;
+        }
+    }
 
     do {
         double weight = 0.0;
