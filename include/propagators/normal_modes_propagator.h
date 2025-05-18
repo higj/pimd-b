@@ -2,21 +2,30 @@
 
 #include "propagators/propagator.h"
 
-class Simulation;
 class NormalModes;
 
 class NormalModesPropagator : public Propagator {
 public:
-    NormalModesPropagator(Params& param_obj, dVec& coord, dVec& momenta, dVec& forces,
-                          dVec& spring_forces, dVec& physical_forces, dVec& prev_coord, dVec& next_coord,
-                          int this_bead, NormalModes& normal_modes, bool bosonic);
+    NormalModesPropagator(Params& param_obj, dVec& coord, dVec& momenta, dVec& forces, 
+                          dVec& physical_forces, dVec& spring_forces, dVec& prev_coord, dVec& next_coord,
+                          int this_bead, NormalModes& normal_modes);
     ~NormalModesPropagator() override = default;
 
-    virtual void preForceStep();
-    virtual void postForceStep();
+    void preForceStep() override;
+    void postForceStep() override;
+
 private:
     double freq, c, s, m_omega;
-    dVec& ext_forces, spring_forces, prev_coord, next_coord;
+    dVec& physical_forces;
+    dVec& spring_forces;
+    dVec& prev_coord;
+    dVec& next_coord;
+
+    int this_bead, nbeads;
+    double spring_constant;
+    NormalModes& normal_modes;
+    bool bosonic;
+
     void momentaExternalForces();
     int this_bead, nbeads;
     double spring_constant;

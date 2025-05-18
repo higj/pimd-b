@@ -51,6 +51,7 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
 #endif
 
     spring_constant = mass * omega_p * omega_p;
+    beta_half_k = thermo_beta * 0.5 * spring_constant;
 
     // Get the seed from the config file
     getVariant(param_obj.sim["seed"], params_seed);
@@ -61,7 +62,7 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     init_pos_type = std::get<std::string>(param_obj.sim["init_pos_type"]);
     init_vel_type = std::get<std::string>(param_obj.sim["init_vel_type"]);
 
-    normal_modes = std::make_unique<NormalModes>(*this);
+    normal_modes = std::make_unique<NormalModes>(param_obj, this_bead, coord, momenta);
 
     // Initialize the coordinate, momenta, and force arrays
     coord = dVec(natoms);
@@ -436,7 +437,6 @@ void Simulation::updateSpringForces() {
                 applyMinimumImage(diff_next, size);
             }
 #endif
-
             spring_forces(ptcl_idx, axis) = spring_constant * (diff_prev + diff_next);
         }
     }
@@ -448,7 +448,12 @@ void Simulation::updateSpringForces() {
  */
 void Simulation::updatePhysicalForces() {
     // Calculate the external forces acting on the particles
-    physical_forces = (-1.0) * ext_potential->gradV(coord);
+    dVec external_forces = (-1.0) * ext_potential->gradV(coord);
+    for (int ptcl_one = 0; ptcl_one < natoms; ++ptcl_one) {
+        for (int axis = 0; axis < NDIM; ++axis) {
+            physical_forces(ptcl_one, axis) = external_forces(ptcl_one, axis);
+        }
+    }
 
     if (int_pot_cutoff != 0.0) {
         for (int ptcl_one = 0; ptcl_one < natoms; ++ptcl_one) {
@@ -611,17 +616,16 @@ std::unique_ptr<Potential> Simulation::initializePotential(const std::string& po
 /**
  * Initializes the propagator based on the input parameters.
  *
- * @param sim_params Simulation parameters object containing information about the propagator.
- */
+ * @param param_obj Params object with all parameters of the simulation.
+ *  */
 void Simulation::initializePropagator(Params& param_obj) {
-
     propagator_type = std::get<std::string>(param_obj.sim.at("propagator_type"));
     
     if (propagator_type == "cartesian") {
         propagator = std::make_unique<CartesianPropagator>(param_obj, coord, momenta, forces);
     } else if (propagator_type == "normal_modes") {
         propagator = std::make_unique<NormalModesPropagator>(param_obj, coord, momenta, forces,
-                        spring_forces, physical_forces, prev_coord, next_coord, this_bead, *normal_modes, bosonic);
+                    physical_forces, spring_forces, prev_coord, next_coord, this_bead, *normal_modes);
     }
 }
 

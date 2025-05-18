@@ -1,5 +1,6 @@
 #include "propagators/normal_modes_propagator.h"
 #include "normal_modes.h"
+<<<<<<< HEAD
 
 #include <numbers>
 
@@ -8,6 +9,16 @@ NormalModesPropagator::NormalModesPropagator(Params& param_obj, dVec& coord, dVe
                           int this_bead, NormalModes& normal_modes, bool bosonic) : 
     Propagator(param_obj, coord, momenta, forces),
     ext_forces(physical_forces),
+=======
+#include "params.h"
+#include <numbers>
+
+NormalModesPropagator::NormalModesPropagator(Params& param_obj, dVec& coord, dVec& momenta, dVec& forces,
+                                            dVec& physical_forces, dVec& spring_forces, dVec& prev_coord, dVec& next_coord,
+                          int this_bead, NormalModes& normal_modes) : 
+    Propagator(param_obj, coord, momenta, forces),
+    physical_forces(physical_forces),
+>>>>>>> removingSimRefsTest
     spring_forces(spring_forces),
     prev_coord(prev_coord),
     next_coord(next_coord),
@@ -15,6 +26,11 @@ NormalModesPropagator::NormalModesPropagator(Params& param_obj, dVec& coord, dVe
     normal_modes(normal_modes)
 {
     getVariant(param_obj.sim["nbeads"], nbeads);
+<<<<<<< HEAD
+=======
+    getVariant(param_obj.sim["bosonic"], bosonic);
+
+>>>>>>> removingSimRefsTest
     double temperature;
     getVariant(param_obj.sys["temperature"], temperature);
 #if IPI_CONVENTION
@@ -36,7 +52,10 @@ NormalModesPropagator::NormalModesPropagator(Params& param_obj, dVec& coord, dVe
 void NormalModesPropagator::preForceStep() {
     // Propagate momenta under external forces
     momentaExternalForces();
+<<<<<<< HEAD
 
+=======
+>>>>>>> removingSimRefsTest
     normal_modes.shareData();
 
     MPI_Barrier(MPI_COMM_WORLD);
@@ -79,7 +98,6 @@ void NormalModesPropagator::preForceStep() {
         }
     }
 }
-
 void NormalModesPropagator::postForceStep() {
     // Propagate momenta under external forces
     momentaExternalForces();
@@ -90,9 +108,9 @@ void NormalModesPropagator::momentaExternalForces() {
         for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx)
             for (int axis = 0; axis < NDIM; ++axis)
 #if IPI_CONVENTION
-                momenta(ptcl_idx, axis) += 0.5 * dt * ext_forces(ptcl_idx, axis);
+                momenta(ptcl_idx, axis) += 0.5 * dt * physical_forces(ptcl_idx, axis);
 #else
-                momenta(ptcl_idx, axis) += 0.5 * dt * ext_forces(ptcl_idx, axis) / nbeads;
+                momenta(ptcl_idx, axis) += 0.5 * dt * physical_forces(ptcl_idx, axis) / nbeads;
 #endif
     } else if (this_bead == 0 || this_bead == nbeads - 1) {
         double inner_springs;
@@ -100,9 +118,9 @@ void NormalModesPropagator::momentaExternalForces() {
             for (int axis = 0; axis < NDIM; ++axis) {
                 inner_springs = -spring_constant * (2 * coord(ptcl_idx, axis) - prev_coord(ptcl_idx, axis) - next_coord(ptcl_idx, axis));
 #if IPI_CONVENTION
-                momenta(ptcl_idx, axis) += 0.5 * dt * (ext_forces(ptcl_idx, axis) + spring_forces(ptcl_idx, axis) - inner_springs);
+                momenta(ptcl_idx, axis) += 0.5 * dt * (physical_forces(ptcl_idx, axis) + spring_forces(ptcl_idx, axis) - inner_springs);
 #else
-                momenta(ptcl_idx, axis) += 0.5 * dt * (ext_forces(ptcl_idx, axis) / nbeads + spring_forces(ptcl_idx, axis) - inner_springs);
+                momenta(ptcl_idx, axis) += 0.5 * dt * (physical_forces(ptcl_idx, axis) / nbeads + spring_forces(ptcl_idx, axis) - inner_springs);
 #endif
             }
         }
@@ -110,9 +128,9 @@ void NormalModesPropagator::momentaExternalForces() {
         for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx)
             for (int axis = 0; axis < NDIM; ++axis)
 #if IPI_CONVENTION
-                momenta(ptcl_idx, axis) += 0.5 * dt * ext_forces(ptcl_idx, axis);
+                momenta(ptcl_idx, axis) += 0.5 * dt * physical_forces(ptcl_idx, axis);
 #else
-                momenta(ptcl_idx, axis) += 0.5 * dt * ext_forces(ptcl_idx, axis) / nbeads;
+                momenta(ptcl_idx, axis) += 0.5 * dt * physical_forces(ptcl_idx, axis) / nbeads;
 #endif
     }
 }

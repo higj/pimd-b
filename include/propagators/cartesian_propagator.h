@@ -7,8 +7,8 @@ public:
     CartesianPropagator(Params& param_obj, dVec& coord, dVec& momenta, dVec& forces);
     ~CartesianPropagator() override = default;
 
-    virtual void preForceStep();
-    virtual void postForceStep();
+    void preForceStep() override;
+    void postForceStep() override;
 private:
     void momentStep();
     void coordsStep();
