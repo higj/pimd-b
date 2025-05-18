@@ -2,6 +2,8 @@
 
 #include "initializers/momentum_initializer.h"
 
+#include <memory>
+
 class ManualMomentumInitializer final : public MomentumInitializer {
 public:
     ManualMomentumInitializer(const std::string& filename, int first_idx, const std::shared_ptr<SystemState>& state, double mass);

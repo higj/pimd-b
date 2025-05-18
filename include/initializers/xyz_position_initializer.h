@@ -2,6 +2,8 @@
 
 #include "initializers/position_initializer.h"
 
+#include <memory>
+
 class XyzPositionInitializer final : public PositionInitializer {
 public:
     XyzPositionInitializer(const std::string& filename, int first_idx, const std::shared_ptr<dVec>& coord, double box_size);

@@ -2,6 +2,8 @@
 
 #include "common.h"
 
+#include <memory>
+
 class PositionInitializer {
 public:
     explicit PositionInitializer(const std::shared_ptr<dVec>& coord, double box_size)

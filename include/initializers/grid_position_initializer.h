@@ -2,6 +2,8 @@
 
 #include "initializers/position_initializer.h"
 
+#include <memory>
+
 /**
  * @brief Arranges particles in a grid-like structure within the simulation box.
  */

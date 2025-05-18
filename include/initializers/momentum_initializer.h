@@ -3,6 +3,8 @@
 //#include "common.h"
 #include "core/system_state.h"
 
+#include <memory>
+
 class MomentumInitializer {
 public:
     explicit MomentumInitializer(const std::shared_ptr<SystemState>& state, double mass)

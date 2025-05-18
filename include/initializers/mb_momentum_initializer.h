@@ -2,6 +2,8 @@
 
 #include "initializers/momentum_initializer.h"
 
+#include <memory>
+
 class RandomGenerators;
 
 class MaxwellBoltzmannMomentumInitializer final : public MomentumInitializer {
