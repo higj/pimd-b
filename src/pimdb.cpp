@@ -31,10 +31,26 @@ void parseArguments(int arg_num, char** arg_arr, std::string& conf_filename, boo
 int main(int argc, char** argv) {
     MPI_Init(&argc, &argv);
 
-    int rank, size;
+    int world_rank, world_size;
+    MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &world_size);
 
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    // User-defined parameters
+    const int beads_per_walker = 8; // for example
+    if (world_size % beads_per_walker != 0) {
+        if (world_rank == 0) {
+            std::cerr << "Total number of ranks must be divisible by beads_per_walker.\n";
+        }
+        MPI_Abort(MPI_COMM_WORLD, 1);
+    }
+
+    int num_walkers = world_size / beads_per_walker;
+    int walker_id = world_rank / beads_per_walker;
+    int local_rank = world_rank % beads_per_walker;
+
+    // Create a communicator per walker group
+    MPI_Comm walker_comm;
+    MPI_Comm_split(MPI_COMM_WORLD, walker_id, local_rank, &walker_comm);
 
     std::string config_filename = "config.ini";
 
@@ -42,16 +58,16 @@ int main(int argc, char** argv) {
         // Flag to check if the user requested information about the program as opposed to running the simulation
         bool display_info = false;
 
-        parseArguments(argc, argv, config_filename, display_info, rank);
+        parseArguments(argc, argv, config_filename, display_info, world_rank);
 
         // If we got to this point, and no info has been requested then initiate the simulation
         if (!display_info) {
             printMsg(LOGO, rank);
 
             // Load the simulation parameters from the configuration file
-            Params params(config_filename, rank);
+            Params params(config_filename, world_rank);
             // Initialize the random number generator seed based on the current time
-            Simulation sim(rank, size, params, static_cast<unsigned int>(time(nullptr)));
+            Simulation sim(local_rank, beads_per_walker, params, static_cast<unsigned int>(time(nullptr)), walker_comm);
             sim.run();
         }
     } catch (const std::invalid_argument& ex) {

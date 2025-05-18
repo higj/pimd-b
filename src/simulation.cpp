@@ -14,11 +14,12 @@
 #include "simulation.h"
 #include <iostream>
 
-Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, unsigned int seed) :
+Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, unsigned int seed, MPI_Comm& walker_comm) :
     bosonic_exchange(nullptr),
     rand_gen(seed + rank),
     this_bead(rank),
-    nproc(nproc) {
+    nproc(nproc),
+    walker_comm(walker_comm){
     getVariant(param_obj.sim["nbeads"], nbeads);
     getVariant(param_obj.sim["dt"], dt);
     getVariant(param_obj.sim["sfreq"], sfreq);
@@ -247,7 +248,7 @@ double Simulation::sampleMaxwellBoltzmann() {
 void Simulation::run() {
     printStatus("Running the simulation", this_bead);
     
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(walker_comm);
     const double sim_exec_time_start = MPI_Wtime();
     
     std::filesystem::create_directory(Output::FOLDER_NAME);
@@ -301,11 +302,11 @@ void Simulation::run() {
 
         // Save the observables at the specified frequency
         if (step % sfreq == 0) {
-            obs_logger.log(step);
+            obs_logger.log(step, walker_comm);
         }
     }
 
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(walker_comm);
     const double sim_exec_time_end = MPI_Wtime();
 
     const double wall_time = sim_exec_time_end - sim_exec_time_start;
@@ -336,12 +337,12 @@ void Simulation::getPrevCoords(dVec& prev) {
         MPI_DOUBLE,
         (this_bead - 1 + nproc) % nproc,
         0,
-        MPI_COMM_WORLD,
+        walker_comm,
         MPI_STATUS_IGNORE
     );
 
     // Ensure all processes have completed the neighbor communication
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(walker_comm);
 }
 
 /**
@@ -364,12 +365,12 @@ void Simulation::getNextCoords(dVec& next) {
         MPI_DOUBLE,
         (this_bead + 1) % nproc,
         0,
-        MPI_COMM_WORLD,
+        walker_comm,
         MPI_STATUS_IGNORE
     );
 
     // Ensure all processes have completed the neighbor communication
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(walker_comm);
 }
 
 /**
@@ -556,7 +557,7 @@ void Simulation::zeroMomentum() {
     }
 
     MPI_Allreduce(momentum_cm_per_bead.data(), momentum_cm.data(), momentum_cm.size(), MPI_DOUBLE, MPI_SUM,
-                  MPI_COMM_WORLD);
+                  walker_comm);
 
     for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {

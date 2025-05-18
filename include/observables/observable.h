@@ -44,7 +44,7 @@ public:
     ObservablesLogger(const std::string& filename, int _bead, const std::vector<std::unique_ptr<Observable>>& _observables);
     ~ObservablesLogger();
 
-    void log(int step);
+    void log(int step, MPI_Comm& walker_comm);
 
 private:
     std::ofstream file;

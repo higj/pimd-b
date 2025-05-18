@@ -52,7 +52,7 @@ public:
 
     std::mt19937 rand_gen;
 
-    Simulation(const int& rank, const int& nproc, Params& param_obj, unsigned int seed = static_cast<unsigned int>(time(nullptr)));
+    Simulation(const int& rank, const int& nproc, Params& param_obj, unsigned int seed = static_cast<unsigned int>(time(nullptr)), MPI_Comm& walker_comm);
     ~Simulation();
 
     dVec coord, momenta, forces, spring_forces, physical_forces;
@@ -124,4 +124,6 @@ private:
     std::string propagator_type;
 
     void printDebug(const std::string& text, int target_bead = 0) const;
+
+    MPI_Comm& walker_comm; // Walker communicator
 };
