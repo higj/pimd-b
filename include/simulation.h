@@ -1,131 +1,166 @@
 #pragma once
 
-#include <string>
-#include <random>
-#include <ctime>
-#include <memory>
-
-#include "random_mars.h"
 #include "common.h"
-#include "params.h"
-#include "potentials.h"
-#include "bosonic_exchange.h"
+#include "core/simulation_resources.h"
 
-class NormalModes;
-class State;
-class Observable;
-class Propagator;
-class Thermostat;
+#include <string>
 
 class Simulation
 {
 public:
-    double temperature;
-    double beta;        // Thermodynamic beta 1/(kB*T)
-    double thermo_beta; // Inverse temperature at which the simulation is actually performed ("thermostat beta")
-    double dt;          // Timestep
-    double size;        // Linear system size (TODO: Add support for Ly, Lz,...)
-    double gamma;       // Friction constant of the Langevin thermostat
-    int    nchains;     // Number of Nose-Hoover chains
-    double threshold;   // Percentage of steps to throw away (thermalization)
-
-    int natoms;         // Number of atoms in the system
-    int nbeads;         // Number of beads
-
-    long sfreq;         // Save frequency (how often the observables are recorded)
-    long steps;         // Total number of MD steps
-
-    bool bosonic;       // Is the simulation bosonic?
-    bool fixcom;        // Fix the center of mass?
-    bool pbc;           // Enable periodic boundary conditions?
-    bool nmthermostat;  // Couple thermostat to normal modes
-
-    bool out_pos;       // Output trajectories?
-    bool out_vel;       // Output velocities?
-    bool out_force;     // Output forces?
-
-    bool is_bosonic_bead; // Is the current simulation bosonic and the time-slice is either 1 or P?
-    std::unique_ptr<BosonicExchangeBase> bosonic_exchange;
-
-    std::vector<std::unique_ptr<Observable>> observables;
-    std::vector<std::unique_ptr<State>> states;
-
-    std::mt19937 rand_gen;
-    std::unique_ptr<RanMars> mars_gen;
-
-    Simulation(const int& rank, const int& nproc, Params& param_obj, unsigned int seed = static_cast<unsigned int>(time(nullptr)));
+    Simulation(const int& rank, const int& nproc, const std::string& config_filename);
     ~Simulation();
 
-    dVec coord, momenta, forces;
-    dVec prev_coord, next_coord;
+    /**
+     * Initializes the simulation box container.
+     *
+     * @param config Simulation configuration object.
+     * @param state System state object.
+     * @param rng Random number generator object.
+     * @return A shared pointer to the initialized box object.
+     */
+    /*static std::shared_ptr<Box> initializeBox(
+        const std::shared_ptr<SimulationConfig>& config,
+        const std::shared_ptr<SystemState>& state,
+        const std::shared_ptr<RandomGenerators>& rng);*/
 
-    int getStep() const;
+    /**
+     * Initializes the bosonic exchange machinery based on the input parameters.
+     *
+     * @param config Simulation configuration object containing information about bosonic exchange.
+     * @param state System state object containing information about the current state of the simulation.
+     * @return A shared pointer to the initialized exchange state object.
+    */
+    static std::shared_ptr<ExchangeState> initializeExchangeState(
+        const std::shared_ptr<SimulationConfig>& config, 
+        const std::shared_ptr<SystemState>& state
+    );
+
+    /**
+     * Initializes the normal modes based on the input parameters.
+     *
+     * @param config Simulation configuration object containing information about normal modes.
+     * @param state System state object containing information about the current state of the simulation.
+     * @return A shared pointer to the initialized normal modes object.
+     */
+    static std::shared_ptr<NormalModes> initializeNormalModes(
+        const std::shared_ptr<SimulationConfig>& config,
+        const std::shared_ptr<SystemState>& state
+    );
+
+    /**
+     * Initializes the propagator based on the input parameters.
+     *
+     * @param config Simulation configuration object containing information about the propagator.
+     * @param state System state object containing information about the current state of the simulation.
+     * @param normal_modes Normal modes object containing information about the normal modes of the system.
+     * @param force_mgr Force field manager object containing information about the forces acting on the system.
+     * @param exchange_state Exchange state object containing information about the bosonic exchange.
+     * @return A shared pointer to the initialized propagator object.
+    */
+    static std::shared_ptr<Propagator> initializePropagator(
+        const std::shared_ptr<SimulationConfig>& config,
+        const std::shared_ptr<SystemState>& state,
+        const std::shared_ptr<NormalModes>& normal_modes,
+        const std::shared_ptr<ForceFieldManager>& force_mgr, 
+        const std::shared_ptr<ExchangeState>& exchange_state
+    );
+    
+    /**
+     * Initializes the thermostat based on the input parameters.
+     *
+     * @param config Simulation configuration object containing information about the thermostat.
+     * @param state System state object containing information about the current state of the simulation.
+     * @param normal_modes Normal modes object containing information about the normal modes of the system.
+     * @param rng Random number generator object for generating random numbers.
+     * @return A shared pointer to the initialized thermostat object.
+    */
+    static std::shared_ptr<Thermostat> initializeThermostat(
+        const std::shared_ptr<SimulationConfig>& config, 
+        const std::shared_ptr<SystemState>& state,
+        const std::shared_ptr<NormalModes>& normal_modes,
+        const std::shared_ptr<RandomGenerators>& rng
+    );
+
+    /**
+     * Initializes the observables based on the input parameters.
+     *
+     * @param config Simulation configuration object.
+     * @param state System state object.
+     * @param exchange_state Exchange state object.
+     * @param force_mgr Force field manager object.
+     * @param thermostat Thermostat object.
+     * @return A vector of shared pointers to the initialized observable objects.
+     */
+    static std::vector<std::shared_ptr<Observable>> initializeObservables(
+        const std::shared_ptr<SimulationConfig>& config,
+        const std::shared_ptr<SystemState>& state,
+        const std::shared_ptr<ExchangeState>& exchange_state,
+        const std::shared_ptr<ForceFieldManager>& force_mgr,
+        const std::shared_ptr<Thermostat>& thermostat
+    );
+
+    /**
+     * Initializes the positions of the particles based on the input parameters.
+     *
+     * @param config Simulation configuration object.
+     * @param state System state object.
+     * @param rng Random number generator object for generating random numbers.
+     */
+    static void initializePositions(
+        const std::shared_ptr<SimulationConfig>& config,
+        const std::shared_ptr<SystemState>& state, 
+        const std::shared_ptr<RandomGenerators>& rng
+    );
+
+    /**
+     * Initializes the momenta of the particles based on the input parameters.
+     *
+     * @param config Simulation configuration object.
+     * @param state System state object.
+     * @param rng Random number generator object for generating random numbers.
+     */
+    static void initializeMomenta(
+        const std::shared_ptr<SimulationConfig>& config,
+        const std::shared_ptr<SystemState>& state, 
+        const std::shared_ptr<RandomGenerators>& rng
+    );
+
+    /**
+     * Initializes the dumps based on the input parameters.
+     *
+     * @param config Simulation configuration object.
+     * @return A vector of shared pointers to the initialized dump objects.
+     */
+    static std::vector<std::shared_ptr<Dump>> initializeDumps(
+        const std::shared_ptr<SimulationConfig>& config,
+        const std::shared_ptr<SystemState>& state
+    );
+
+    /**
+     * @brief Gets the current simulation step.
+     */
+    [[nodiscard]] int getStep() const;
+
+    /**
+     * Sets the current simulation step.
+     *
+     * @param step The step to set.
+     */
     void setStep(int step);
 
-    double mass;
-    double spring_constant;  // k=m*omega_p^2 (where omega_p depends on the convention)
-    double omega_p;          // Angular frequency of the ring polymer
-    double beta_half_k;      // Pre-factor of beta*0.5*k
-
-    void genRandomPositions(dVec& pos_arr);
-    void uniformParticleGrid(dVec& pos_arr) const;
-    void genMomentum(dVec& momenta_arr);
-
-    void zeroMomentum();
-
-    void initializePropagator(const VariantMap& sim_params);
-    void initializeThermostat(const VariantMap& sim_params);
-    void initializeExchangeAlgorithm();
-    void initializePositions(dVec& coord_arr, const VariantMap& sim_params);
-    void initializeMomenta(dVec& momentum_arr, const VariantMap& sim_params);
-    void addStateIfEnabled(const StringMap& sim_params, const std::string& param_key, const std::string& state_name);
-    void initializeStates(const StringMap& sim_params);
-    void addObservableIfEnabled(const StringMap& sim_params, const std::string& param_key, const std::string& observable_name);
-    void initializeObservables(const StringMap& sim_params);
-    std::unique_ptr<Potential> initializePotential(const std::string& potential_name,
-                                                   const VariantMap& potential_options);
-
-    double sampleMaxwellBoltzmann();
-    
-    std::unique_ptr<Propagator> propagator;
-    std::unique_ptr<Thermostat> thermostat;
-
-    std::unique_ptr<NormalModes> normal_modes;
-
+    /**
+     * @brief Perform a molecular dynamics run using the OBABO scheme.
+     */
     void run();
-
-    std::unique_ptr<Potential> ext_potential;
-    std::unique_ptr<Potential> int_potential;
-    double int_pot_cutoff;
-
-    std::string external_potential_name;
-    std::string interaction_potential_name;
-
-    void updateForces();
-    void updateSpringForces(dVec& spring_force_arr) const;
-    void updatePhysicalForces(dVec& physical_force_arr) const;
-
-    double classicalSpringEnergy() const;
-
-    void getNextCoords(dVec& next);
-    void getPrevCoords(dVec& prev);
-    void updateNeighboringCoordinates();
-
-    dVec getSeparation(int first_ptcl, int second_ptcl, bool minimum_image = false) const;
-
-    int this_bead;   // Current process id ("rank" of MPI_Comm_rank)
-    int nproc;       // Number of processes ("size" of MPI_Comm_size)
-    unsigned int params_seed;
-    std::string thermostat_type;
-
 private:
-    int md_step;
+    int m_step;
 
+    SimulationResources m_context;
+
+    /**
+     * @brief Prints a summary of the simulation parameters at the end of the simulation.
+     */
     void printReport(double wall_time) const;
-
-    std::string init_pos_type;
-    std::string init_vel_type;
-    std::string propagator_type;
-
-    void printDebug(const std::string& text, int target_bead = 0) const;
+    ///void printDebug(const std::string& text, int target_bead = 0) const;
 };

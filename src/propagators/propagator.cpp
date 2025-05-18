@@ -1,3 +1,3 @@
 #include "propagators/propagator.h"
 
-Propagator::Propagator(Simulation& _sim) : sim(_sim) {}
+Propagator::Propagator(const PropagatorContext& context) : m_context(context) {}

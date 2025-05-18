@@ -1,13 +1,21 @@
 #include "thermostats/thermostat.h"
-#include "simulation.h"
+
+#include "core/system_state.h"
 #include "thermostats/thermostat_coupling.h"
 
-Thermostat::Thermostat(Simulation& _sim, bool normal_modes) : sim(_sim) {
+Thermostat::Thermostat(const ThermostatContext& context) : m_context(context) {
+    const auto& momenta_ptr = std::shared_ptr<dVec>(context.state, &context.state->momenta);
     // Choose coupling (Cartesian coords or normal modes of distinguishable ring polymers)
-    if (normal_modes) {
-        coupling = std::make_unique<NMCoupling>(_sim);
+    if (m_context.couple_to_nm) {
+        coupling = std::make_unique<NormalModesCoupling>(
+            momenta_ptr,
+            context.normal_modes,
+            context.state->currentBead()
+        );
     } else {
-        coupling = std::make_unique<CartesianCoupling>(_sim);
+        coupling = std::make_unique<CartesianCoupling>(
+            momenta_ptr
+        );
     }
 }
 

@@ -1,19 +1,20 @@
 #pragma once
 
-#include <vector>
+#include "contexts/thermostats/thermostat_context.h"
+
 #include <memory>
 
-class Simulation;
 class Coupling;
 
 class Thermostat {
 public:
-    explicit Thermostat(Simulation& _sim, bool normal_modes);
+    explicit Thermostat(const ThermostatContext& context);
     virtual ~Thermostat() = default;
+
     void step();
     virtual void momentaUpdate();
     virtual double getAdditionToH();
 protected:
-    Simulation& sim;   // Reference to the simulation object
+    ThermostatContext m_context;
     std::unique_ptr<Coupling> coupling;
 };

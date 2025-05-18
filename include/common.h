@@ -3,7 +3,6 @@
 #include <vector>
 #include <format>
 #include <variant>
-#include <cmath>
 
 #include "units.h"
 
@@ -44,6 +43,7 @@
 // A small number (but not necessarily the smallest)
 constexpr auto EPS = 1.0E-7;
 
+/// TODO: BEGIN The following stuff is not really common to many files. Refactor!
 // Progress bar parameters
 constexpr int PBWIDTH = 30;
 constexpr std::string_view PBSTR = "||||||||||||||||||||||||||||||";
@@ -69,6 +69,7 @@ template <typename T, typename... VariantParams>
 void getVariant(const std::variant<VariantParams...>& v, T& value) {
     value = std::get<T>(v);
 }
+/// TODO: END
 
 /**
  * A class to store an array of vectors of dimension "dim".
@@ -233,6 +234,23 @@ public:
         return *this;
     }
 
+    /**
+     * Calculate the difference between two vectors in the array (v_i-v_j).
+     *
+     * @param i First vector index.
+     * @param j Second vector index.
+     * @return VectorArray containing the difference between the two vectors.
+     */
+    VectorArray<T, dim> getSeparation(int i, int j) const {
+        VectorArray<T, dim> sep;
+
+        for (int axis = 0; axis < dim; ++axis) {
+            sep(0, axis) = (*this)(i, axis) - (*this)(j, axis);
+        }
+
+        return sep;
+    }
+
 private:
     int m_rows; // Number of vectors in the array
     std::vector<T> m_arr; // 1D array to store the vectors
@@ -255,9 +273,6 @@ using VariantMap = std::unordered_map<std::string, std::variant<int, unsigned in
 
 // Define a map of strings
 using StringMap = std::unordered_map<std::string, std::string>;
-
-// Define a list of strings
-using StringsList = std::vector<std::string>;
 
 // Print a general message on "out_rank" (by default, the root rank is 0)
 void printMsg(const std::string& msg, int this_rank, int out_rank = 0);

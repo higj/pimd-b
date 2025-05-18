@@ -1,21 +1,8 @@
 #include <cassert>
 
 #include "bosonic_exchange/bosonic_exchange_base.h"
-#include "simulation.h"
 
-BosonicExchangeBase::BosonicExchangeBase(const Simulation& _sim) :
-    sim(_sim),
-    nbosons(_sim.natoms),
-    nbeads(_sim.nbeads),
-    spring_constant(_sim.spring_constant),
-    beta(_sim.beta),
-    x(_sim.coord),
-    x_prev(_sim.prev_coord),
-    x_next(_sim.next_coord) {
-    assert(_sim.is_bosonic_bead);
-#if IPI_CONVENTION
-    beta /= _sim.nbeads;
-#endif
+BosonicExchangeBase::BosonicExchangeBase(const BosonicExchangeContext& context) : m_context(context) {
 }
 
 /**
@@ -28,14 +15,14 @@ BosonicExchangeBase::BosonicExchangeBase(const Simulation& _sim) :
  * @param[out] diff Vector distance between the two beads.
  */
 void BosonicExchangeBase::getBeadsSeparation(const dVec& x1, int l1, const dVec& x2, int l2, double diff[NDIM]) const {
-    l1 = l1 % nbosons;
-    l2 = l2 % nbosons;
+    l1 = l1 % m_context.nbosons;
+    l2 = l2 % m_context.nbosons;
 
     for (int axis = 0; axis < NDIM; ++axis) {
         double dx = x2(l2, axis) - x1(l1, axis);
 #if MINIM
-        if (sim.pbc)
-            applyMinimumImage(dx, sim.size);
+        if (m_context.pbc)
+            applyMinimumImage(dx, m_context.box_size);
 #endif
         diff[axis] = dx;
     }
@@ -70,7 +57,7 @@ double BosonicExchangeBase::getBeadsSeparationSquared(const dVec& x1, int l1, co
  * @param[out] f Vector to store the forces.
  */
 void BosonicExchangeBase::exteriorSpringForce(dVec& f) {
-    if (sim.this_bead == 0) {
+    if (m_context.this_bead == 0) {
         springForceFirstBead(f);
     } else {
         springForceLastBead(f);
@@ -84,11 +71,11 @@ void BosonicExchangeBase::exteriorSpringForce(dVec& f) {
  * @param[out] x_last_bead The coordinates of the particles in the last time-slice.
  */
 void BosonicExchangeBase::assignFirstLast(dVec& x_first_bead, dVec& x_last_bead) const {
-    if (sim.this_bead == 0) {
-        x_first_bead = x;
-        x_last_bead = x_prev;
+    if (m_context.this_bead == 0) {
+        x_first_bead = *m_context.x;
+        x_last_bead = *m_context.x_prev;
     } else {
-        x_first_bead = x_next;
-        x_last_bead = x;
+        x_first_bead = *m_context.x_next;
+        x_last_bead = *m_context.x;
     }
 }

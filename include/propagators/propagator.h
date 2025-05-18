@@ -1,18 +1,16 @@
 #pragma once
 
-#include "common.h"
-
-class Simulation;
+#include "contexts/propagator_context.h"
 
 class Propagator {
 public:
-    explicit Propagator(Simulation& _sim);
+    explicit Propagator(const PropagatorContext& context);
     virtual ~Propagator() = default;
     
     virtual void step() = 0;
-    void momentStep();
-    void coordsStep();
+    void momentStep() const;
+    void coordsStep() const;
 
 protected:
-    Simulation& sim; // Reference to the simulation object
+    PropagatorContext m_context;
 };

@@ -5,7 +5,7 @@
 
 class FactorialBosonicExchange final : public BosonicExchangeBase {
 public:
-    FactorialBosonicExchange(const Simulation& _sim);
+    explicit FactorialBosonicExchange(const BosonicExchangeContext& context);
     ~FactorialBosonicExchange() override = default;
 
     double effectivePotential() override;

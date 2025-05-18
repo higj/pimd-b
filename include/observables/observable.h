@@ -1,52 +1,43 @@
 #pragma once
 
 #include <string>
-#include <memory>
 #include <vector>
-#include <fstream>
 
 #include "ordered_map.h"
 
-class Simulation; // Forward declaration
-
-/* -------------------------------- */
-
 class Observable {
 public:
-    explicit Observable(const Simulation& _sim, int _freq, const std::string& _out_unit);
+    /**
+     * @brief Generic observable class constructor
+     */
+    explicit Observable(int out_freq, const std::string& out_unit);
+
     virtual void calculate() = 0;
     virtual ~Observable() = default;
 
+    /**
+     * Initializes observable with the given label.
+     *
+     * @param label Labels of the quantity to be calculated
+     */
+    void initializeLabel(const std::string& label);
+
+    /**
+     * Initializes observables with the given labels.
+     *
+     * @param labels Labels of the quantities to be calculated
+     */
     void initialize(const std::vector<std::string>& labels);
+
+    /**
+     * @brief Resets the values of the observable to zero.
+     * Useful for clearing results from the previous molecular dynamics step. /// TODO: Is it actually useful?
+     */
     void resetValues();
 
     tsl::ordered_map<std::string, double> quantities;
 
 protected:
-    const Simulation& sim; // Reference to the simulation object
-    int freq;              // Frequency at which the observable is recorded
-    std::string out_unit;  // Units of the output quantities
-};
-
-/* -------------------------------- */
-
-class ObservableFactory {
-public:
-    static std::unique_ptr<Observable> createQuantity(const std::string& observable_type, const Simulation& _sim, int _freq,
-        const std::string& _out_unit);
-};
-
-/* -------------------------------- */
-
-class ObservablesLogger {
-public:
-    ObservablesLogger(const std::string& filename, int _bead, const std::vector<std::unique_ptr<Observable>>& _observables);
-    ~ObservablesLogger();
-
-    void log(int step);
-
-private:
-    std::ofstream file;
-    int bead;
-    const std::vector<std::unique_ptr<Observable>>& observables;
+    int m_out_freq;          // Frequency at which the observable is recorded
+    std::string m_out_unit;  // Units of the output quantities
 };

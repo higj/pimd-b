@@ -3,9 +3,9 @@
 #include <algorithm>
 
 #include "bosonic_exchange/factorial_bosonic_exchange.h"
-#include "simulation.h"
 
-FactorialBosonicExchange::FactorialBosonicExchange(const Simulation& _sim) : BosonicExchangeBase(_sim), labels(_sim.natoms) {
+FactorialBosonicExchange::FactorialBosonicExchange(const BosonicExchangeContext& context)
+: BosonicExchangeBase(context), labels(context.nbosons) {
     // Fill the labels array with numbers from 0 to nbosons-1
     std::iota(labels.begin(), labels.end(), 0);
 
@@ -56,8 +56,8 @@ int FactorialBosonicExchange::lastBeadNeighbor(int ptcl_idx) const {
  * @return The smallest exterior spring energy contribution due to a permutation.
  */
 double FactorialBosonicExchange::getMinExteriorSpringEnergy() {
-    dVec x_first_bead(nbosons);
-    dVec x_last_bead(nbosons);
+    dVec x_first_bead(m_context.nbosons);
+    dVec x_last_bead(m_context.nbosons);
 
     assignFirstLast(x_first_bead, x_last_bead);
 
@@ -67,7 +67,7 @@ double FactorialBosonicExchange::getMinExteriorSpringEnergy() {
     do {
         double diff2 = 0.0;
 
-        for (int l = 0; l < nbosons; ++l) {
+        for (int l = 0; l < m_context.nbosons; ++l) {
             std::array<double, NDIM> sums = {};
 
             // First bead of some particle (depending on the permutation) minus last bead of the l-th particle
@@ -75,7 +75,7 @@ double FactorialBosonicExchange::getMinExteriorSpringEnergy() {
         }
 
         // Compare the current total exterior spring energy with the minimum total exterior spring energy found so far
-        min_delta = std::min(min_delta, 0.5 * spring_constant * diff2);
+        min_delta = std::min(min_delta, 0.5 * m_context.spring_constant * diff2);
     } while (std::ranges::next_permutation(labels).found);
 
     return min_delta;
@@ -89,8 +89,8 @@ double FactorialBosonicExchange::getMinExteriorSpringEnergy() {
  * @return Effective bosonic exchange potential.
  */
 double FactorialBosonicExchange::effectivePotential() {
-    dVec x_first_bead(nbosons);
-    dVec x_last_bead(nbosons);
+    dVec x_first_bead(m_context.nbosons);
+    dVec x_last_bead(m_context.nbosons);
 
     assignFirstLast(x_first_bead, x_last_bead);
 
@@ -103,14 +103,14 @@ double FactorialBosonicExchange::effectivePotential() {
         permutation_counter++;
         double diff2 = 0.0;
 
-        for (int ptcl_idx = 0; ptcl_idx < nbosons; ++ptcl_idx) {
+        for (int ptcl_idx = 0; ptcl_idx < m_context.nbosons; ++ptcl_idx) {
             diff2 += getBeadsSeparationSquared(x_first_bead, ptcl_idx, x_last_bead, lastBeadNeighbor(ptcl_idx));
         }
 
-        weights_sum += exp(-sim.beta_half_k * diff2);
+        weights_sum += exp(-m_context.beta_half_k * diff2);
     } while (std::ranges::next_permutation(labels).found);
 
-    return (-1.0 / beta) * log(weights_sum / permutation_counter);
+    return (-1.0 / m_context.thermo_beta) * log(weights_sum / permutation_counter);
 }
 
 /**
@@ -119,16 +119,17 @@ double FactorialBosonicExchange::effectivePotential() {
  * @param[out] f Spring forces acting on the particles at time-slice P.
  */
 void FactorialBosonicExchange::springForceLastBead(dVec& f) {
-    const dVec x_first_bead = x_next;
-    const dVec x_last_bead = x;
+    /// TODO: Why not assignFirstLast here?
+    const dVec x_first_bead = *m_context.x_next;
+    const dVec x_last_bead = *m_context.x;
 
-    dVec temp_force(nbosons);
+    dVec temp_force(m_context.nbosons);
     double denom_weight = 0.0;
 
     do {
         double weight = 0.0;
 
-        for (int l = 0; l < nbosons; ++l) {
+        for (int l = 0; l < m_context.nbosons; ++l) {
             std::array<double, NDIM> sums = {};
 
             double diff_next[NDIM];
@@ -144,17 +145,17 @@ void FactorialBosonicExchange::springForceLastBead(dVec& f) {
             double diff_prev[NDIM];
 
             // Previous bead (P-1) of the l-th particle minus last bead (P) of the l-th particle
-            getBeadsSeparation(x_last_bead, l, x_prev, l, diff_prev);
+            getBeadsSeparation(x_last_bead, l, *m_context.x_prev, l, diff_prev);
 
             for (int axis = 0; axis < NDIM; ++axis) {
                 sums[axis] += diff_prev[axis] + diff_next[axis];
-                temp_force(l, axis) = sums[axis] * spring_constant;
+                temp_force(l, axis) = sums[axis] * m_context.spring_constant;
             }
         }
 
-        weight = exp(-beta * (0.5 * spring_constant * weight - e_shift));
+        weight = exp(-m_context.thermo_beta * (0.5 * m_context.spring_constant * weight - e_shift));
 
-        for (int l = 0; l < nbosons; ++l) {
+        for (int l = 0; l < m_context.nbosons; ++l) {
             for (int axis = 0; axis < NDIM; ++axis) {
                 f(l, axis) += weight * temp_force(l, axis);
             }
@@ -164,7 +165,7 @@ void FactorialBosonicExchange::springForceLastBead(dVec& f) {
     } while (std::ranges::next_permutation(labels).found);
 
     // Normalize the forces by the sum of Boltzmann contributions due to all the permutations
-    for (int l = 0; l < nbosons; ++l) {
+    for (int l = 0; l < m_context.nbosons; ++l) {
         for (int axis = 0; axis < NDIM; ++axis) {
             f(l, axis) = f(l, axis) / denom_weight;
         }
@@ -177,16 +178,16 @@ void FactorialBosonicExchange::springForceLastBead(dVec& f) {
  * @param[out] f Spring forces acting on the particles at time-slice 1.
  */
 void FactorialBosonicExchange::springForceFirstBead(dVec& f) {
-    const dVec x_first_bead = x;
-    const dVec x_last_bead = x_prev;
+    const dVec x_first_bead = *m_context.x;
+    const dVec x_last_bead = *m_context.x_prev;
 
-    dVec temp_force(nbosons);
+    dVec temp_force(m_context.nbosons);
     double denom_weight = 0.0;
 
     do {
         double weight = 0.0;
 
-        for (int l = 0; l < nbosons; ++l) {
+        for (int l = 0; l < m_context.nbosons; ++l) {
             std::array<double, NDIM> sums = {};
 
             double diff_prev[NDIM];
@@ -202,17 +203,17 @@ void FactorialBosonicExchange::springForceFirstBead(dVec& f) {
             double diff_next[NDIM];
 
             // Next bead (2) of the l-th particle minus first bead (1) of the l-th particle
-            getBeadsSeparation(x_first_bead, l, x_next, l, diff_next);
+            getBeadsSeparation(x_first_bead, l, *m_context.x_next, l, diff_next);
 
             for (int axis = 0; axis < NDIM; ++axis) {
                 sums[axis] += diff_prev[axis] + diff_next[axis];
-                temp_force(l, axis) = sums[axis] * spring_constant;
+                temp_force(l, axis) = sums[axis] * m_context.spring_constant;
             }
         }
 
-        weight = exp(-beta * (0.5 * spring_constant * weight - e_shift));
+        weight = exp(-m_context.thermo_beta * (0.5 * m_context.spring_constant * weight - e_shift));
 
-        for (int l = 0; l < nbosons; ++l) {
+        for (int l = 0; l < m_context.nbosons; ++l) {
             for (int axis = 0; axis < NDIM; ++axis) {
                 f(l, axis) += weight * temp_force(l, axis);
             }
@@ -222,7 +223,7 @@ void FactorialBosonicExchange::springForceFirstBead(dVec& f) {
     } while (std::ranges::next_permutation(labels).found);
 
     // Normalize the forces by the sum of Boltzmann contributions due to all the permutations
-    for (int l = 0; l < nbosons; ++l) {
+    for (int l = 0; l < m_context.nbosons; ++l) {
         for (int axis = 0; axis < NDIM; ++axis) {
             f(l, axis) = f(l, axis) / denom_weight;
         }
@@ -257,8 +258,8 @@ double FactorialBosonicExchange::getLongestProbability() {
  * @return Weighted average of exterior spring energies over all permutations. 
  */
 double FactorialBosonicExchange::primEstimator() {
-    dVec x_first_bead(nbosons);
-    dVec x_last_bead(nbosons);
+    dVec x_first_bead(m_context.nbosons);
+    dVec x_last_bead(m_context.nbosons);
 
     assignFirstLast(x_first_bead, x_last_bead);
 
@@ -268,13 +269,13 @@ double FactorialBosonicExchange::primEstimator() {
     do {
         double weight = 0.0;
 
-        for (int l = 0; l < nbosons; ++l) {
+        for (int l = 0; l < m_context.nbosons; ++l) {
             // Last bead of some particle (depending on the permutation) minus first bead of the l-th particle
             weight += getBeadsSeparationSquared(x_first_bead, l, x_last_bead, firstBeadNeighbor(l));
         }
 
-        double delta_spring_energy = 0.5 * spring_constant * weight;
-        weight = exp(-beta * (delta_spring_energy - e_shift));
+        double delta_spring_energy = 0.5 * m_context.spring_constant * weight;
+        weight = exp(-m_context.thermo_beta * (delta_spring_energy - e_shift));
 
         // Delta(E^sigma) is ready only at this point. We multiply Delta(E^sigma) by the weight
         // and add the result to the numerator (and also update the denominator by adding the 
@@ -286,7 +287,7 @@ double FactorialBosonicExchange::primEstimator() {
     double bosonic_spring_energy = numerator / denom_weight;
 
 #if IPI_CONVENTION
-    bosonic_spring_energy /= nbeads;
+    bosonic_spring_energy /= m_context.nbeads;
 #endif
 
     return (-1.0) * bosonic_spring_energy;

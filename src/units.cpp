@@ -10,6 +10,7 @@
 #include <stdexcept>
 #include <regex>
 #include <ranges>
+#include <sstream>
 
 #include "units.h"
 
@@ -61,5 +62,26 @@ namespace Units {
 
     double convertToUser(const std::string& family, const std::string& unit, double number) {
         return number / convertToInternal(family, unit, 1.0);
+    }
+
+    std::pair<double, std::string> parseQuantity(const std::string& input) {
+        std::istringstream iss(input);
+        std::string unit;
+
+        // Read the floating-point number and the unit
+        // See: https://en.cppreference.com/w/cpp/io/basic_istream/operator_gtgt
+        if (double value; iss >> value >> std::ws >> unit) {
+            return std::make_pair(value, unit);
+        }
+
+        throw std::invalid_argument("Invalid input format");
+    }
+
+    double getQuantity(const std::string& family, const std::string& input) {
+        // Extract numerical value and specified unit
+        auto [value, raw_unit] = parseQuantity(input);
+
+        // Match the provided unit to known units.
+        return convertToInternal(family, raw_unit, value);
     }
 }

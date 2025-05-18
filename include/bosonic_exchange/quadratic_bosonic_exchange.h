@@ -1,11 +1,11 @@
 #pragma once
 
-#include "common.h"
+#include <vector>
 #include "bosonic_exchange/bosonic_exchange_base.h"
 
 class BosonicExchange final : public BosonicExchangeBase {
 public:
-    BosonicExchange(const Simulation& _sim);
+    explicit BosonicExchange(const BosonicExchangeContext& context);
     ~BosonicExchange() override = default;
 
     double effectivePotential() override;

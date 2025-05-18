@@ -150,63 +150,7 @@ namespace Units {
             {"automatic", 1.00},
             {"atomic_unit", 1.00},
             {"ev/ang^2", 0.010290858},
-        }},
-        /*{"dipole", {
-           {"", 1.00},
-           {"automatic", 1.00},
-           {"atomic_unit", 1.00},
-           {"debye", 0.393430307},
-           {"coulombmeter", 1.2081944},
-        }},
-        {"polarizability", {
-           {"", 1.00},
-           {"automatic", 1.00},
-           {"atomic_unit", 1.00},
-           {"angstrom3", 6.748334231},
-           {"bohr3", 1.00},
-        }},
-        {"charge", {
-           {"", 1.00},
-           {"automatic", 1.00},
-           {"atomic_unit", 1.00},
-           {"coulomb", 1.00},
-           {"elementary", 1.00},
-        }},
-        {"dipolemoment", {
-           {"", 1.00},
-           {"automatic", 1.00},
-           {"atomic_unit", 1.00},
-           {"debye", 0.393430307},
-           {"coulombmeter", 1.2081944},
-        }},
-        {"electricfield", {
-           {"", 1.00},
-           {"automatic", 1.00},
-           {"atomic_unit", 1.00},
-           {"volt/angstrom", 0.00051422063},
-           {"volt/meter", 0.00051422063},
-        }},
-        {"magneticfield", {
-           {"", 1.00},
-           {"automatic", 1.00},
-           {"atomic_unit", 1.00},
-           {"tesla", 0.000013996246},
-           {"gauss", 0.13996246},
-        }},
-        {"magneticmoment", {
-           {"", 1.00},
-           {"automatic", 1.00},
-           {"atomic_unit", 1.00},
-           {"bohrmagneton", 1.00},
-           {"nuclearmagneton", 0.0015212021},
-        }},
-        {"conductivity", {
-           {"", 1.00},
-           {"automatic", 1.00},
-           {"atomic_unit", 1.00},
-           {"siemens/meter", 1.00},
-           {"siemens/cm", 100.00},
-        }}*/
+        }}
     };
 
     // Separates base unit from the metric prefix (if it exists)
@@ -217,4 +161,17 @@ namespace Units {
 
     // Converts the internal (atomic) units to the desired output units
     double convertToUser(const std::string& family, const std::string& unit, double number);
+
+    // Parse a string containing a numerical value and a unit
+    std::pair<double, std::string> parseQuantity(const std::string& input);
+
+    /**
+     * Accepts a string of the format "<number> <unit>" and returns the numerical
+     * value of the quantity in internal (atomic) units.
+     *
+     * @param family The family of units to which the quantity belongs.
+     * @param input The string containing the numerical value and the unit.
+     * @return The numerical value of the quantity in internal units.
+     */
+    double getQuantity(const std::string& family, const std::string& input);
 }

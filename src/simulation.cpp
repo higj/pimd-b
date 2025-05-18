@@ -1,280 +1,613 @@
-#include <algorithm>
+#include "simulation.h"
+
+#include "common.h"
+#include "params.h"
+
+#include "core/system_state.h"
+#include "core/force_field_manager.h"
+#include "core/random_generators.h"
+#include "contexts/bosonic_exchange_context.h"
+#include "contexts/propagator_context.h"
+#include "momentum_initializers.h"
+#include "position_initializers.h"
+
+#include "dumps.h"
+#include "observables.h"
+#include "propagators.h"
+#include "thermostats.h"
+
 #include <ranges>
 #include <fstream>
 #include <filesystem>
 #include <chrono>
 #include <array>
 #include <cassert>
-#include "mpi.h"
-#include "states.h"
-#include "observables.h"
-#include "propagators.h"
-#include "thermostats.h"
-#include "normal_modes.h"
-#include "simulation.h"
 
-Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, unsigned int seed) :
-    bosonic_exchange(nullptr),
-    rand_gen(seed + rank),
-    this_bead(rank),
-    nproc(nproc) {
-    getVariant(param_obj.sim["nbeads"], nbeads);
-    getVariant(param_obj.sim["dt"], dt);
-    getVariant(param_obj.sim["sfreq"], sfreq);
-    getVariant(param_obj.sim["steps"], steps);
+#include "observables_logger.h"
 
-    getVariant(param_obj.sim["threshold"], threshold);
-    threshold *= steps;  // Threshold in terms of steps
+Simulation::Simulation(const int& rank, const int& nproc, const std::string& config_filename): m_step(0)
+{
+    // Load the simulation parameters from the configuration (input) file
+    const Params params(config_filename, rank);
+    const std::shared_ptr<SimulationConfig> config = params.load();
 
-    getVariant(param_obj.sim["bosonic"], bosonic);
-    getVariant(param_obj.sim["fixcom"], fixcom);
-    getVariant(param_obj.sim["pbc"], pbc);
+    // Initialize the random number generator (each process has a unique seed)
+    const auto rng = std::make_shared<RandomGenerators>(config->seed + rank);
 
-    getVariant(param_obj.sys["temperature"], temperature);
-    getVariant(param_obj.sys["natoms"], natoms);
-    getVariant(param_obj.sys["size"], size);
+    // Initialize the simulation state
+    const auto state = std::make_shared<SystemState>(rank, nproc, config->natoms, config->nbeads);
 
-    beta = 1.0 / (Constants::kB * temperature);
+    // Initialize the simulation box, as well as the particle positions and velocities
+    //const auto box = initializeBox(config, state, rng);
+    //box->initializeMomenta(state->momenta, rng);
+    initializePositions(config, state, rng);
+    initializeMomenta(config, state, rng);
 
-    getVariant(param_obj.sys["mass"], mass);
+    // Communicate the new coordinates to the neighboring processes
+    state->updateNeighboringCoordinates();
 
-#if IPI_CONVENTION
-    // i-Pi convention [J. Chem. Phys. 133, 124104 (2010)]
-    thermo_beta = beta / nbeads;
-    omega_p = nbeads / (beta * Constants::hbar);
-#else
-    // Tuckerman convention
-    thermo_beta = beta;
-    omega_p = sqrt(nbeads) / (beta * Constants::hbar);
-#endif
+    // Initialize the force manager
+    const auto force_mgr = std::make_shared<ForceFieldManager>(config);
+    /// TODO: Get rid of initialize methods. Initialize everything in the constructor
+    //force_mgr->initialize(config);
 
-    spring_constant = mass * omega_p * omega_p;
-    beta_half_k = thermo_beta * 0.5 * spring_constant;
+    // Initialize the exchange state
+    const auto exchange_state = initializeExchangeState(config, state);
 
-    // Get the seed from the config file
-    getVariant(param_obj.sim["seed"], params_seed);
+    // Initialize normal modes (if necessary)
+    const auto normal_modes = initializeNormalModes(config, state);
 
-    // Based on the provided seed, make sure each process has a unique seed
-    rand_gen.seed(params_seed + rank);
-    mars_gen = std::make_unique<RanMars>(params_seed + rank);
+    // Initialize the time propagation scheme
+    const auto propagator = initializePropagator(config, state, normal_modes, force_mgr, exchange_state);
 
-    init_pos_type = std::get<std::string>(param_obj.sim["init_pos_type"]);
-    init_vel_type = std::get<std::string>(param_obj.sim["init_vel_type"]);
+    // Initialize the thermostat
+    const auto thermostat = initializeThermostat(config, state, normal_modes, rng);
 
-    // Initialize the propagator, thermostat, and exchange algorithm
-    initializePropagator(param_obj.sim);
-    initializeThermostat(param_obj.sim);
-    initializeExchangeAlgorithm();
+    // Initialize the observables
+    const auto observables = initializeObservables(config, state, exchange_state, force_mgr, thermostat);
 
-    // Initialize the coordinate, momenta, and force arrays
-    coord = dVec(natoms);
-    prev_coord = dVec(natoms);
-    next_coord = dVec(natoms);
-    momenta = dVec(natoms);
-    forces = dVec(natoms);
+    // Initialize the dumps
+    const auto dumps = initializeDumps(config, state);
 
-    initializePositions(coord, param_obj.sim);
-    initializeMomenta(momenta, param_obj.sim);
-
-    // Initialize the potential based on the input
-    external_potential_name = std::get<std::string>(param_obj.external_pot["name"]);
-    interaction_potential_name = std::get<std::string>(param_obj.interaction_pot["name"]);
-
-    // If the interaction potential is set to "free", then the cutoff distance is meaningless
-    int_pot_cutoff = (interaction_potential_name == "free") ? 0.0 : std::get<double>(param_obj.interaction_pot["cutoff"]);
-
-    // For cubic cells with PBC, the cutoff distance must be no greater than L/2 for consistency with
-    // the minimum image convention (see 1.6.3 in Allen & Tildesley).
-    if (pbc) {
-        int_pot_cutoff = std::min(int_pot_cutoff, 0.5 * size);
-    }
-
-    ext_potential = initializePotential(external_potential_name, param_obj.external_pot);
-    int_potential = initializePotential(interaction_potential_name, param_obj.interaction_pot);
-
-    // Update the coordinate arrays of neighboring particles
-    updateNeighboringCoordinates();
-
-    initializeStates(param_obj.states);
-    initializeObservables(param_obj.observables);
-    normal_modes = std::make_unique<NormalModes>(*this);
+    // Load the simulation context with the initialized objects
+    m_context = SimulationResources{
+        .config = config,
+        .state = state,
+        .exchange_state = exchange_state,
+        .rng = rng,
+        //.box = box,
+        .force_mgr = force_mgr,
+        .normal_modes = normal_modes,
+        .propagator = propagator,
+        .thermostat = thermostat,
+        .observables = observables,
+        .dumps = dumps
+    };
 }
 
 Simulation::~Simulation() = default;
 
-int Simulation::getStep() const {
-    return md_step;
+//std::shared_ptr<Box> Simulation::initializeBox(
+//    const std::shared_ptr<SimulationConfig>& config,
+//    const std::shared_ptr<SystemState>& state,
+//    const std::shared_ptr<RandomGenerators>& rng)
+//{
+//    /*
+//        std::shared_ptr<dVec> coord;
+//    //std::shared_ptr<dVec> momenta;
+//    std::shared_ptr<RandomGenerators> rng;
+//    int natoms;
+//    double box_size;
+//    std::string init_pos_type;
+//    */
+//    return std::make_shared<Box>(BoxContext{
+//        .coord = std::shared_ptr<dVec>(state, &state->coord),
+//        .rng = rng,
+//        .natoms = config->natoms,
+//        .box_size = config->box_size,
+//        .init_pos_type = config->init_pos_type
+//    });
+//}
+
+std::shared_ptr<ExchangeState> Simulation::initializeExchangeState(
+    const std::shared_ptr<SimulationConfig>& config,
+    const std::shared_ptr<SystemState>& state)
+{
+    const auto bosonic_context = BosonicExchangeContext{
+        .nbosons = config->natoms,
+        .nbeads = config->nbeads,
+        .spring_constant = config->spring_constant,
+        .beta_half_k = config->beta_half_k,
+        .beta = config->beta,
+        .thermo_beta = config->thermo_beta,
+        .x = std::shared_ptr<dVec>(state, &state->coord),
+        .x_prev = std::shared_ptr<dVec>(state, &state->prev_coord),
+        .x_next = std::shared_ptr<dVec>(state, &state->next_coord),
+        .pbc = config->pbc,
+        .box_size = config->box_size,
+        .this_bead = config->this_bead
+    };
+
+    auto exchange_state = std::make_shared<ExchangeState>();
+    /// TODO: Get rid of initialize methods. Initialize everything in the constructor
+    exchange_state->initialize(bosonic_context, config->bosonic);
+    return exchange_state;
 }
 
-void Simulation::setStep(int step) {
-    md_step = step;
+std::shared_ptr<NormalModes> Simulation::initializeNormalModes(
+    const std::shared_ptr<SimulationConfig>& config,
+    const std::shared_ptr<SystemState>& state)
+{
+    if (config->propagator_type == "normal_modes")
+    {
+        return std::make_shared<NormalModes>(
+            NormalModesContext{
+                .coord = std::shared_ptr<dVec>(state, &state->coord),
+                .momenta = std::shared_ptr<dVec>(state, &state->momenta),
+                .natoms = config->natoms,
+                .nbeads = config->nbeads,
+                .this_bead = config->this_bead,
+            });
+    }
+    return {nullptr};
 }
 
-/**
- * Generates random positions in the interval [-L/2, L/2] for each particle along each axis.
- * 
- * @param[out] pos_arr Array to store the generated positions.
- */
-void Simulation::genRandomPositions(dVec& pos_arr) {
-    std::uniform_real_distribution<double> u_dist(-0.5 * size, 0.5 * size);
+std::shared_ptr<Propagator> Simulation::initializePropagator(
+    const std::shared_ptr<SimulationConfig>& config,
+    const std::shared_ptr<SystemState>& state,
+    const std::shared_ptr<NormalModes>& normal_modes,
+    const std::shared_ptr<ForceFieldManager>& force_mgr,
+    const std::shared_ptr<ExchangeState>& exchange_state)
+{
+    const auto propagator_context = PropagatorContext{
+        .state = state,
+        .force_mgr = force_mgr,
+        .exchange_state = exchange_state,
+        .dt = config->dt,
+        .natoms = config->natoms,
+        .nbeads = config->nbeads,
+        .mass = config->mass,
+        .omega_p = config->omega_p,
+        .spring_constant = config->spring_constant,
+        .this_bead = config->this_bead,
+        .bosonic = config->bosonic,
+    };
 
-    for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
-        for (int axis = 0; axis < NDIM; ++axis) {
-            pos_arr(ptcl_idx, axis) = u_dist(rand_gen);
-        }
+    /// TODO: Maybe pass a smaller propagator context to propagator types, and then add more specific parameters as additional arguments?
+    if (config->propagator_type == "cartesian")
+    {
+        return std::make_shared<VelocityVerletPropagator>(propagator_context);
     }
+
+    if (config->propagator_type == "normal_modes")
+    {
+        return std::make_shared<NormalModesPropagator>(propagator_context, normal_modes);
+    }
+
+    return {nullptr};
 }
 
-/**
- * Places particles in a uniform grid according to the specified box size.
- *
- * @param[out] pos_arr Array to store the generated positions.
- */
-void Simulation::uniformParticleGrid(dVec& pos_arr) const {
-    const double volume = std::pow(size, NDIM);
+std::shared_ptr<Thermostat> Simulation::initializeThermostat(
+    const std::shared_ptr<SimulationConfig>& config,
+    const std::shared_ptr<SystemState>& state,
+    const std::shared_ptr<NormalModes>& normal_modes,
+    const std::shared_ptr<RandomGenerators>& rng)
+{
+    // General thermostat parameters needed in every case
+    const auto thermostat_context = ThermostatContext{
+        .state = state,
+        .normal_modes = normal_modes,
+        .couple_to_nm = std::get<bool>(config->thermostat_params["nmthermostat"]),
+        .beta = config->beta,
+        .thermo_beta = config->thermo_beta,
+        .natoms = config->natoms,
+        .nbeads = config->nbeads,
+        .dt = config->dt,
+        .mass = config->mass
+    };
 
-    // Get the linear size per particle, and the number of particles
-    const double init_side = std::pow((1.0 * natoms / volume), -1.0 / (1.0 * NDIM));
-
-    // Determine the number and the size of initial grid boxes in each dimension
-    int tot_num_grid_boxes = 1;
-    iVec num_nn_grid;
-    dVec size_nn_grid;
-
-    for (int i = 0; i < NDIM; i++) {
-        num_nn_grid(0, i) = static_cast<int>(std::ceil((size / init_side) - EPS));
-
-        // Make sure we have at least one grid box
-        num_nn_grid(0, i) = std::max(num_nn_grid(0, i), 1);
-
-        // Compute the actual size of the grid
-        size_nn_grid(0, i) = size / (1.0 * num_nn_grid(0, i));
-
-        // Determine the total number of grid boxes
-        tot_num_grid_boxes *= num_nn_grid(0, i);
+    if (config->thermostat_type == "langevin")
+    {
+        return std::make_shared<LangevinThermostat>(
+            thermostat_context,
+            LangevinThermostatContext{
+                .rng = rng,
+                .gamma = std::get<double>(config->thermostat_params["gamma"]),
+            });
     }
 
-    // Place the particles at the middle of each box
-    if (tot_num_grid_boxes < natoms) {
-        throw std::runtime_error("Number of grid boxes is less than the number of particles");
+    auto nh_context = NoseHooverThermostatContext{
+        .nchains = std::get<int>(config->thermostat_params["nchains"]),
+    };
+
+    if (config->thermostat_type == "nose_hoover")
+    {
+        return std::make_shared<NoseHooverThermostat>(thermostat_context, nh_context);
     }
 
-    dVec pos;
-    for (int n = 0; n < tot_num_grid_boxes; n++) {
-        iVec grid_index;
+    if (config->thermostat_type == "nose_hoover_np")
+    {
+        return std::make_shared<NoseHooverNpThermostat>(thermostat_context, nh_context);
+    }
 
-        for (int i = 0; i < NDIM; i++) {
-            int scale = 1;
-            for (int j = i + 1; j < NDIM; j++)
-                scale *= num_nn_grid(0, j);
+    if (config->thermostat_type == "nose_hoover_np_dim")
+    {
+        return std::make_shared<NoseHooverNpDimThermostat>(thermostat_context, nh_context);
+    }
 
-            grid_index(0, i) = (n / scale) % num_nn_grid(0, i);
+    if (config->thermostat_type == "none")
+    {
+        return std::make_shared<Thermostat>(ThermostatContext{});
+    }
+
+    return {nullptr};
+}
+
+std::vector<std::shared_ptr<Observable>> Simulation::initializeObservables(
+    const std::shared_ptr<SimulationConfig>& config,
+    const std::shared_ptr<SystemState>& state,
+    const std::shared_ptr<ExchangeState>& exchange_state,
+    const std::shared_ptr<ForceFieldManager>& force_mgr,
+    const std::shared_ptr<Thermostat>& thermostat)
+{
+    std::vector<std::shared_ptr<Observable>> observables;
+    observables.reserve(config->observables_list.size()); // Pre-allocate for efficiency
+
+    for (const auto& [obs_name, obs_unit] : config->observables_list)
+    {
+        // Skip disabled observables
+        if (obs_unit == "off")
+        {
+            continue;
         }
 
-        for (int axis = 0; axis < NDIM; ++axis) {
-            pos(0, axis) = (grid_index(0, axis) + 0.5) * size_nn_grid(0, axis) - 0.5 * size;
-        }
+        // Determine the correct unit to use
+        std::string correct_unit = (obs_unit != "none") ? obs_unit : "";
 
-        /// @todo If wrapping should be applied regardless of PBC, then it can be moved to the previous loop
-        if (pbc) {
-            for (int axis = 0; axis < NDIM; ++axis) {
-                applyMinimumImage(pos(0, axis), size);
-            }
-        }
+        // Use enum-based switch for better performance and readability
+        enum ObservableType : std::int8_t
+        {
+            ENERGY,
+            CLASSICAL,
+            BOSONIC,
+            GSF,
+            UNKNOWN
+        };
 
-        if (n >= natoms) {
+        ObservableType type = UNKNOWN;
+        if (obs_name == "energy") type = ENERGY;
+        else if (obs_name == "classical") type = CLASSICAL;
+        else if (obs_name == "bosonic") type = BOSONIC;
+        else if (obs_name == "gsf") type = GSF;
+
+        switch (type)
+        {
+        case ENERGY:
+            observables.push_back(std::make_shared<EnergyObservable>(
+                EnergyObservableContext{
+                    .exchange_state = exchange_state,
+                    .coord = std::shared_ptr<dVec>(state, &state->coord),
+                    .prev_coord = std::shared_ptr<dVec>(state, &state->prev_coord),
+                    .force_mgr = force_mgr,
+                    .natoms = config->natoms,
+                    .nbeads = config->nbeads,
+                    .this_bead = config->this_bead,
+                    .beta = config->beta,
+                    .spring_constant = config->spring_constant,
+                    .box_size = config->box_size,
+                    .bosonic = config->bosonic,
+                    .ext_pot_name = config->ext_pot_name,
+                    .int_pot_name = config->int_pot_name
+                },
+                config->sfreq, /// TODO: Generalize the save frequency option to dumps, observables, etc.
+                correct_unit
+            ));
             break;
-        }
 
-        for (int axis = 0; axis < NDIM; axis++) {
-            pos_arr(n, axis) = pos(0, axis);
+        case CLASSICAL:
+            observables.push_back(std::make_shared<ClassicalObservable>(
+                ClassicalObservableContext{
+                    .coord = std::shared_ptr<dVec>(state, &state->coord),
+                    .prev_coord = std::shared_ptr<dVec>(state, &state->prev_coord),
+                    .momenta = std::shared_ptr<dVec>(state, &state->momenta),
+                    .exchange_state = exchange_state,
+                    .thermostat = thermostat,
+                    .natoms = config->natoms,
+                    .nbeads = config->nbeads,
+                    .this_bead = config->this_bead,
+                    .beta = config->beta,
+                    .mass = config->mass,
+                    .spring_constant = config->spring_constant,
+                    .box_size = config->box_size,
+                    .bosonic = config->bosonic,
+                    .thermostat_type = config->thermostat_type
+                },
+                config->sfreq, /// TODO: Generalize the save frequency option to dumps, observables, etc.
+                correct_unit
+            ));
+            break;
+
+        case BOSONIC:
+            if (!config->bosonic)
+            {
+                throw std::runtime_error("Bosonic observables require bosonic simulation mode");
+            }
+            observables.push_back(std::make_shared<BosonicObservable>(
+                BosonicObservableContext{
+                    .this_bead = config->this_bead,
+                    .exchange_state = exchange_state
+                },
+                config->sfreq, /// TODO: Generalize the save frequency option to dumps, observables, etc.
+                correct_unit
+            ));
+            break;
+
+        case GSF:
+            observables.push_back(std::make_shared<GSFActionObservable>(
+                GSFActionObservableContext{
+                    .coord = std::shared_ptr<dVec>(state, &state->coord),
+                    .force_mgr = force_mgr,
+                    .natoms = config->natoms,
+                    .nbeads = config->nbeads,
+                    .this_bead = config->this_bead,
+                    .beta = config->beta,
+                    .spring_constant = config->spring_constant
+                },
+                config->sfreq, /// TODO: Generalize the save frequency option to dumps, observables, etc.
+                correct_unit
+            ));
+            break;
+
+        case UNKNOWN:
+        default:
+            throw std::runtime_error("Unknown observable type: " + obs_name);
         }
     }
+
+    return observables;
 }
 
-/**
- * Generates momenta according to the Maxwell-Boltzmann distribution.
- * 
- * @param momenta_arr Array to store the generated momenta.
- */
-void Simulation::genMomentum(dVec& momenta_arr) {
-    for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
-        for (int axis = 0; axis < NDIM; ++axis) {
-            momenta_arr(ptcl_idx, axis) = mass * sampleMaxwellBoltzmann();
+std::vector<std::shared_ptr<Dump>> Simulation::initializeDumps(
+    const std::shared_ptr<SimulationConfig>& config,
+    const std::shared_ptr<SystemState>& state)
+{
+    std::vector<std::shared_ptr<Dump>> dumps;
+    dumps.reserve(config->dumps_list.size()); // Pre-allocate for efficiency
+
+    // Initialize the dump files based on the configuration
+    for (const auto& [dump_name, dump_unit] : config->dumps_list)
+    {
+        if (dump_unit == "off" || dump_unit == "false")
+        {
+            continue;
+        }
+
+        // Check if using default unit
+        const bool use_default_unit = (dump_unit == "none" || dump_unit == "true" || dump_unit == "on");
+
+        // Determine the correct unit to use
+        //std::string correct_unit = (dump_unit != "none" && dump_unit != "true" && dump_unit != "on") ? dump_unit : "atomic_unit";
+        std::string correct_unit = use_default_unit ? "atomic_unit" : dump_unit;
+
+        // Use enum-based switch for better performance and readability
+        enum DumpType : std::int8_t
+        {
+            POSITION,
+            VELOCITY,
+            FORCE,
+            UNKNOWN
+        };
+
+        DumpType type = UNKNOWN;
+        if (dump_name == "position") type = POSITION;
+        else if (dump_name == "velocity") type = VELOCITY;
+        else if (dump_name == "force") type = FORCE;
+
+        switch (type)
+        {
+        case POSITION:
+            dumps.push_back(std::make_shared<PositionDump>(
+                PositionDumpContext{
+                    .coord = std::shared_ptr<dVec>(state, &state->coord),
+                    .natoms = config->natoms,
+                    .this_bead = config->this_bead
+                },
+                config->sfreq, /// TODO: Generalize the save frequency option to dumps, observables, etc.
+                correct_unit
+            ));
+            break;
+
+        case VELOCITY:
+            dumps.push_back(std::make_shared<VelocityDump>(
+                VelocityDumpContext{
+                    .momenta = std::shared_ptr<dVec>(state, &state->momenta),
+                    .natoms = config->natoms,
+                    .this_bead = config->this_bead,
+                    .mass = config->mass
+                },
+                config->sfreq, /// TODO: Generalize the save frequency option to dumps, observables, etc.
+                correct_unit
+            ));
+            break;
+
+        case FORCE:
+            dumps.push_back(std::make_shared<ForceDump>(
+                ForceDumpContext{
+                    .state = state,
+                },
+                config->sfreq, /// TODO: Generalize the save frequency option to dumps, observables, etc.
+                correct_unit
+            ));
+            break;
+
+        case UNKNOWN:
+        default:
+            throw std::runtime_error("Unknown dump type: " + dump_name);
         }
     }
+
+    return dumps;
 }
 
-/**
- * Samples velocities from the Maxwell-Boltzmann distribution.
- * 
- * @return Sampled velocity from the Maxwell-Boltzmann distribution.
- */
-double Simulation::sampleMaxwellBoltzmann() {
-    std::normal_distribution<double> normal(0.0, 1 / sqrt(thermo_beta * mass));
+void Simulation::initializePositions(
+    const std::shared_ptr<SimulationConfig>& config,
+    const std::shared_ptr<SystemState>& state,
+    const std::shared_ptr<RandomGenerators>& rng)
+{
+    std::unique_ptr<PositionInitializer> initializer;
 
-    return normal(rand_gen);
+    if (config->init_pos_type == "random")
+    {
+        initializer = std::make_unique<RandomPositionInitializer>(
+            rng,
+            std::shared_ptr<dVec>(state, &state->coord),
+            config->box_size
+        );
+    }
+    else if (config->init_pos_type == "grid")
+    {
+        initializer = std::make_unique<GridPositionInitializer>(
+            std::shared_ptr<dVec>(state, &state->coord),
+            config->box_size
+        );
+    }
+    else if (config->init_pos_type == "xyz")
+    {
+        initializer = std::make_unique<XyzPositionInitializer>(
+            config->init_pos_filename,
+            config->this_bead + config->init_pos_index_offset,
+            std::shared_ptr<dVec>(state, &state->coord),
+            config->box_size
+        );
+    }
+    else
+    {
+        throw std::invalid_argument("Unknown position initialization method: " + config->init_pos_type);
+    }
+
+    initializer->initialize();
+
+    state->updateNeighboringCoordinates();
 }
 
-/**
- * @brief Perform a molecular dynamics run using the OBABO scheme.
- */
-void Simulation::run() {
-    printStatus("Running the simulation", this_bead);
-    
+void Simulation::initializeMomenta(
+    const std::shared_ptr<SimulationConfig>& config,
+    const std::shared_ptr<SystemState>& state,
+    const std::shared_ptr<RandomGenerators>& rng)
+{
+    std::unique_ptr<MomentumInitializer> initializer;
+
+    if (config->init_vel_type == "random")
+    {
+        initializer = std::make_unique<MaxwellBoltzmannMomentumInitializer>(
+            rng,
+            state,
+            config->mass,
+            config->thermo_beta
+        );
+    }
+    else if (config->init_vel_type == "manual")
+    {
+        initializer = std::make_unique<ManualMomentumInitializer>(
+            config->init_vel_filename,
+            config->init_vel_index_offset,
+            state,
+            config->mass
+        );
+    }
+    else
+    {
+        throw std::invalid_argument("Unknown momentum initialization method: " + config->init_vel_type);
+    }
+
+    initializer->initialize();
+}
+
+int Simulation::getStep() const
+{
+    return m_step;
+}
+
+void Simulation::setStep(const int step)
+{
+    m_step = step;
+}
+
+void Simulation::run()
+{
+    printStatus("Running the simulation", m_context.config->this_bead);
+
     MPI_Barrier(MPI_COMM_WORLD);
     const double sim_exec_time_start = MPI_Wtime();
-    
-    std::filesystem::create_directory(Output::FOLDER_NAME);
-    ObservablesLogger obs_logger(Output::MAIN_FILENAME, this_bead, observables);
 
-    for (const auto& state : states) {
-        state->initialize();
+    std::filesystem::create_directory(Output::FOLDER_NAME);
+    // Initialize the output file for the observables
+    ObservablesLogger obs_logger(Output::MAIN_FILENAME, m_context.config->this_bead, m_context.observables);
+
+    // Initialize the files for the dumps (e.g., xyz, dat)
+    for (const auto& dump : m_context.dumps)
+    {
+        dump->initialize();
     }
 
     // Main loop performing molecular dynamics steps
-    for (int step = 0; step <= steps; ++step) {
+    for (long step = 0; step <= m_context.config->steps; ++step)
+    {
         setStep(step);
 
-        for (const auto& observable : observables) {
+        // Reset the observables at the beginning of each step
+        /// TODO: Do we need this? What if we want accumulation? Does it account for frequency?
+        for (const auto& observable : m_context.observables)
+        {
             observable->resetValues();
         }
 
-        for (const auto& state : states) {
-            state->output(step);
+        // Dump the desired quantities (e.g., coordinates, forces, etc.) at the specified frequency
+        for (const auto& dump : m_context.dumps)
+        {
+            dump->output(step);
         }
-        thermostat->step();
+
+        // Perform a thermostat step
+        m_context.thermostat->step();
 
         // If fixcom=true, the center of mass of the ring polymers is fixed during the simulation
-        if (fixcom) {
-            zeroMomentum();
+        if (m_context.config->fixcom)
+        {
+            m_context.state->zeroMomentum();
         }
 
-        propagator->step();
-        thermostat->step();
+        // Perform a time propagation step
+        m_context.propagator->step();
+
+        // Perform a thermostat step
+        m_context.thermostat->step();
 
         // Zero momentum after every thermostat step (if needed)
-        if (fixcom) {
-            zeroMomentum();
+        if (m_context.config->fixcom)
+        {
+            m_context.state->zeroMomentum();
         }
 
-
 #if PROGRESS
-        printProgress(step, steps, this_bead);
+        printProgress(step, steps, m_context.config->this_bead);
 #endif
 
         // If we have not reached the thermalization threshold, skip to the next step (thermalization stage)
-        if (step < threshold) {
+        if (step < m_context.config->threshold)
+        {
             continue;
         }
 
         // Calculate the observables (production stage)
-        for (const auto& observable : observables) {
+        for (const auto& observable : m_context.observables)
+        {
             observable->calculate();
         }
 
         // Save the observables at the specified frequency
-        if (step % sfreq == 0) {
+        if (step % m_context.config->sfreq == 0)
+        {
             obs_logger.log(step);
         }
     }
@@ -284,246 +617,24 @@ void Simulation::run() {
 
     const double wall_time = sim_exec_time_end - sim_exec_time_start;
 
-    printStatus(std::format("Simulation finished running successfully (Runtime = {:.3} sec)", wall_time), this_bead);
+    printStatus(std::format("Simulation finished running successfully (Runtime = {:.3} sec)", wall_time),
+                m_context.config->this_bead);
 
     printReport(wall_time);
 }
 
-
-/**
- * Receives coordinates from the previous time-slice,
- * and sends the current coordinates to the next time-slice.
- * 
- * @param prev Vector to store the previous coordinates.
- */
-void Simulation::getPrevCoords(dVec& prev) {
-    const int coord_size = coord.size();
-
-    MPI_Sendrecv(
-        coord.data(),
-        coord_size,
-        MPI_DOUBLE,
-        (this_bead + 1) % nproc,
-        0,
-        prev.data(),
-        coord_size,
-        MPI_DOUBLE,
-        (this_bead - 1 + nproc) % nproc,
-        0,
-        MPI_COMM_WORLD,
-        MPI_STATUS_IGNORE
-    );
-
-    // Ensure all processes have completed the neighbor communication
-    MPI_Barrier(MPI_COMM_WORLD);
-}
-
-/**
- * Receives coordinates from the next time-slice,
- * and sends the current coordinates to the previous time-slice.
- * 
- * @param next Vector to store the next coordinates.
- */
-void Simulation::getNextCoords(dVec& next) {
-    const int coord_size = coord.size();
-
-    MPI_Sendrecv(
-        coord.data(),
-        coord_size,
-        MPI_DOUBLE,
-        (this_bead - 1 + nproc) % nproc,
-        0,
-        next.data(),
-        coord_size,
-        MPI_DOUBLE,
-        (this_bead + 1) % nproc,
-        0,
-        MPI_COMM_WORLD,
-        MPI_STATUS_IGNORE
-    );
-
-    // Ensure all processes have completed the neighbor communication
-    MPI_Barrier(MPI_COMM_WORLD);
-}
-
-/**
- * @brief Updates the forces acting on the particles. Evaluates both the spring forces
- * and the external forces.
- */
-void Simulation::updateForces() {
-    // We distinguish between two types of forces: spring forces between the beads (due to the 
-    // classical isomorphism) and the non-spring forces (due to either an external potential 
-    // or interactions).
-    dVec spring_forces(natoms);
-    dVec physical_forces(natoms);
-
-    updateSpringForces(spring_forces);
-    updatePhysicalForces(physical_forces);
-
-    for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
-        for (int axis = 0; axis < NDIM; ++axis) {
-#if IPI_CONVENTION
-            // i-Pi convention; exp[-(beta/P)*H_cl]
-            forces(ptcl_idx, axis) = spring_forces(ptcl_idx, axis) + physical_forces(ptcl_idx, axis);
-#else
-            // Corresponds to Eqn. (12.6.4) from Tuckerman; exp[-beta*H_cl]
-            forces(ptcl_idx, axis) = spring_forces(ptcl_idx, axis) + physical_forces(ptcl_idx, axis) / nbeads;
-#endif
-        }
-    }
-}
-
-/**
- * @brief Updates the neighboring coordinates arrays.
- */
-void Simulation::updateNeighboringCoordinates() {
-    getPrevCoords(prev_coord);
-    getNextCoords(next_coord);
-}
-
-/**
- * Updates the spring force vector exerted on a specific bead by the two neighboring beads.
- * In the distinguishable case, the force is given by Eqn. (12.6.4) in Tuckerman (1st ed).
- * In the bosonic case, by default, the forces are evaluated using the algorithm 
- * described in https://doi.org/10.1063/5.0173749. It is also possible to perform the
- * bosonic simulation using the original (inefficient) algorithm, that takes into
- * account all the N! permutations, by setting FACTORIAL_BOSONIC_ALGORITHM to true.
- * 
- * @param spring_force_arr Vector to store the spring forces.
- */
-void Simulation::updateSpringForces(dVec& spring_force_arr) const {
-    if (is_bosonic_bead) {
-        // If the simulation is bosonic and the current bead is either 1 or P, we calculate
-        // the exterior spring forces in the appropriate bosonic class.
-        bosonic_exchange->prepare();
-        bosonic_exchange->exteriorSpringForce(spring_force_arr);
-        return;
-    }
-
-    // If particles are distinguishable, or if the current bead is an interior bead,
-    // the force is calculated based on the standard expression for distinguishable particles.
-    for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
-        for (int axis = 0; axis < NDIM; ++axis) {
-            double diff_prev = prev_coord(ptcl_idx, axis) - coord(ptcl_idx, axis);
-            double diff_next = next_coord(ptcl_idx, axis) - coord(ptcl_idx, axis);
-
-#if MINIM
-            if (pbc) {
-                applyMinimumImage(diff_prev, size);
-                applyMinimumImage(diff_next, size);
-            }
-#endif
-
-            spring_force_arr(ptcl_idx, axis) = spring_constant * (diff_prev + diff_next);
-        }
-    }
-}
-
-/**
- * Updates the physical forces acting on the particles. This includes both the forces
- * due external potentials and the interaction forces between the particles.
- * 
- * @param physical_force_arr Vector to store the physical forces.
- */
-void Simulation::updatePhysicalForces(dVec& physical_force_arr) const {
-    // Calculate the external forces acting on the particles
-    physical_force_arr = (-1.0) * ext_potential->gradV(coord);
-
-    if (int_pot_cutoff != 0.0) {
-        for (int ptcl_one = 0; ptcl_one < natoms; ++ptcl_one) {
-            for (int ptcl_two = ptcl_one + 1; ptcl_two < natoms; ++ptcl_two) {
-                // Get the vector distance between the two particles.
-                // Here "diff" contains just one vector of dimension NDIM.
-                dVec diff = getSeparation(ptcl_one, ptcl_two, MINIM);
-
-                // If the distance between the particles exceeds the cutoff length
-                // then we assume the interaction is negligible and do not bother
-                // calculating the force.
-                // We use the convention that when cutoff < 0 then the interaction is
-                // calculated for all distances.
-                if (const double distance = diff.norm(); distance < int_pot_cutoff || int_pot_cutoff < 0.0) {
-                    dVec force_on_one = (-1.0) * int_potential->gradV(diff);
-
-                    for (int axis = 0; axis < NDIM; ++axis) {
-                        physical_force_arr(ptcl_one, axis) += force_on_one(0, axis);
-                        physical_force_arr(ptcl_two, axis) -= force_on_one(0, axis);
-                    }
-                }
-            }
-        }
-    }
-}
-
-/**
- * Calculates the spring energy contribution of the current and the previous time-slice,
- * provided they are classical, i.e., are not affected by bosonic exchange.
- * If the simulation is bosonic, the function is callable only for the interior connections.
- *
- * @return Classical spring energy contribution of the current and the previous time-slice.
- */
-double Simulation::classicalSpringEnergy() const {
-    assert(!bosonic || (bosonic && this_bead != 0));
-
-    double interior_spring_energy = 0.0;
-
-    for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
-        for (int axis = 0; axis < NDIM; ++axis) {
-            double diff = prev_coord(ptcl_idx, axis) - coord(ptcl_idx, axis);
-
-#if MINIM
-            if (pbc) {
-                applyMinimumImage(diff, size);
-            }
-#endif
-
-            interior_spring_energy += diff * diff;
-        }
-    }
-
-    interior_spring_energy *= 0.5 * spring_constant;
-
-    return interior_spring_energy;
-}
-
-/**
- * Returns the vectorial distance between two particles at the same imaginary timeslice.
- * Mathematically equivalent to r1-r2, where r1 and r2 are the position-vectors
- * of the first and second particles, respectively. In the case of PBC, there is an
- * option to return the minimal distance between the two particles.
- * 
- * @param first_ptcl Index of the first particle.
- * @param second_ptcl Index of the second particle.
- * @param minimum_image Flag determining whether the minimum image convention should be applied.
- * @return Vectorial distance between the two particles.
- */
-dVec Simulation::getSeparation(int first_ptcl, int second_ptcl, bool minimum_image) const {
-    dVec sep;
-
-    for (int axis = 0; axis < NDIM; ++axis) {
-        double diff = coord(first_ptcl, axis) - coord(second_ptcl, axis);
-
-        if (pbc && minimum_image)
-            applyMinimumImage(diff, size);
-
-        sep(0, axis) = diff;
-    }
-
-    return sep;
-}
-
-/**
- * @brief Prints a summary of the simulation parameters at the end of the simulation.
- */
-void Simulation::printReport(double wall_time) const {
-    if (this_bead != 0)
+void Simulation::printReport(double wall_time) const
+{
+    if (m_context.config->this_bead != 0)
         return;
 
     std::ofstream report_file;
-    report_file.open(std::format("{}/report.txt", Output::FOLDER_NAME), std::ios::out | std::ios::app);   
+    report_file.open(std::format("{}/report.txt", Output::FOLDER_NAME), std::ios::out | std::ios::app);
 
     report_file << "---------\nParameters\n---------\n";
 
-    if (bosonic) {
+    if (m_context.config->bosonic)
+    {
         report_file << formattedReportLine("Statistics", "Bosonic");
         std::string bosonic_alg_name = "Feldman-Hirshberg";
 
@@ -532,30 +643,32 @@ void Simulation::printReport(double wall_time) const {
 #endif
 
         report_file << formattedReportLine("Bosonic algorithm", bosonic_alg_name);
-    } else {
+    }
+    else
+    {
         report_file << formattedReportLine("Statistics", "Boltzmannonic");
     }
-    
-    report_file << formattedReportLine("Time propagation algorithm", propagator_type);
-    report_file << formattedReportLine("Periodic boundary conditions", pbc);
-    report_file << formattedReportLine("Dimension", NDIM);
-    report_file << formattedReportLine("Seed", params_seed);
-    report_file << formattedReportLine("Coordinate initialization method", init_pos_type);
-    report_file << formattedReportLine("Number of atoms", natoms);
-    report_file << formattedReportLine("Number of beads", nbeads);
 
-    double out_temperature = Units::convertToUser("temperature", "kelvin", temperature);
+    report_file << formattedReportLine("Time propagation algorithm", m_context.config->propagator_type);
+    report_file << formattedReportLine("Periodic boundary conditions", m_context.config->pbc);
+    report_file << formattedReportLine("Dimension", NDIM);
+    report_file << formattedReportLine("Seed", m_context.config->seed);
+    report_file << formattedReportLine("Coordinate initialization method", m_context.config->init_pos_type);
+    report_file << formattedReportLine("Number of atoms", m_context.config->natoms);
+    report_file << formattedReportLine("Number of beads", m_context.config->nbeads);
+
+    double out_temperature = Units::convertToUser("temperature", "kelvin", m_context.config->temperature);
     report_file << formattedReportLine("Temperature", std::format("{} kelvin", out_temperature));
 
-    double out_sys_size = Units::convertToUser("length", "angstrom", size);
+    double out_sys_size = Units::convertToUser("length", "angstrom", m_context.config->box_size);
     report_file << formattedReportLine("Linear size of the system", std::format("{} angstroms", out_sys_size));
 
-    double out_mass = Units::convertToUser("mass", "dalton", mass);
+    double out_mass = Units::convertToUser("mass", "dalton", m_context.config->mass);
     report_file << formattedReportLine("Mass", std::format("{} amu", out_mass));
 
-    report_file << formattedReportLine("Total number of MD steps", steps);
-    report_file << formattedReportLine("Interaction potential name", interaction_potential_name);
-    report_file << formattedReportLine("External potential name", external_potential_name);
+    report_file << formattedReportLine("Total number of MD steps", m_context.config->steps);
+    report_file << formattedReportLine("Interaction potential name", m_context.config->int_pot_name);
+    report_file << formattedReportLine("External potential name", m_context.config->ext_pot_name);
 
     report_file << "---------\nFeatures\n---------\n";
     report_file << formattedReportLine("Minimum image convention", MINIM);
@@ -564,270 +677,10 @@ void Simulation::printReport(double wall_time) const {
 
     report_file << "---------\n";
     report_file << formattedReportLine("Wall time", std::format("{:%T}",
-        std::chrono::duration<double>(wall_time)
-    ));
-    report_file << formattedReportLine("Wall time per step (sec)", std::format("{:.5e}", wall_time / steps));
+                                                                std::chrono::duration<double>(wall_time)
+                                       ));
+    report_file << formattedReportLine("Wall time per step (sec)",
+                                       std::format("{:.5e}", wall_time / m_context.config->steps));
 
     report_file.close();
-}
-
-/**
- * @brief Zero the linear momentum of a group of atoms by subtracting the velocity
- * of the center of mass from the velocity of each atom.
- * The calculation assumes that all atoms have the same mass, in which case the
- * center of mass momentum is given by p_c=m*v_c=(p_1+...+p_n)/n, where n=N*P
- * is the total number of beads in the system.
- */
-void Simulation::zeroMomentum() {
-    dVec momentum_cm;           // Resulting center of mass momentum vector
-    dVec momentum_cm_per_bead;  // Contribution of the current time-slice to the center of mass momentum vector
-
-    for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
-        for (int axis = 0; axis < NDIM; ++axis) {
-            momentum_cm_per_bead(0, axis) += momenta(ptcl_idx, axis);
-        }
-    }
-
-    for (int axis = 0; axis < NDIM; ++axis) {
-        momentum_cm_per_bead(0, axis) /= (natoms * nbeads);
-    }
-
-    MPI_Allreduce(momentum_cm_per_bead.data(), momentum_cm.data(), momentum_cm.size(), MPI_DOUBLE, MPI_SUM,
-                  MPI_COMM_WORLD);
-
-    for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
-        for (int axis = 0; axis < NDIM; ++axis) {
-            momenta(ptcl_idx, axis) -= momentum_cm(0, axis);
-        }
-    }
-}
-
-/**
- * Initializes the potential based on the input parameters.
- *
- * @param potential_name Name of the potential.
- * @param potential_options Physical parameters of the potential. 
- * @return Pointer to the initialized potential.
- */
-std::unique_ptr<Potential> Simulation::initializePotential(const std::string& potential_name,
-                                                           const VariantMap& potential_options) {
-    if (potential_name == "free") {
-        return std::make_unique<Potential>();
-    }
-
-    if (potential_name == "harmonic") {
-        double omega = std::get<double>(potential_options.at("omega"));
-        return std::make_unique<HarmonicPotential>(mass, omega);
-    }
-
-    if (potential_name == "double_well") {
-        double strength = std::get<double>(potential_options.at("strength"));
-        double loc = std::get<double>(potential_options.at("location"));
-        return std::make_unique<DoubleWellPotential>(mass, strength, loc);
-    }
-
-    if (potential_name == "dipole") {
-        double strength = std::get<double>(potential_options.at("strength"));
-        return std::make_unique<DipolePotential>(strength);
-    }
-
-    if (potential_name == "cosine") {
-        double amplitude = std::get<double>(potential_options.at("amplitude"));
-        double phase = std::get<double>(potential_options.at("phase"));
-        return std::make_unique<CosinePotential>(amplitude, size, phase);
-    }
-
-    if (potential_name == "aziz") {
-        return std::make_unique<AzizPotential>();
-    }
-
-    return std::make_unique<Potential>();
-}
-
-/**
- * Initializes the propagator based on the input parameters.
- *
- * @param sim_params Simulation parameters object containing information about the propagator.
- */
-void Simulation::initializePropagator(const VariantMap& sim_params) {
-    propagator_type = std::get<std::string>(sim_params.at("propagator_type"));
-    
-    if (propagator_type == "cartesian") {
-        propagator = std::make_unique<VelocityVerletPropagator>(*this);
-    } else if (propagator_type == "normal_modes") {
-        propagator = std::make_unique<NormalModesPropagator>(*this);
-    }
-}
-
-/**
- * Initializes the thermostat based on the input parameters.
- *
- * @param sim_params Simulation parameters object containing information about the thermostat.
- */
-void Simulation::initializeThermostat(const VariantMap& sim_params) {
-    thermostat_type = std::get<std::string>(sim_params.at("thermostat_type"));
-    getVariant(sim_params.at("nmthermostat"), nmthermostat);
-    getVariant(sim_params.at("nchains"), nchains);
-    getVariant(sim_params.at("gamma"), gamma);
-
-    if (thermostat_type == "langevin") {
-        thermostat = std::make_unique<LangevinThermostat>(*this, nmthermostat);
-    } else if (thermostat_type == "nose_hoover") {
-        thermostat = std::make_unique<NoseHooverThermostat>(*this, nmthermostat, nchains);
-    } else if (thermostat_type == "nose_hoover_np") {
-        thermostat = std::make_unique<NoseHooverNpThermostat>(*this, nmthermostat, nchains);
-    } else if (thermostat_type == "nose_hoover_np_dim") {
-        thermostat = std::make_unique<NoseHooverNpDimThermostat>(*this, nmthermostat, nchains);
-    } else if (thermostat_type == "none") {
-        thermostat = std::make_unique<Thermostat>(*this, nmthermostat);
-    }
-}
-
-/**
- * Initializes the bosonic exchange algorithm.
- */
-void Simulation::initializeExchangeAlgorithm() {
-    bosonic = bosonic && (nbeads > 1); // Bosonic exchange is only possible for P>1
-    is_bosonic_bead = bosonic && (this_bead == 0 || this_bead == nbeads - 1);
-
-    if (is_bosonic_bead) {
-#if FACTORIAL_BOSONIC_ALGORITHM
-        bosonic_exchange = std::make_unique<FactorialBosonicExchange>(*this);
-#else
-        bosonic_exchange = std::make_unique<BosonicExchange>(*this);
-#endif
-    }
-}
-
-/**
- * Initializes the positions of the particles based on the input parameters.
- *
- * @param[out] coord_arr Array to store the generated positions.
- * @param sim_params Simulation parameters object containing information about the init trajectories file.
- */
-void Simulation::initializePositions(dVec& coord_arr, const VariantMap& sim_params) {
-    if (init_pos_type == "xyz") {
-        // Load initial Cartesian coordinates from the provided .xyz file
-        const std::string xyz_filename = std::get<std::string>(sim_params.at("init_pos_xyz_filename"));
-
-        // Uncomment the next line to restrict the coordinate initialization to the first time-slice
-        //if (this_bead == 0)
-        loadTrajectories(xyz_filename, coord_arr);
-    } else if (init_pos_type == "xyz_formatted") {
-        const std::string xyz_filename_format = std::get<std::string>(sim_params.at("init_pos_xyz_filename_format"));
-        const int arg = this_bead + std::get<int>(sim_params.at("init_pos_first_index"));
-
-        loadTrajectories(std::vformat(xyz_filename_format, std::make_format_args(arg)), coord_arr);
-    } else if (init_pos_type == "grid") {
-        // Generate a grid of particles
-        uniformParticleGrid(coord_arr);
-    } else {
-        // Sample positions from a uniform distribution
-        genRandomPositions(coord_arr);
-    }
-}
-
-/**
- * Initializes the momenta of the particles based on the input parameters.
- *
- * @param[out] momentum_arr Array to store the generated momenta.
- * @param sim_params Simulation parameters object containing information about the init velocities file. 
- */
-void Simulation::initializeMomenta(dVec& momentum_arr, const VariantMap& sim_params) {
-    if (init_vel_type == "manual") {
-        // If loading momenta from elsewhere, do not zero momentum after that
-        loadMomenta(std::format("init/vel_{:02}.dat", this_bead + 1), mass, momentum_arr); // LAMMPS convention
-        //loadMomenta(std::format("init/vel_{:02}.dat", this_bead), mass, momenta); // i-Pi convention
-
-        /// @todo Handle the cases when the file does not exist or has a wrong format
-    } else if (init_vel_type == "manual_formatted") {
-        const std::string vel_filename_format = std::get<std::string>(sim_params.at("init_vel_manual_filename_format"));
-        const int arg = this_bead + std::get<int>(sim_params.at("init_vel_first_index"));
-        
-        loadMomenta(std::vformat(vel_filename_format, std::make_format_args(arg)), mass, momentum_arr);
-    } else {
-        // If generating momenta from the Maxwell-Boltzmann distribution, zero the total momentum
-        genMomentum(momentum_arr);
-        zeroMomentum();
-    }
-}
-
-/**
- * Initializes a state based on the input parameters. Initialization occurs only if the
- * state is enabled, i.e., if the units are not set to "off" or "false".
- *
- * @param sim_params Simulation parameters object containing information about the states.
- * @param param_key Key of the parameter in the simulation parameters object.
- * @param state_name Name of the state.
- */
-void Simulation::addStateIfEnabled(const StringMap& sim_params, const std::string& param_key, const std::string& state_name) {
-    if (const std::string& units = sim_params.at(param_key); units != "off" && units != "false") {
-        if (units == "on" || units == "true" || units == "none") {
-            // In the case of "none", it is expected that the State object quantities will not have units,
-            // and therefore providing "atomic_unit" as the units in this case is simply a placeholder.
-            states.push_back(StateFactory::createQuantity(state_name, *this, sfreq, "atomic_unit"));
-        } else {
-            states.push_back(StateFactory::createQuantity(state_name, *this, sfreq, units));
-        }
-    }
-}
-
-/**
- * Method for initializing all the requested states.
- *
- * @param sim_params Simulation parameters object containing information about the states.
- */
-void Simulation::initializeStates(const StringMap& sim_params) {
-    addStateIfEnabled(sim_params, "positions", "position");
-    addStateIfEnabled(sim_params, "velocities", "velocity");
-    addStateIfEnabled(sim_params, "forces", "force");
-}
-
-/**
- * Initializes an observable based on the input parameters. Initialization occurs only if the
- * observable is enabled (the units are not set to "off").
- *
- * @param sim_params Simulation parameters object containing information about the observables.
- * @param param_key Key of the parameter in the simulation parameters object.
- * @param observable_name Name of the observable.
- */
-void Simulation::addObservableIfEnabled(const StringMap& sim_params, const std::string& param_key, const std::string& observable_name) {
-    if (const std::string& units = sim_params.at(param_key); units != "off") {
-        if (units == "none") {
-            observables.push_back(ObservableFactory::createQuantity(observable_name, *this, sfreq, ""));
-        } else {
-            observables.push_back(ObservableFactory::createQuantity(observable_name, *this, sfreq, units));
-        }
-    }
-}
-
-/**
- * Method for initializing all the requested observables.
- *
- * @param sim_params Simulation parameters object containing information about the observables.
- */
-void Simulation::initializeObservables(const StringMap& sim_params) {
-    addObservableIfEnabled(sim_params, "energy", "energy");
-    addObservableIfEnabled(sim_params, "classical", "classical");
-
-    if (bosonic) {
-        addObservableIfEnabled(sim_params, "bosonic", "bosonic");
-    }
-
-    addObservableIfEnabled(sim_params, "gsf", "gsf");
-}
-
-/**
- * Prints information for debugging purposes.
- *
- * @param text Text to print.
- * @param target_bead Bead for which the text should be printed.
- */
-void Simulation::printDebug(const std::string& text, int target_bead) const {
-    if (this_bead == target_bead) {
-        std::ofstream debug;
-        debug.open(std::format("{}/debug.log", Output::FOLDER_NAME), std::ios::out | std::ios::app);
-        debug << text;
-        debug.close();
-    }
 }
