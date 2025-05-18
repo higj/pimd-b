@@ -15,7 +15,7 @@ public:
     explicit State(Params& param_obj, int _freq, const std::string& _out_unit);
     ~State();
 
-    virtual void initialize(int this_bead) = 0;
+    virtual void initialize(int this_bead, std::string& output_dir) = 0;
     virtual void output(int step) = 0;   
 
 protected:

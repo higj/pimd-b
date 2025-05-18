@@ -5,7 +5,6 @@
 #include <chrono>
 #include <array>
 #include <cassert>
-#include "mpi.h"
 #include "states.h"
 #include "observables.h"
 #include "propagators.h"
@@ -14,12 +13,13 @@
 #include "simulation.h"
 #include <iostream>
 
-Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, unsigned int seed, MPI_Comm& walker_comm) :
+Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, MPI_Comm& walker_comm, int walker_id, unsigned int seed) :
     bosonic_exchange(nullptr),
     rand_gen(seed + rank),
     this_bead(rank),
     nproc(nproc),
-    walker_comm(walker_comm){
+    walker_comm(walker_comm),
+    walker_id(walker_id){
     getVariant(param_obj.sim["nbeads"], nbeads);
     getVariant(param_obj.sim["dt"], dt);
     getVariant(param_obj.sim["sfreq"], sfreq);
@@ -57,12 +57,12 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     getVariant(param_obj.sim["seed"], params_seed);
 
     // Based on the provided seed, make sure each process has a unique seed
-    rand_gen.seed(params_seed + rank);
+    rand_gen.seed(params_seed + rank + walker_id * nbeads);
 
     init_pos_type = std::get<std::string>(param_obj.sim["init_pos_type"]);
     init_vel_type = std::get<std::string>(param_obj.sim["init_vel_type"]);
 
-    normal_modes = std::make_unique<NormalModes>(param_obj, this_bead, coord, momenta);
+    normal_modes = std::make_unique<NormalModes>(param_obj, this_bead, coord, momenta, walker_comm);
 
     // Initialize the coordinate, momenta, and force arrays
     coord = dVec(natoms);
@@ -247,16 +247,20 @@ double Simulation::sampleMaxwellBoltzmann() {
  * @brief Perform a molecular dynamics run using the OBABO scheme.
  */
 void Simulation::run() {
-    printStatus("Running the simulation", this_bead);
-    
+    printStatus("Running the simulation", this_bead + walker_id*nbeads);
     MPI_Barrier(walker_comm);
     const double sim_exec_time_start = MPI_Wtime();
-    
-    std::filesystem::create_directory(Output::FOLDER_NAME);
-    ObservablesLogger obs_logger(Output::MAIN_FILENAME, this_bead, observables);
+    std::string output_dir = Output::FOLDER_NAME;
+    if (nproc != nbeads)
+    {
+        std::filesystem::create_directory(output_dir);
+        output_dir += std::format("/walker_{}", walker_id);
+    }
+    std::filesystem::create_directory(output_dir);
+    ObservablesLogger obs_logger(std::format("{}/{}", output_dir, Output::MAIN_FILENAME), this_bead, observables);
 
     for (const auto& state : states) {
-        state->initialize(this_bead);
+        state->initialize(this_bead, output_dir);
     }
 
     // Main loop performing molecular dynamics steps
@@ -312,9 +316,9 @@ void Simulation::run() {
 
     const double wall_time = sim_exec_time_end - sim_exec_time_start;
 
-    printStatus(std::format("Simulation finished running successfully (Runtime = {:.3} sec)", wall_time), this_bead);
+    printStatus(std::format("Simulation finished running successfully (Runtime = {:.3} sec)", wall_time), this_bead + walker_id*nbeads, walker_id);
 
-    printReport(wall_time);
+    printReport(wall_time, output_dir);
 }
 
 
@@ -331,12 +335,12 @@ void Simulation::getPrevCoords(dVec& prev) {
         coord.data(),
         coord_size,
         MPI_DOUBLE,
-        (this_bead + 1) % nproc,
+        (this_bead + 1) % nbeads,
         0,
         prev.data(),
         coord_size,
         MPI_DOUBLE,
-        (this_bead - 1 + nproc) % nproc,
+        (this_bead - 1 + nbeads) % nbeads,
         0,
         walker_comm,
         MPI_STATUS_IGNORE
@@ -359,12 +363,12 @@ void Simulation::getNextCoords(dVec& next) {
         coord.data(),
         coord_size,
         MPI_DOUBLE,
-        (this_bead - 1 + nproc) % nproc,
+        (this_bead - 1 + nbeads) % nbeads,
         0,
         next.data(),
         coord_size,
         MPI_DOUBLE,
-        (this_bead + 1) % nproc,
+        (this_bead + 1) % nbeads,
         0,
         walker_comm,
         MPI_STATUS_IGNORE
@@ -483,12 +487,12 @@ void Simulation::updatePhysicalForces() {
 /**
  * @brief Prints a summary of the simulation parameters at the end of the simulation.
  */
-void Simulation::printReport(double wall_time) const {
+void Simulation::printReport(double wall_time, const std::string& output_dir) const {
     if (this_bead != 0)
         return;
 
     std::ofstream report_file;
-    report_file.open(std::format("{}/report.txt", Output::FOLDER_NAME), std::ios::out | std::ios::app);   
+    report_file.open(std::format("{}/report.txt", output_dir), std::ios::out | std::ios::app);   
 
     report_file << "---------\nParameters\n---------\n";
 
@@ -646,7 +650,7 @@ void Simulation::initializeThermostat(Params& param_obj) {
     }
 
     if (thermostat_type == "langevin") {
-        thermostat = std::make_unique<LangevinThermostat>(*thermostat_coupling, param_obj, this_bead);
+        thermostat = std::make_unique<LangevinThermostat>(*thermostat_coupling, param_obj, this_bead  + walker_id * nbeads);
     } else if (thermostat_type == "nose_hoover") {
         thermostat = std::make_unique<NoseHooverThermostat>(*thermostat_coupling, param_obj);
     } else if (thermostat_type == "nose_hoover_np") {

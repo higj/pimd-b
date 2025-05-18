@@ -19,8 +19,8 @@ ForceState::ForceState(Params& param_obj, int _freq, const std::string& _out_uni
 /**
  * @brief Initializes the forces dat file.
  */
-void ForceState::initialize(int this_bead) {
-    out_file.open(std::format("{}/force_{}.dat", Output::FOLDER_NAME, this_bead), std::ios::out | std::ios::app);
+void ForceState::initialize(int this_bead, std::string& output_dir) {
+    out_file.open(std::format("{}/force_{}.dat", output_dir, this_bead), std::ios::out | std::ios::app);
     //out_file << std::format("# Units: {}\n", out_unit);
 }
 

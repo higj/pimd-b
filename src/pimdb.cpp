@@ -56,7 +56,7 @@ int main(int argc, char** argv) {
             
             if (world_size % beads_per_walker != 0) {
                 if (world_rank == 0) {
-                    std::cerr << "Total number of ranks must be divisible by beads_per_walker.\n";
+                    throw std::invalid_argument("Total number of ranks must be divisible by beads_per_walker!");
                 }
                 MPI_Abort(MPI_COMM_WORLD, 1);
             }
@@ -70,7 +70,7 @@ int main(int argc, char** argv) {
             MPI_Comm_split(MPI_COMM_WORLD, walker_id, local_rank, &walker_comm);
 
             // Initialize the random number generator seed based on the current time
-            Simulation sim(local_rank, beads_per_walker, params, static_cast<unsigned int>(time(nullptr)), walker_comm);
+            Simulation sim(local_rank, world_size, params, walker_comm, walker_id, static_cast<unsigned int>(time(nullptr)));
             sim.run();
         }
 

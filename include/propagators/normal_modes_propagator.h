@@ -21,11 +21,6 @@ private:
     dVec& prev_coord;
     dVec& next_coord;
 
-    int this_bead, nbeads;
-    double spring_constant;
-    NormalModes& normal_modes;
-    bool bosonic;
-
     void momentaExternalForces();
     int this_bead, nbeads;
     double spring_constant;

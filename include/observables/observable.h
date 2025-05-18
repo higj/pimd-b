@@ -6,10 +6,10 @@
 #include <fstream>
 #include "params.h"
 #include "ordered_map.h"
+#include "mpi.h"
 
 class Params; // Forward declaration
 class Simulation; // Forward declaration
-
 /* -------------------------------- */
 
 class Observable {

@@ -20,8 +20,8 @@ PositionState::PositionState(Params& param_obj, int _freq, const std::string& _o
 /**
  * @brief Initializes the coordinates xyz file.
  */
-void PositionState::initialize(int this_bead) {
-    out_file.open(std::format("{}/position_{}.xyz", Output::FOLDER_NAME, this_bead), std::ios::out | std::ios::app);
+void PositionState::initialize(int this_bead, std::string& output_dir) {
+    out_file.open(std::format("{}/position_{}.xyz", output_dir, this_bead), std::ios::out | std::ios::app);
     //out_file << std::format("# Units: {}\n", out_unit);
 }
 

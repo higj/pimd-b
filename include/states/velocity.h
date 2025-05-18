@@ -6,7 +6,7 @@ class VelocityState : public State {
 public:
     VelocityState(Params& param_obj, int _freq, const std::string& _out_unit, dVec& momenta);
 
-    void initialize(int this_bead) override;
+    void initialize(int this_bead, std::string& output_dir) override;
     void output(int step) override;
 private:
     double mass;

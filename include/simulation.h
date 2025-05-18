@@ -9,6 +9,7 @@
 #include "params.h"
 #include "potentials.h"
 #include "bosonic_exchange.h"
+#include "mpi.h"
 
 class NormalModes;
 class State;
@@ -52,7 +53,8 @@ public:
 
     std::mt19937 rand_gen;
 
-    Simulation(const int& rank, const int& nproc, Params& param_obj, unsigned int seed = static_cast<unsigned int>(time(nullptr)), MPI_Comm& walker_comm);
+    Simulation(const int& rank, const int& nproc, Params& param_obj, MPI_Comm& walker_comm, int walker_id, 
+               unsigned int seed = static_cast<unsigned int>(time(nullptr)));
     ~Simulation();
 
     dVec coord, momenta, forces, spring_forces, physical_forces;
@@ -116,8 +118,8 @@ public:
 
 private:
     int md_step;
-
-    void printReport(double wall_time) const;
+    int walker_id;
+    void printReport(double wall_time, const std::string& filename) const;
 
     std::string init_pos_type;
     std::string init_vel_type;

@@ -3,8 +3,8 @@
 #include "normal_modes.h"
 #include "params.h"
 
-NormalModes::NormalModes(Params& param_obj, int this_bead, dVec& coord, dVec& momenta) :
-    this_bead(this_bead), coord(coord), momenta(momenta)
+NormalModes::NormalModes(Params& param_obj, int this_bead, dVec& coord, dVec& momenta, MPI_Comm& walker_comm) :
+    this_bead(this_bead), coord(coord), momenta(momenta), walker_comm(walker_comm)
 {
     getVariant(param_obj.sys["natoms"], natoms);
     getVariant(param_obj.sim["nbeads"], nbeads);
@@ -25,31 +25,31 @@ NormalModes::NormalModes(Params& param_obj, int this_bead, dVec& coord, dVec& mo
     // Allocate shared memory
     if (this_bead == 0) {
         MPI_Win_allocate_shared(natoms*nbeads*NDIM*sizeof(double), sizeof(double),
-            MPI_INFO_NULL, MPI_COMM_WORLD,
+            MPI_INFO_NULL, walker_comm,
             &arr_coord_cartesian, &win_coord_cartesian);
         MPI_Win_allocate_shared(natoms*nbeads*NDIM*sizeof(double), sizeof(double),
-            MPI_INFO_NULL, MPI_COMM_WORLD,
+            MPI_INFO_NULL, walker_comm,
             &arr_coord_nm, &win_coord_nm);
         MPI_Win_allocate_shared(natoms*nbeads*NDIM*sizeof(double), sizeof(double),
-            MPI_INFO_NULL, MPI_COMM_WORLD,
+            MPI_INFO_NULL, walker_comm,
             &arr_momenta_cartesian, &win_momenta_cartesian);
         MPI_Win_allocate_shared(natoms*nbeads*NDIM*sizeof(double), sizeof(double),
-            MPI_INFO_NULL, MPI_COMM_WORLD,
+            MPI_INFO_NULL, walker_comm,
             &arr_momenta_nm, &win_momenta_nm);
     } else {
         int disp_unit;
         MPI_Aint size;
         MPI_Win_allocate_shared(0, sizeof(double),
-            MPI_INFO_NULL, MPI_COMM_WORLD,
+            MPI_INFO_NULL, walker_comm,
             &arr_coord_cartesian, &win_coord_cartesian);
         MPI_Win_allocate_shared(0, sizeof(double),
-            MPI_INFO_NULL, MPI_COMM_WORLD,
+            MPI_INFO_NULL, walker_comm,
             &arr_coord_nm, &win_coord_nm);
         MPI_Win_allocate_shared(0, sizeof(double),
-            MPI_INFO_NULL, MPI_COMM_WORLD,
+            MPI_INFO_NULL, walker_comm,
             &arr_momenta_cartesian, &win_momenta_cartesian);
         MPI_Win_allocate_shared(0, sizeof(double),
-            MPI_INFO_NULL, MPI_COMM_WORLD,
+            MPI_INFO_NULL, walker_comm,
             &arr_momenta_nm, &win_momenta_nm);
         MPI_Win_shared_query(win_coord_cartesian, 0, &size, &disp_unit, &arr_coord_cartesian);
         MPI_Win_shared_query(win_coord_nm, 0, &size, &disp_unit, &arr_coord_nm);

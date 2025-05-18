@@ -1,15 +1,5 @@
 #include "propagators/normal_modes_propagator.h"
 #include "normal_modes.h"
-<<<<<<< HEAD
-
-#include <numbers>
-
-NormalModesPropagator::NormalModesPropagator(Params& param_obj, dVec& coord, dVec& momenta, dVec& forces,
-                          dVec& spring_forces, dVec& physical_forces, dVec& prev_coord, dVec& next_coord,
-                          int this_bead, NormalModes& normal_modes, bool bosonic) : 
-    Propagator(param_obj, coord, momenta, forces),
-    ext_forces(physical_forces),
-=======
 #include "params.h"
 #include <numbers>
 
@@ -18,7 +8,6 @@ NormalModesPropagator::NormalModesPropagator(Params& param_obj, dVec& coord, dVe
                           int this_bead, NormalModes& normal_modes) : 
     Propagator(param_obj, coord, momenta, forces),
     physical_forces(physical_forces),
->>>>>>> removingSimRefsTest
     spring_forces(spring_forces),
     prev_coord(prev_coord),
     next_coord(next_coord),
@@ -26,11 +15,8 @@ NormalModesPropagator::NormalModesPropagator(Params& param_obj, dVec& coord, dVe
     normal_modes(normal_modes)
 {
     getVariant(param_obj.sim["nbeads"], nbeads);
-<<<<<<< HEAD
-=======
     getVariant(param_obj.sim["bosonic"], bosonic);
 
->>>>>>> removingSimRefsTest
     double temperature;
     getVariant(param_obj.sys["temperature"], temperature);
 #if IPI_CONVENTION
@@ -52,13 +38,9 @@ NormalModesPropagator::NormalModesPropagator(Params& param_obj, dVec& coord, dVe
 void NormalModesPropagator::preForceStep() {
     // Propagate momenta under external forces
     momentaExternalForces();
-<<<<<<< HEAD
-
-=======
->>>>>>> removingSimRefsTest
     normal_modes.shareData();
 
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(normal_modes.walker_comm);
     for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
             const int glob_idx = normal_modes.globIndexAtom(axis, ptcl_idx);
@@ -76,7 +58,7 @@ void NormalModesPropagator::preForceStep() {
         }
     }
 
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(normal_modes.walker_comm);
     for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
             int glob_idx = normal_modes.globIndexAtom(axis, ptcl_idx);
@@ -89,7 +71,7 @@ void NormalModesPropagator::preForceStep() {
     }
 
     // Update forces
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(normal_modes.walker_comm);
     for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
             int glob_idx = normal_modes.globIndexAtom(axis, ptcl_idx);

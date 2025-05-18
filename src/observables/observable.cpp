@@ -1,7 +1,6 @@
 #include "observables.h"
 #include "simulation.h"
 #include <ranges>
-#include "mpi.h"
 
 /**
  * @brief Generic observable class constructor
@@ -64,7 +63,7 @@ ObservablesLogger::ObservablesLogger(const std::string& filename, int _bead, con
     : bead(_bead), observables(_observables) {
 
     if (bead == 0) {
-        file.open(std::format("{}/{}", Output::FOLDER_NAME, filename), std::ios::out | std::ios::app);
+        file.open(filename, std::ios::out | std::ios::app);
 
         if (!file.is_open()) {
             throw std::ios_base::failure(std::format("Failed to open {}.", Output::MAIN_FILENAME));

@@ -8,7 +8,7 @@ class ForceState : public State {
 public:
     ForceState(Params& param_obj, int _freq, const std::string& _out_unit, dVec& _forces);
 
-    void initialize(int this_bead) override;
+    void initialize(int this_bead, std::string& output_dir) override;
     void output(int step) override;
 private:
     dVec& forces;

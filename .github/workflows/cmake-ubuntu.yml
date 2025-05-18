@@ -2,7 +2,7 @@ name: Compile on Ubuntu & Test
 
 on:
   push:
-    branches: [ "master", "removingSimRefsTest" ]
+    branches: [ "master", "walkers" ]
     paths-ignore:
       - '**/README.md'
   pull_request:
