@@ -62,7 +62,6 @@ public:
     dVec coord, momenta, forces, spring_forces, physical_forces;
     dVec prev_coord, next_coord;
 
-    int getStep() const;
     void setStep(int step);
 
     double mass;
@@ -91,7 +90,6 @@ public:
     void initializeWalkersCommunication(const std::string& walkers_communication_name);
 
     double sampleMaxwellBoltzmann();
-    double classicalSpringEnergy() const;
     std::unique_ptr<Propagator> propagator;
     std::unique_ptr<Thermostat> thermostat;
     std::unique_ptr<Coupling> thermostat_coupling;

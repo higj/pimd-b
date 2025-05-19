@@ -111,34 +111,6 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, MPI
 
 Simulation::~Simulation() = default;
 
-double Simulation::classicalSpringEnergy() const {
-    assert(!bosonic || (bosonic && this_bead != 0));
-
-    double interior_spring_energy = 0.0;
-
-    for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
-        for (int axis = 0; axis < NDIM; ++axis) {
-            double diff = prev_coord(ptcl_idx, axis) - coord(ptcl_idx, axis);
-
-#if MINIM
-            if (pbc) {
-                applyMinimumImage(diff, size);
-            }
-#endif
-
-            interior_spring_energy += diff * diff;
-        }
-    }
-
-    interior_spring_energy *= 0.5 * spring_constant;
-    return interior_spring_energy;
-}
-
-
-int Simulation::getStep() const {
-    return md_step;
-}
-
 void Simulation::setStep(int step) {
     md_step = step;
 }

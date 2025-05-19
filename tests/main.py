@@ -62,7 +62,6 @@ def get_number_of_atoms(input_file):
 
 
 def run_simulation(executable_dir, input_file):
-    print("Entered run")
     nbeads = get_number_of_beads(input_file)
     
     mpirun_bin_dir = os.environ['OPENMPI_BIN']
@@ -327,7 +326,6 @@ def run_tests(executable_dir, tests_dir, is_factorial_bosonic):
 
 
 if __name__ == "__main__":
-    print("Entered main")
     parser = argparse.ArgumentParser(description='PIMD-B++ tests')
     parser.add_argument('executable_dir', type=Path, help='Directory containing the executable')
     parser.add_argument('tests_dir', type=Path, help='Directory containing the test cases')
