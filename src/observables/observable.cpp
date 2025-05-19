@@ -90,7 +90,7 @@ ObservablesLogger::~ObservablesLogger() {
 }
 
 // Log observables data to the file
-void ObservablesLogger::log(int step, MPI_Comm& walker_comm) {
+void ObservablesLogger::log(int step, MPI_Comm& walker_world) {
     if (bead == 0) {
         file << std::format("{:^16.8e}", static_cast<double>(step));
     }
@@ -103,7 +103,7 @@ void ObservablesLogger::log(int step, MPI_Comm& walker_comm) {
             double local_quantity_value = val;
 
             // Sum the results from all processes (beads)
-            MPI_Allreduce(&local_quantity_value, &quantity_value, 1, MPI_DOUBLE, MPI_SUM, walker_comm);
+            MPI_Allreduce(&local_quantity_value, &quantity_value, 1, MPI_DOUBLE, MPI_SUM, walker_world);
 
             if (bead == 0) {
                 file << std::format(" {:^16.8e}", quantity_value);

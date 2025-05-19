@@ -48,29 +48,22 @@ int main(int argc, char** argv) {
             printMsg(LOGO, world_rank);
 
             // Load the simulation parameters from the configuration file
-            Params params(config_filename, world_rank);
+            Params params(config_filename, world_rank, world_size);
 
             // User-defined parameters
-            int beads_per_walker = 8; 
+            int beads_per_walker; 
             getVariant(params.sim["nbeads"], beads_per_walker);
-            
-            if (world_size % beads_per_walker != 0) {
-                if (world_rank == 0) {
-                    throw std::invalid_argument("Total number of ranks must be divisible by beads_per_walker!");
-                }
-                MPI_Abort(MPI_COMM_WORLD, 1);
-            }
 
             int num_walkers = world_size / beads_per_walker;
             int walker_id = world_rank / beads_per_walker;
             int local_rank = world_rank % beads_per_walker;
 
             // Create a communicator per walker group
-            MPI_Comm walker_comm;
-            MPI_Comm_split(MPI_COMM_WORLD, walker_id, local_rank, &walker_comm);
+            MPI_Comm walker_world;
+            MPI_Comm_split(MPI_COMM_WORLD, walker_id, local_rank, &walker_world);
 
             // Initialize the random number generator seed based on the current time
-            Simulation sim(local_rank, world_size, params, walker_comm, walker_id, static_cast<unsigned int>(time(nullptr)));
+            Simulation sim(local_rank, world_size, params, walker_world, walker_id, static_cast<unsigned int>(time(nullptr)));
             sim.run();
         }
 

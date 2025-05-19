@@ -17,6 +17,7 @@ class Observable;
 class Propagator;
 class Thermostat;
 class Coupling;
+class WalkersCommunicationBase;
 
 class Simulation
 {
@@ -33,6 +34,7 @@ public:
     int natoms;         // Number of atoms in the system
     int nbeads;         // Number of beads
 
+    long wfreq;         // Frequency of walkers communication
     long sfreq;         // Save frequency (how often the observables are recorded)
     long steps;         // Total number of MD steps
 
@@ -53,7 +55,7 @@ public:
 
     std::mt19937 rand_gen;
 
-    Simulation(const int& rank, const int& nproc, Params& param_obj, MPI_Comm& walker_comm, int walker_id, 
+    Simulation(const int& rank, const int& nproc, Params& param_obj, MPI_Comm& walker_world, int walker_id, 
                unsigned int seed = static_cast<unsigned int>(time(nullptr)));
     ~Simulation();
 
@@ -73,7 +75,8 @@ public:
     void genMomentum(dVec& momenta_arr);
 
     void zeroMomentum();
-
+    
+    void initializeWalkersCommunication(Params& param_obj);
     void initializePropagator(Params& param_obj);
     void initializeThermostat(Params& param_obj);
     void initializeExchangeAlgorithm(Params& param_obj);
@@ -85,12 +88,14 @@ public:
     void initializeObservables(Params& param_obj);
     std::unique_ptr<Potential> initializePotential(const std::string& potential_name,
                                                    const VariantMap& potential_options);
+    void initializeWalkersCommunication(const std::string& walkers_communication_name);
 
     double sampleMaxwellBoltzmann();
     double classicalSpringEnergy() const;
     std::unique_ptr<Propagator> propagator;
     std::unique_ptr<Thermostat> thermostat;
     std::unique_ptr<Coupling> thermostat_coupling;
+    std::unique_ptr<WalkersCommunicationBase> walker_communication;
 
     std::unique_ptr<NormalModes> normal_modes;
 
@@ -127,5 +132,6 @@ private:
 
     void printDebug(const std::string& text, int target_bead = 0) const;
 
-    MPI_Comm& walker_comm; // Walker communicator
+    MPI_Comm& walker_world; // Walker communicator
+    std::string walker_communication_type;
 };

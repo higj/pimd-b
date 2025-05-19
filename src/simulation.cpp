@@ -1,3 +1,4 @@
+#include "walkers_communication.h"
 #include <algorithm>
 #include <ranges>
 #include <fstream>
@@ -13,17 +14,21 @@
 #include "simulation.h"
 #include <iostream>
 
-Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, MPI_Comm& walker_comm, int walker_id, unsigned int seed) :
+Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, MPI_Comm& walker_world, int walker_id, unsigned int seed) :
     bosonic_exchange(nullptr),
     rand_gen(seed + rank),
     this_bead(rank),
     nproc(nproc),
-    walker_comm(walker_comm),
+    walker_world(walker_world),
     walker_id(walker_id){
     getVariant(param_obj.sim["nbeads"], nbeads);
     getVariant(param_obj.sim["dt"], dt);
     getVariant(param_obj.sim["sfreq"], sfreq);
     getVariant(param_obj.sim["steps"], steps);
+    getVariant(param_obj.sim["wfreq"], wfreq);
+    if (wfreq == 0) {
+        wfreq = steps;
+    }
 
     getVariant(param_obj.sim["threshold"], threshold);
     threshold *= steps;  // Threshold in terms of steps
@@ -62,7 +67,7 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, MPI
     init_pos_type = std::get<std::string>(param_obj.sim["init_pos_type"]);
     init_vel_type = std::get<std::string>(param_obj.sim["init_vel_type"]);
 
-    normal_modes = std::make_unique<NormalModes>(param_obj, this_bead, coord, momenta, walker_comm);
+    normal_modes = std::make_unique<NormalModes>(param_obj, this_bead, coord, momenta, walker_world);
 
     // Initialize the coordinate, momenta, and force arrays
     coord = dVec(natoms);
@@ -75,7 +80,8 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, MPI
     initializePositions(coord, param_obj.sim);
     initializeMomenta(momenta, param_obj.sim);
 
-    // Initialize the propagator, thermostat, and exchange algorithm
+    // Initialize the walker communication scheme, propagator, thermostat, and exchange algorithm
+    initializeWalkersCommunication(param_obj);
     initializePropagator(param_obj);
     initializeThermostat(param_obj);
     initializeExchangeAlgorithm(param_obj);
@@ -248,7 +254,7 @@ double Simulation::sampleMaxwellBoltzmann() {
  */
 void Simulation::run() {
     printStatus("Running the simulation", this_bead + walker_id*nbeads);
-    MPI_Barrier(walker_comm);
+    MPI_Barrier(walker_world);
     const double sim_exec_time_start = MPI_Wtime();
     std::string output_dir = Output::FOLDER_NAME;
     if (nproc != nbeads)
@@ -290,6 +296,10 @@ void Simulation::run() {
             zeroMomentum();
         }
 
+        // Save the observables at the specified frequency
+        if ((step % wfreq == 0) && (step > 0)) {
+            walker_communication->communicate();
+        }
 
 #if PROGRESS
         printProgress(step, steps, this_bead);
@@ -307,11 +317,11 @@ void Simulation::run() {
 
         // Save the observables at the specified frequency
         if (step % sfreq == 0) {
-            obs_logger.log(step, walker_comm);
+            obs_logger.log(step, walker_world);
         }
     }
 
-    MPI_Barrier(walker_comm);
+    MPI_Barrier(walker_world);
     const double sim_exec_time_end = MPI_Wtime();
 
     const double wall_time = sim_exec_time_end - sim_exec_time_start;
@@ -342,12 +352,12 @@ void Simulation::getPrevCoords(dVec& prev) {
         MPI_DOUBLE,
         (this_bead - 1 + nbeads) % nbeads,
         0,
-        walker_comm,
+        walker_world,
         MPI_STATUS_IGNORE
     );
 
     // Ensure all processes have completed the neighbor communication
-    MPI_Barrier(walker_comm);
+    MPI_Barrier(walker_world);
 }
 
 /**
@@ -370,12 +380,12 @@ void Simulation::getNextCoords(dVec& next) {
         MPI_DOUBLE,
         (this_bead + 1) % nbeads,
         0,
-        walker_comm,
+        walker_world,
         MPI_STATUS_IGNORE
     );
 
     // Ensure all processes have completed the neighbor communication
-    MPI_Barrier(walker_comm);
+    MPI_Barrier(walker_world);
 }
 
 /**
@@ -519,6 +529,9 @@ void Simulation::printReport(double wall_time, const std::string& output_dir) co
 
     double out_temperature = Units::convertToUser("temperature", "kelvin", temperature);
     report_file << formattedReportLine("Temperature", std::format("{} kelvin", out_temperature));
+    report_file << formattedReportLine("Thermostat", thermostat_type);
+    std::string coupling_type = (nmthermostat) ? "Normal modes" : "Cartesian";
+    report_file << formattedReportLine("Thermostat coupling", coupling_type);
 
     double out_sys_size = Units::convertToUser("length", "angstrom", size);
     report_file << formattedReportLine("Linear size of the system", std::format("{} angstroms", out_sys_size));
@@ -529,6 +542,10 @@ void Simulation::printReport(double wall_time, const std::string& output_dir) co
     report_file << formattedReportLine("Total number of MD steps", steps);
     report_file << formattedReportLine("Interaction potential name", interaction_potential_name);
     report_file << formattedReportLine("External potential name", external_potential_name);
+
+    if (nproc != nbeads) {
+        report_file << formattedReportLine("Walkers communication scheme", walker_communication_type);
+    }
 
     report_file << "---------\nFeatures\n---------\n";
     report_file << formattedReportLine("Minimum image convention", MINIM);
@@ -566,7 +583,7 @@ void Simulation::zeroMomentum() {
     }
 
     MPI_Allreduce(momentum_cm_per_bead.data(), momentum_cm.data(), momentum_cm.size(), MPI_DOUBLE, MPI_SUM,
-                  walker_comm);
+                  walker_world);
 
     for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
@@ -615,6 +632,19 @@ std::unique_ptr<Potential> Simulation::initializePotential(const std::string& po
     }
 
     return std::make_unique<Potential>();
+}
+
+/**
+ * Initializes the walkers communication scheme based on the input parameters.
+ *
+ * @param param_obj Params object with all parameters of the simulation.
+ *  */
+void Simulation::initializeWalkersCommunication(Params& param_obj) {
+    walker_communication_type = std::get<std::string>(param_obj.sim.at("walkers_communication_type"));
+    
+    if (walker_communication_type == "no_communication") {
+        walker_communication = std::make_unique<WalkersCommunicationBase>();
+    }
 }
 
 /**

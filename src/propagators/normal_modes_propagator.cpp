@@ -40,7 +40,7 @@ void NormalModesPropagator::preForceStep() {
     momentaExternalForces();
     normal_modes.shareData();
 
-    MPI_Barrier(normal_modes.walker_comm);
+    MPI_Barrier(normal_modes.walker_world);
     for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
             const int glob_idx = normal_modes.globIndexAtom(axis, ptcl_idx);
@@ -58,7 +58,7 @@ void NormalModesPropagator::preForceStep() {
         }
     }
 
-    MPI_Barrier(normal_modes.walker_comm);
+    MPI_Barrier(normal_modes.walker_world);
     for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
             int glob_idx = normal_modes.globIndexAtom(axis, ptcl_idx);
@@ -71,7 +71,7 @@ void NormalModesPropagator::preForceStep() {
     }
 
     // Update forces
-    MPI_Barrier(normal_modes.walker_comm);
+    MPI_Barrier(normal_modes.walker_world);
     for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
             int glob_idx = normal_modes.globIndexAtom(axis, ptcl_idx);

@@ -5,7 +5,7 @@
 #include <format>
 #include <filesystem>
 
-Params::Params(const std::string& filename, const int& rank) : reader(filename) {
+Params::Params(const std::string& filename, const int& rank, const int& world_size) : reader(filename) {
     printStatus("Initializing the simulation parameters", rank);
 
     if (reader.ParseError() < 0)
@@ -29,8 +29,15 @@ Params::Params(const std::string& filename, const int& rank) : reader(filename) 
     sim["sfreq"] = reader.GetLong(Sections::SIMULATION, "sfreq", 1000); /// @todo: Add support for scientific notation
     sim["nbeads"] = reader.GetInteger(Sections::SIMULATION, "nbeads", 4);
 
-    if (int nbeads = std::get<int>(sim["nbeads"]); nbeads < 1)
+    int nbeads = std::get<int>(sim["nbeads"]);
+    if (nbeads < 1)
         throw std::invalid_argument(std::format("The specified number of beads ({}) is less than one!", nbeads));
+    if (world_size % nbeads != 0)
+        throw std::invalid_argument(std::format("The number of processes ({}) is not divisible by the number of beads ({})!", world_size, nbeads));
+
+    sim["wfreq"] = reader.GetLong(Sections::SIMULATION, "wfreq", 0);
+    if (long wfreq = std::get<long>(sim["wfreq"]); wfreq < 0)
+        throw std::invalid_argument(std::format("The specified frequency of walkers communication ({}) is less than zero!", wfreq));
 
     sim["seed"] = static_cast<unsigned int>(std::stod(reader.Get(Sections::SIMULATION, "seed", "1234")));
 
@@ -82,7 +89,7 @@ Params::Params(const std::string& filename, const int& rank) : reader(filename) 
                   );
         }
     }
-    
+
     sim["init_pos_type"] = init_pos_type;
 
     if (init_pos_type == "xyz") {
@@ -137,7 +144,22 @@ Params::Params(const std::string& filename, const int& rank) : reader(filename) 
     if (init_vel_type == "manual_formatted") {
         sim["init_vel_manual_filename_format"] = init_vel_specification;
     }
+
+    // Implemented walkers communication schemes:
+    // "no_communication": no communication between walkers
+    StringsList allowed_walkers_communication = { "no_communication" };
+    std::string walkers_communication_type = reader.GetString(Sections::SIMULATION, "walkers_communication", "none");
+    if (walkers_communication_type == "none") {
+        if (world_size != nbeads) {
+            throw std::invalid_argument("The number of processes must be equal to the number of beads when using no walkers communication!");
+        }
+        walkers_communication_type = "no_communication";
+    }
+    sim["walkers_communication_type"] = walkers_communication_type;
     
+    if (!labelInArray(walkers_communication_type, allowed_walkers_communication))
+        throw std::invalid_argument(std::format("The specified walkers communication scheme ({}) is not supported!", walkers_communication_type));  
+
     // Implemented time propagators:
     // "cartesian": regular velocity Verlet algorithm, propagating the plain Cartesian coordinates
     // "normal_modes": a velocity Verlet algorithm that propagates the normal modes
@@ -171,7 +193,7 @@ Params::Params(const std::string& filename, const int& rank) : reader(filename) 
     sim["thermostat_type"] = thermostat_type;
     
     if (!labelInArray(thermostat_type, allowed_thermostats))
-        throw std::invalid_argument(std::format("The specified thermostat ({}) is not supported!", propagator_type));
+        throw std::invalid_argument(std::format("The specified thermostat ({}) is not supported!", thermostat_type));
         
     /* System params */
     sys["temperature"] = getQuantity("temperature", reader.Get(Sections::SYSTEM, "temperature", "1.0 kelvin"));

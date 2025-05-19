@@ -29,7 +29,7 @@ NMCoupling::NMCoupling(dVec& _momenta, NormalModes& normal_modes, int this_bead)
 
 void NMCoupling::mpiCommunication() {
     normal_modes.shareData();
-    MPI_Barrier(normal_modes.walker_comm);
+    MPI_Barrier(normal_modes.walker_world);
 }
  
 double NMCoupling::getMomentumForCalc(const int ptcl_idx, const int axis) {
@@ -43,6 +43,6 @@ double& NMCoupling::getMomentumForUpdate(const int ptcl_idx, const int axis) {
 }
 
 void NMCoupling::updateCoupledMomenta() {
-    MPI_Barrier(normal_modes.walker_comm);
+    MPI_Barrier(normal_modes.walker_world);
     normal_modes.updateCartesianMomenta();
 }
