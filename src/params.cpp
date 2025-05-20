@@ -147,6 +147,7 @@ Params::Params(const std::string& filename, const int& rank, const int& world_si
 
     // Implemented walkers communication schemes:
     // "no_communication": no communication between walkers
+    // "roulette_splitting_cycle_prob": roulette splitting according to cummulative cycle probabilities
     StringsList allowed_walkers_communication = { "no_communication", "roulette_splitting_cycle_prob" };
     std::string walkers_communication_type = reader.GetString(Sections::SIMULATION, "walkers_communication", "none");
     if (walkers_communication_type == "none") {
@@ -154,6 +155,13 @@ Params::Params(const std::string& filename, const int& rank, const int& world_si
             throw std::invalid_argument("The number of processes must be equal to the number of beads when using no walkers communication!");
         }
         walkers_communication_type = "no_communication";
+    } else if (walkers_communication_type == "roulette_splitting_cycle_prob") {
+        if (!bosonic) {
+            throw std::invalid_argument("Roulette splitting according to cummulative cycle probabilities is only available for bosonic simulations!");
+        }
+#if FACTORIAL_BOSONIC_ALGORITHM
+            throw std::invalid_argument("Roulette splitting according to cummulative cycle probabilities is currently only available for quadratic bosonic exchange algorithm!");
+#endif
     }
     sim["walkers_communication_type"] = walkers_communication_type;
     
@@ -279,6 +287,7 @@ Params::Params(const std::string& filename, const int& rank, const int& world_si
     observables["classical"] = reader.Get(Sections::OBSERVABLES, "classical", "off");
     observables["bosonic"] = reader.Get(Sections::OBSERVABLES, "bosonic", "off");
     observables["gsf"] = reader.Get(Sections::OBSERVABLES, "gsf", "off");
+    observables["walkers"] = reader.Get(Sections::OBSERVABLES, "walkers", "off");
 }
 
 bool Params::labelInArray(const std::string& label, const StringsList& arr) {

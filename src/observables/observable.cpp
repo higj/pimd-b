@@ -53,6 +53,8 @@ std::unique_ptr<Observable> ObservableFactory::createQuantity(Simulation& sim, P
     } else if (observable_type == "gsf") {
         return std::make_unique<GSFActionObservable>(param_obj, _freq, _out_unit, this_bead,
                                     *sim.ext_potential, *sim.int_potential, sim.coord);
+    } else if (observable_type == "walkers") {
+        return std::make_unique<WalkersObservable>(param_obj, _freq, _out_unit, this_bead, *sim.walker_communication);
     } else {
         throw std::invalid_argument("Unknown observable type.");
     }

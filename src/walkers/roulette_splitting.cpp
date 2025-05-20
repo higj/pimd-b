@@ -1,4 +1,6 @@
 #include "walkers/roulette_splitting.h"
+#include <numeric>
+#include <vector>
 #include <iostream>
 
 RouletteSplitting::RouletteSplitting(int nworlds,int local_rank, int walker_id, MPI_Comm& bead_world, std::mt19937& rand_gen) : 
@@ -14,22 +16,36 @@ void RouletteSplitting::communicate(dVec& coord, dVec& momenta) {
     }
 
     if (local_rank == 0) {
+        int ncopies[nworlds];
         // Evaluate the importance weights
-        std::vector<double> impotanceWeights = evaluateImportance();
+        importance_weight = evaluateImportance();
+        std::vector<double> impotance_weights(nworlds);
+        MPI_Gather(&importance_weight, 1, MPI_DOUBLE, impotance_weights.data(), 1, MPI_DOUBLE, 0, bead_world);
+        std::vector<double> statistical_weights(nworlds);
+        MPI_Gather(&statistical_weight, 1, MPI_DOUBLE, statistical_weights.data(), 1, MPI_DOUBLE, 0, bead_world);
+
         if (walker_id == 0) {
-            int ncopies[nworlds];
+            // Normalize the importance weights
+            double sum = std::accumulate(impotance_weights.begin(), impotance_weights.end(), 0.0);
+            if (sum != 0.0) {
+                double scale = static_cast<double>(nworlds) / sum;
+                for (double& v : impotance_weights) {
+                    v *= scale;
+                }
+            }
+
             int current_nworlds = 0;
             // Assign the number of copies of each world such that the total number of copies is equal to nworlds
             while (current_nworlds != nworlds) {
                 current_nworlds = 0;
                 for (int i = 0; i < nworlds; ++i) {
                     double u_sample = u_dist(rand_gen);
-                    if (impotanceWeights[i] < 1) {
-                        ncopies[i] = (u_sample < impotanceWeights[i]) ? 1 : 0;
+                    if (impotance_weights[i] < 1) {
+                        ncopies[i] = (u_sample < impotance_weights[i]) ? 1 : 0;
                     }
                     else {
-                        int floor_val = static_cast<int>(impotanceWeights[i]);
-                        ncopies[i] = (u_sample < impotanceWeights[i] - floor_val) ? floor_val + 1 : floor_val;
+                        int floor_val = static_cast<int>(impotance_weights[i]);
+                        ncopies[i] = (u_sample < impotance_weights[i] - floor_val) ? floor_val + 1 : floor_val;
                     }
                     current_nworlds += ncopies[i];
                 }
@@ -53,11 +69,20 @@ void RouletteSplitting::communicate(dVec& coord, dVec& momenta) {
                     }
                 }           
             }
+            // Adjust statistical weights
+            for (int i = 0; i < nworlds; ++i) {
+                if ((impotance_weights[i] < 1) && (assigned_worlds[i] == i)) {
+                    statistical_weights[i] *= 1 / impotance_weights[i];
+                } else {
+                    statistical_weights[i] = statistical_weights[assigned_worlds[i]] / ncopies[assigned_worlds[i]];
+                }
+            }
         }
+        // Broadcast the statistical weights to all worlds
+        MPI_Bcast(statistical_weights.data(), nworlds, MPI_DOUBLE, 0, bead_world);        
     }
     // Broadcast the assigned worlds to all worlds
     MPI_Bcast(assigned_worlds, nworlds, MPI_INT, 0, MPI_COMM_WORLD);
-    MPI_Barrier(MPI_COMM_WORLD);
 
     // Broadcast the assigned copies to all worlds
     const int size = coord.size();
@@ -65,17 +90,14 @@ void RouletteSplitting::communicate(dVec& coord, dVec& momenta) {
         if (assigned_worlds[i] != i) {
             // If in the world that is being copy, send coords and momenta to world i
             if (walker_id == assigned_worlds[i]) {
-                // std::cout << "Sending coords and momenta to world " << i << " from world " << walker_id << std::endl;
                 MPI_Send(coord.data(), size, MPI_DOUBLE, i, 0, bead_world);
                 MPI_Send(momenta.data(), size, MPI_DOUBLE, i, 1, bead_world);
-                // std::cout << "Sent coords and momenta to world " << i << " from world " << walker_id << std::endl;
 
             }
             // If in world i, receive coords and momenta from the world that is being copied
             else if (walker_id == i) {
                 dVec new_coord(size);
                 dVec new_momenta(size);
-                // std::cout << "Recieving coords and momenta in world " << i << " from world " << assigned_worlds[i] << std::endl;
                 MPI_Recv(new_coord.data(), size, MPI_DOUBLE, assigned_worlds[i], 0, bead_world, MPI_STATUS_IGNORE);
                 MPI_Recv(new_momenta.data(), size, MPI_DOUBLE, assigned_worlds[i], 1, bead_world, MPI_STATUS_IGNORE);
                 for (int ptcl_idx = 0; ptcl_idx < size/NDIM; ++ptcl_idx) {
@@ -84,7 +106,6 @@ void RouletteSplitting::communicate(dVec& coord, dVec& momenta) {
                         momenta(ptcl_idx, axis) = new_momenta(ptcl_idx, axis);
                     }
                 }
-                // std::cout << "Recieved coords and momenta in world " << i << " from world " << assigned_worlds[i] << std::endl;
             }
         }
     }

@@ -29,6 +29,7 @@ public:
     virtual double getLongestProbability() = 0;
 
     virtual void printBosonicDebug() = 0;
+    virtual double getCumulativeCycleProb() const;
 
 protected:
     void assignFirstLast(dVec& x_first_bead, dVec& x_last_bead) const;

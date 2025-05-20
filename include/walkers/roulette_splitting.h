@@ -1,7 +1,6 @@
 #pragma once
 
 #include "walkers_communication_base.h"
-#include <vector>
 #include <random>
 #include "mpi.h"
 
@@ -12,7 +11,7 @@ public:
     ~RouletteSplitting() override = default;
 
     void communicate(dVec& coord, dVec& momenta) override;
-    virtual std::vector<double> evaluateImportance() = 0;
+    virtual double evaluateImportance() = 0;
 protected:
     MPI_Comm& bead_world;
     int nworlds, local_rank, walker_id;

@@ -83,10 +83,10 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, MPI
     initializeMomenta(momenta, param_obj.sim);
 
     // Initialize the walker communication scheme, propagator, thermostat, and exchange algorithm
-    initializeWalkersCommunication(param_obj);
     initializePropagator(param_obj);
     initializeThermostat(param_obj);
     initializeExchangeAlgorithm(param_obj);
+    initializeWalkersCommunication(param_obj);
 
     // Initialize the potential based on the input
     external_potential_name = std::get<std::string>(param_obj.external_pot["name"]);
@@ -619,7 +619,7 @@ void Simulation::initializeWalkersCommunication(Params& param_obj) {
     if (walker_communication_type == "no_communication") {
         walker_communication = std::make_unique<WalkersCommunicationBase>();
     } else if (walker_communication_type == "roulette_splitting_cycle_prob") {
-        walker_communication = std::make_unique<RouletteSplittingCycleProb>(nproc/nbeads, this_bead, walker_id, bead_world, rand_gen);
+        walker_communication = std::make_unique<RouletteSplittingCycleProb>(nproc/nbeads, this_bead, walker_id, bead_world, rand_gen, *bosonic_exchange);
     }
 }
 
@@ -802,6 +802,7 @@ void Simulation::initializeObservables(Params& param_obj) {
     }
 
     addObservableIfEnabled(param_obj, "gsf", "gsf");
+    addObservableIfEnabled(param_obj, "walkers", "walkers");
 }
 
 /**

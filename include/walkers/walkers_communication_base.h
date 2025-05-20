@@ -7,4 +7,5 @@ public:
     virtual ~WalkersCommunicationBase() = default;
     
     virtual void communicate(dVec& coord, dVec& momenta);
+    double importance_weight, statistical_weight;
 };

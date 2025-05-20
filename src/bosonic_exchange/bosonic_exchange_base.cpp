@@ -98,3 +98,7 @@ void BosonicExchangeBase::assignFirstLast(dVec& x_first_bead, dVec& x_last_bead)
         x_last_bead = x;
     }
 }
+
+double BosonicExchangeBase::getCumulativeCycleProb() const {
+    return 0.0;
+}

@@ -20,6 +20,8 @@ public:
 
     void printBosonicDebug() override;
 
+    double getCumulativeCycleProb() const override;
+
 protected:
     void springForceFirstBead(dVec& f) override;
     void springForceLastBead(dVec& f) override;
