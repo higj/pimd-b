@@ -62,8 +62,12 @@ int main(int argc, char** argv) {
             MPI_Comm walker_world;
             MPI_Comm_split(MPI_COMM_WORLD, walker_id, local_rank, &walker_world);
 
+            // Create a communicator per bead group
+            MPI_Comm bead_world;
+            MPI_Comm_split(MPI_COMM_WORLD, local_rank, walker_id, &bead_world);
+
             // Initialize the random number generator seed based on the current time
-            Simulation sim(local_rank, world_size, params, walker_world, walker_id, static_cast<unsigned int>(time(nullptr)));
+            Simulation sim(local_rank, world_size, params, walker_world, bead_world, walker_id, static_cast<unsigned int>(time(nullptr)));
             sim.run();
         }
 

@@ -55,7 +55,7 @@ public:
 
     std::mt19937 rand_gen;
 
-    Simulation(const int& rank, const int& nproc, Params& param_obj, MPI_Comm& walker_world, int walker_id, 
+    Simulation(const int& rank, const int& nproc, Params& param_obj, MPI_Comm& walker_world, MPI_Comm& bead_world, int walker_id, 
                unsigned int seed = static_cast<unsigned int>(time(nullptr)));
     ~Simulation();
 
@@ -131,5 +131,6 @@ private:
     void printDebug(const std::string& text, int target_bead = 0) const;
 
     MPI_Comm& walker_world; // Walker communicator
+    MPI_Comm& bead_world;  // Bead communicator
     std::string walker_communication_type;
 };

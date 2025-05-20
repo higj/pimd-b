@@ -147,7 +147,7 @@ Params::Params(const std::string& filename, const int& rank, const int& world_si
 
     // Implemented walkers communication schemes:
     // "no_communication": no communication between walkers
-    StringsList allowed_walkers_communication = { "no_communication" };
+    StringsList allowed_walkers_communication = { "no_communication", "roulette_splitting_cycle_prob" };
     std::string walkers_communication_type = reader.GetString(Sections::SIMULATION, "walkers_communication", "none");
     if (walkers_communication_type == "none") {
         if (world_size != nbeads) {

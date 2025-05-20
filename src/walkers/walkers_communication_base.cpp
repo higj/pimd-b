@@ -2,4 +2,4 @@
 
 WalkersCommunicationBase::WalkersCommunicationBase() {}
 
-void WalkersCommunicationBase::communicate() {}
+void WalkersCommunicationBase::communicate(dVec& coord, dVec& momenta) {}

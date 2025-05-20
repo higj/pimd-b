@@ -14,13 +14,15 @@
 #include "simulation.h"
 #include <iostream>
 
-Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, MPI_Comm& walker_world, int walker_id, unsigned int seed) :
+Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, MPI_Comm& walker_world, 
+                       MPI_Comm& bead_world, int walker_id, unsigned int seed) :
     bosonic_exchange(nullptr),
     rand_gen(seed + rank),
     this_bead(rank),
     nproc(nproc),
     walker_world(walker_world),
-    walker_id(walker_id){
+    walker_id(walker_id),
+    bead_world(bead_world) {
     getVariant(param_obj.sim["nbeads"], nbeads);
     getVariant(param_obj.sim["dt"], dt);
     getVariant(param_obj.sim["sfreq"], sfreq);
@@ -270,7 +272,7 @@ void Simulation::run() {
 
         // Save the observables at the specified frequency
         if ((step % wfreq == 0) && (step > 0)) {
-            walker_communication->communicate();
+            walker_communication->communicate(coord, momenta);
         }
 
 #if PROGRESS
@@ -616,6 +618,8 @@ void Simulation::initializeWalkersCommunication(Params& param_obj) {
     
     if (walker_communication_type == "no_communication") {
         walker_communication = std::make_unique<WalkersCommunicationBase>();
+    } else if (walker_communication_type == "roulette_splitting_cycle_prob") {
+        walker_communication = std::make_unique<RouletteSplittingCycleProb>(nproc/nbeads, this_bead, walker_id, bead_world, rand_gen);
     }
 }
 
