@@ -1,6 +1,7 @@
 #include "potentials/harmonic.h"
 
-HarmonicPotential::HarmonicPotential(double mass, double omega) : mass(mass), omega(omega) {
+HarmonicPotential::HarmonicPotential(int start_potential_activation, int finish_potential_activation, double mass, double omega) 
+    : Potential(start_potential_activation, finish_potential_activation), mass(mass), omega(omega) {
     k = mass * omega * omega;
 }
 

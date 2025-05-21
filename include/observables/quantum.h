@@ -10,7 +10,7 @@ class QuantumObservable : public EnergyObservable {
 public:
     QuantumObservable(Params& param_obj, int _freq, const std::string& _out_unit, int this_bead, 
                       dVec& prev_coord, dVec& coord, BosonicExchangeBase& bosonic_exchange,
-                      Potential& ext_potential, Potential& int_potential, dVec& physical_forces);
+                      Potential& ext_potential, Potential& int_potential, dVec& physical_forces, int& md_step);
 
     void calculate() override;
 
@@ -23,4 +23,5 @@ private:
     Potential& ext_potential;
     Potential& int_potential;
     dVec& physical_forces;
+    int& md_step;
 };

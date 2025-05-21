@@ -1,7 +1,7 @@
 #include "potentials/double_well.h"
 
-DoubleWellPotential::DoubleWellPotential(double mass, double strength, double loc)
-    : mass(mass), strength(strength), loc(loc) {}
+DoubleWellPotential::DoubleWellPotential(int start_potential_activation, int finish_potential_activation, double mass, double strength, double loc)
+    : Potential(start_potential_activation, finish_potential_activation), mass(mass), strength(strength), loc(loc) {}
 
 double DoubleWellPotential::V(const dVec& x) {
     double potential = 0.0;

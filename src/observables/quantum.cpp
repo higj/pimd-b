@@ -9,9 +9,9 @@
  */
 QuantumObservable::QuantumObservable(Params& param_obj, int _freq, const std::string& _out_unit, int this_bead, 
                                      dVec& prev_coord, dVec& coord, BosonicExchangeBase& bosonic_exchange,
-                                     Potential& ext_potential, Potential& int_potential, dVec& physical_forces) :
+                                     Potential& ext_potential, Potential& int_potential, dVec& physical_forces, int& md_step) :
     EnergyObservable(param_obj, _freq, _out_unit, this_bead, prev_coord, coord, bosonic_exchange),
-    ext_potential(ext_potential), int_potential(int_potential), physical_forces(physical_forces) {
+    ext_potential(ext_potential), int_potential(int_potential), physical_forces(physical_forces), md_step(md_step) {
         
     external_potential_name = std::get<std::string>(param_obj.external_pot["name"]);
     interaction_potential_name = std::get<std::string>(param_obj.interaction_pot["name"]);
@@ -69,7 +69,7 @@ void QuantumObservable::calculatePotential() {
     double ext_pot = 0.0;    // Potential energy due to external field
 
     if (external_potential_name != "free") {
-        ext_pot = ext_potential.V(coord);
+        ext_pot = ext_potential.getV(coord, md_step);
         potential += ext_pot;
 
         for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {

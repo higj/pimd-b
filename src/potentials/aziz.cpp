@@ -1,6 +1,7 @@
 #include "potentials/aziz.h"
 
-AzizPotential::AzizPotential() {
+AzizPotential::AzizPotential(int start_potential_activation, int finish_potential_activation) :
+    Potential(start_potential_activation, finish_potential_activation) {
     // Aziz potential (HFDHE2) parameters, based on [J. Chem. Phys. 70, 4330-4342 (1979)].
     // The dimensional quantities (rm and epsilon) are in atomic units.
     rm = 5.60738;            // 5.60738 Bohr = 2.9673 Angstrom

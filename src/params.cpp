@@ -240,6 +240,8 @@ Params::Params(const std::string& filename, const int& rank, const int& world_si
 
     interaction_pot["name"] = interaction_name;
     interaction_pot["cutoff"] = getQuantity("length", reader.Get(Sections::INT_POTENTIAL, "cutoff", "-1.0 angstrom"));
+    interaction_pot["start_potential_activation"] = reader.GetInteger(Sections::INT_POTENTIAL, "start_potential_activation", 0);
+    interaction_pot["finish_potential_activation"] = reader.GetInteger(Sections::INT_POTENTIAL, "finish_potential_activation", 0);
 
     if (interaction_name == "free") {
         // In the special case of free particles, the cutoff distance is set to zero
@@ -281,6 +283,8 @@ Params::Params(const std::string& filename, const int& rank, const int& world_si
             "energy", reader.Get(Sections::EXT_POTENTIAL, "amplitude", "1.0 millielectronvolt"));
         external_pot["phase"] = reader.GetReal(Sections::EXT_POTENTIAL, "phase", 1.0);
     }
+    external_pot["start_potential_activation"] = reader.GetInteger(Sections::EXT_POTENTIAL, "start_potential_activation", 0);
+    external_pot["finish_potential_activation"] = reader.GetInteger(Sections::EXT_POTENTIAL, "finish_potential_activation", 0);
 
     /****** Output ******/
     states["positions"] = reader.Get(Sections::OUTPUT, "positions", "off");

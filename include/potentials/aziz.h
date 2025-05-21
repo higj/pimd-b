@@ -6,7 +6,7 @@
 /* -------------- Aziz potential -------------- */
 class AzizPotential : public Potential {
 public:
-    AzizPotential();
+    AzizPotential(int start_potential_activation, int finish_potential_activation);
     ~AzizPotential() override = default;
 
     // Potential

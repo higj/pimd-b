@@ -1,8 +1,8 @@
 #include "potentials/cosine.h"
 #include <numbers>
 
-CosinePotential::CosinePotential(double amplitude, double wavelength, double phase)
-    : amplitude(amplitude), wavelength(wavelength), phase(phase) {
+CosinePotential::CosinePotential(int start_potential_activation, int finish_potential_activation, double amplitude, double wavelength, double phase)
+    : Potential(start_potential_activation, finish_potential_activation), amplitude(amplitude), wavelength(wavelength), phase(phase) {
     k = 2 * std::numbers::pi / wavelength;
 }
 

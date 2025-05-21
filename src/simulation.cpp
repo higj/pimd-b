@@ -94,6 +94,7 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, MPI
 
     // If the interaction potential is set to "free", then the cutoff distance is meaningless
     int_pot_cutoff = (interaction_potential_name == "free") ? 0.0 : std::get<double>(param_obj.interaction_pot["cutoff"]);
+    getVariant(param_obj.interaction_pot["finish_potential_activation"], finish_potential_activation);
 
     // For cubic cells with PBC, the cutoff distance must be no greater than L/2 for consistency with
     // the minimum image convention (see 1.6.3 in Allen & Tildesley).
@@ -271,7 +272,7 @@ void Simulation::run() {
         }
 
         // Save the observables at the specified frequency
-        if ((step % wfreq == 0) && (step > 0)) {
+        if ((step % wfreq == 0) && (step > finish_potential_activation)) {
             walker_communication->communicate(coord, momenta);
         }
 
@@ -436,7 +437,7 @@ void Simulation::updateSpringForces() {
  */
 void Simulation::updatePhysicalForces() {
     // Calculate the external forces acting on the particles
-    dVec external_forces = (-1.0) * ext_potential->gradV(coord);
+    dVec external_forces = (-1.0) * ext_potential->getGradV(coord, md_step);
     for (int ptcl_one = 0; ptcl_one < natoms; ++ptcl_one) {
         for (int axis = 0; axis < NDIM; ++axis) {
             physical_forces(ptcl_one, axis) = external_forces(ptcl_one, axis);
@@ -456,7 +457,7 @@ void Simulation::updatePhysicalForces() {
                 // We use the convention that when cutoff < 0 then the interaction is
                 // calculated for all distances.
                 if (const double distance = diff.norm(); distance < int_pot_cutoff || int_pot_cutoff < 0.0) {
-                    dVec force_on_one = (-1.0) * int_potential->gradV(diff);
+                    dVec force_on_one = (-1.0) * int_potential->getGradV(diff, md_step);
 
                     for (int axis = 0; axis < NDIM; ++axis) {
                         physical_forces(ptcl_one, axis) += force_on_one(0, axis);
@@ -575,37 +576,40 @@ void Simulation::zeroMomentum() {
  */
 std::unique_ptr<Potential> Simulation::initializePotential(const std::string& potential_name,
                                                            const VariantMap& potential_options) {
+    int start_potential_activation = std::get<int>(potential_options.at("start_potential_activation"));
+    int finish_potential_activation = std::get<int>(potential_options.at("finish_potential_activation"));
+
     if (potential_name == "free") {
-        return std::make_unique<Potential>();
+        return std::make_unique<Potential>(start_potential_activation, finish_potential_activation);
     }
 
     if (potential_name == "harmonic") {
         double omega = std::get<double>(potential_options.at("omega"));
-        return std::make_unique<HarmonicPotential>(mass, omega);
+        return std::make_unique<HarmonicPotential>(start_potential_activation, finish_potential_activation, mass, omega);
     }
 
     if (potential_name == "double_well") {
         double strength = std::get<double>(potential_options.at("strength"));
         double loc = std::get<double>(potential_options.at("location"));
-        return std::make_unique<DoubleWellPotential>(mass, strength, loc);
+        return std::make_unique<DoubleWellPotential>(start_potential_activation, finish_potential_activation, mass, strength, loc);
     }
 
     if (potential_name == "dipole") {
         double strength = std::get<double>(potential_options.at("strength"));
-        return std::make_unique<DipolePotential>(strength);
+        return std::make_unique<DipolePotential>(start_potential_activation, finish_potential_activation, strength);
     }
 
     if (potential_name == "cosine") {
         double amplitude = std::get<double>(potential_options.at("amplitude"));
         double phase = std::get<double>(potential_options.at("phase"));
-        return std::make_unique<CosinePotential>(amplitude, size, phase);
+        return std::make_unique<CosinePotential>(start_potential_activation, finish_potential_activation, amplitude, size, phase);
     }
 
     if (potential_name == "aziz") {
-        return std::make_unique<AzizPotential>();
+        return std::make_unique<AzizPotential>(start_potential_activation, finish_potential_activation);
     }
 
-    return std::make_unique<Potential>();
+    return std::make_unique<Potential>(start_potential_activation, finish_potential_activation);
 }
 
 /**

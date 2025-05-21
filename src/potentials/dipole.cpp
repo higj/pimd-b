@@ -1,6 +1,7 @@
 #include "potentials/dipole.h"
 
-DipolePotential::DipolePotential(double strength) : strength(strength) {}
+DipolePotential::DipolePotential(int start_potential_activation, int finish_potential_activation, double strength) : 
+    Potential(start_potential_activation, finish_potential_activation), strength(strength) {}
 
 double DipolePotential::V(const dVec& x) {
     double potential = 0.0;

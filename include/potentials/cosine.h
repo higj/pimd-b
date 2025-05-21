@@ -6,7 +6,7 @@
 /* -------------- Isotropic cosine potential -------------- */
 class CosinePotential : public Potential {
 public:
-    CosinePotential(double amplitude, double wavelength, double phase);
+    CosinePotential(int start_potential_activation, int finish_potential_activation, double amplitude, double wavelength, double phase);
     ~CosinePotential() override = default;
 
     // Potential

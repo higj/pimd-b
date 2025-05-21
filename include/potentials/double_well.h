@@ -6,7 +6,7 @@
 /* -------------- Isotropic double well potential -------------- */
 class DoubleWellPotential : public Potential {
 public:
-    DoubleWellPotential(double mass, double strength, double loc);
+    DoubleWellPotential(int start_potential_activation, int finish_potential_activation, double mass, double strength, double loc);
     ~DoubleWellPotential() override = default;
 
     // Potential

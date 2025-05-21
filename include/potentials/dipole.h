@@ -6,7 +6,7 @@
 /* -------------- Dipole potential -------------- */
 class DipolePotential : public Potential {
 public:
-    DipolePotential(double strength);
+    DipolePotential(int start_potential_activation, int finish_potential_activation, double strength);
     ~DipolePotential() override = default;
 
     // Potential

@@ -6,7 +6,7 @@
 /* -------------- Isotropic harmonic potential -------------- */
 class HarmonicPotential : public Potential {
 public:
-    HarmonicPotential(double mass, double omega);
+    HarmonicPotential(int start_potential_activation, int finish_potential_activation, double mass, double omega);
     ~HarmonicPotential() override = default;
 
     // Potential

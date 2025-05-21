@@ -118,9 +118,10 @@ public:
     int nproc;       // Number of processes ("size" of MPI_Comm_size)
     unsigned int params_seed;
     std::string thermostat_type;
+    int finish_potential_activation;
+    int md_step;
 
 private:
-    int md_step;
     int walker_id;
     void printReport(double wall_time, const std::string& filename) const;
 

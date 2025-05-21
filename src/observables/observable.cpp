@@ -44,7 +44,7 @@ std::unique_ptr<Observable> ObservableFactory::createQuantity(Simulation& sim, P
     int _freq, const std::string& _out_unit, int this_bead) {
     if (observable_type == "energy") {
         return std::make_unique<QuantumObservable>(param_obj, _freq, _out_unit, this_bead,
-                                    sim.prev_coord, sim.coord, *sim.bosonic_exchange, *sim.ext_potential, *sim.int_potential, sim.physical_forces);
+                                    sim.prev_coord, sim.coord, *sim.bosonic_exchange, *sim.ext_potential, *sim.int_potential, sim.physical_forces, sim.md_step);
     } else if (observable_type == "classical") {
         return std::make_unique<ClassicalObservable>(param_obj, _freq, _out_unit, this_bead,
                                     sim.prev_coord, sim.coord, *sim.bosonic_exchange, *sim.thermostat, sim.momenta);
