@@ -4,10 +4,12 @@
 #include <random>
 #include "mpi.h"
 
+class Params;
+
 class RouletteSplitting : public WalkersCommunicationBase
 {
 public:
-    explicit RouletteSplitting(int nworlds, int local_rank, int walker_id, MPI_Comm& bead_world, std::mt19937& rand_gen);
+    explicit RouletteSplitting(Params& param_obj, int nworlds, int local_rank, int walker_id, MPI_Comm& bead_world, std::mt19937& rand_gen);
     ~RouletteSplitting() override = default;
 
     void communicate(dVec& coord, dVec& momenta) override;
@@ -17,4 +19,5 @@ protected:
     int nworlds, local_rank, walker_id;
     std::mt19937& rand_gen;
     std::uniform_real_distribution<double> u_dist;
+    double roullete_thershold, splitting_thershold, roullete_splitting_normalized_thershold;
 };

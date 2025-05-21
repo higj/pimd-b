@@ -9,7 +9,7 @@ class BosonicExchangeBase;
 class RouletteSplittingCycleProb : public RouletteSplitting
 {
 public:
-    explicit RouletteSplittingCycleProb(int nworlds, int local_rank, int walker_id, MPI_Comm& bead_world, 
+    explicit RouletteSplittingCycleProb(Params& param_obj, int nworlds, int local_rank, int walker_id, MPI_Comm& bead_world, 
                                         std::mt19937& rand_gen, BosonicExchangeBase& bosonic_exchange);
     ~RouletteSplittingCycleProb() override = default;
 

@@ -1,10 +1,17 @@
 #include "walkers/roulette_splitting.h"
 #include <numeric>
 #include <vector>
+#include "params.h"
+#include <algorithm>
 #include <iostream>
 
-RouletteSplitting::RouletteSplitting(int nworlds,int local_rank, int walker_id, MPI_Comm& bead_world, std::mt19937& rand_gen) : 
-    nworlds(nworlds), local_rank(local_rank), walker_id(walker_id), bead_world(bead_world), rand_gen(rand_gen), u_dist(0.0, 1.0) {}
+RouletteSplitting::RouletteSplitting(Params& param_obj, int nworlds,int local_rank, int walker_id, MPI_Comm& bead_world, std::mt19937& rand_gen) : 
+    nworlds(nworlds), local_rank(local_rank), walker_id(walker_id), 
+    bead_world(bead_world), rand_gen(rand_gen), u_dist(0.0, 1.0) {
+        getVariant(param_obj.sim["roullete_thershold"], roullete_thershold);
+        getVariant(param_obj.sim["splitting_thershold"], splitting_thershold);
+        getVariant(param_obj.sim["roullete_splitting_normalized_thershold"], roullete_splitting_normalized_thershold);
+    }
 
 void RouletteSplitting::communicate(dVec& coord, dVec& momenta) {
     
@@ -15,41 +22,62 @@ void RouletteSplitting::communicate(dVec& coord, dVec& momenta) {
         assigned_worlds[i] = nworlds;
     }
 
-    if (local_rank == 0) {
-        int ncopies[nworlds];
+    if (local_rank == 0) {        
         // Evaluate the importance weights
         importance_weight = evaluateImportance();
-        std::vector<double> impotance_weights(nworlds);
-        MPI_Gather(&importance_weight, 1, MPI_DOUBLE, impotance_weights.data(), 1, MPI_DOUBLE, 0, bead_world);
-        std::vector<double> statistical_weights(nworlds);
-        MPI_Gather(&statistical_weight, 1, MPI_DOUBLE, statistical_weights.data(), 1, MPI_DOUBLE, 0, bead_world);
+        std::vector<double> importance_weights(nworlds);
+        MPI_Gather(&importance_weight, 1, MPI_DOUBLE, importance_weights.data(), 1, MPI_DOUBLE, 0, bead_world);
+        std::vector<double> old_statistical_weights(nworlds);
+        MPI_Gather(&statistical_weight, 1, MPI_DOUBLE, old_statistical_weights.data(), 1, MPI_DOUBLE, 0, bead_world);
+        std::vector<double> new_statistical_weights(nworlds);
+        MPI_Gather(&statistical_weight, 1, MPI_DOUBLE, new_statistical_weights.data(), 1, MPI_DOUBLE, 0, bead_world);
 
         if (walker_id == 0) {
-            // Normalize the importance weights
-            double sum = std::accumulate(impotance_weights.begin(), impotance_weights.end(), 0.0);
-            if (sum != 0.0) {
-                double scale = static_cast<double>(nworlds) / sum;
-                for (double& v : impotance_weights) {
-                    v *= scale;
+            std::vector<int> ncopies(nworlds, 0);
+            // Create a vector of ids for worlds participating, and a vector of weights
+            double normalization = static_cast<double>(nworlds) / std::accumulate(importance_weights.begin(), importance_weights.end(), 0.0);
+            std::vector<int> participating_worlds;
+            std::vector<double> participating_weights;
+            participating_weights.push_back(0.0);
+            int n_participating_worlds = 0;
+            for (int i = 0; i < nworlds; ++i) {
+                bool allowed_to_die = ((importance_weights[i] * normalization < 1) && (importance_weights[i] < roullete_thershold));
+                bool allowed_to_split = ((importance_weights[i] * normalization > 1) && (importance_weights[i] > splitting_thershold));
+                if (allowed_to_die || allowed_to_split) {
+                    participating_worlds.push_back(i);
+                    participating_weights.push_back(importance_weights[i]);
+                    n_participating_worlds++;
+                } else {
+                    ncopies[i] = 1;
                 }
             }
 
-            int current_nworlds = 0;
-            // Assign the number of copies of each world such that the total number of copies is equal to nworlds
-            while (current_nworlds != nworlds) {
-                current_nworlds = 0;
-                for (int i = 0; i < nworlds; ++i) {
-                    double u_sample = u_dist(rand_gen);
-                    if (impotance_weights[i] < 1) {
-                        ncopies[i] = (u_sample < impotance_weights[i]) ? 1 : 0;
+            // Normalize the participating weights
+            double sum = std::accumulate(participating_weights.begin(), participating_weights.end(), 0.0);
+            for (double& v : participating_weights) {
+                v /= sum;
+            }
+            
+            // Create an array of random numbers
+            std::vector<double> u_samples(n_participating_worlds);
+            for (int i = 0; i < n_participating_worlds; ++i) {
+                u_samples[i] = u_dist(rand_gen);
+            }
+
+            // Sample copies of the worlds
+            double lower_limit = 0;
+            double upper_limit = 0;
+            for (int i = 0; i < n_participating_worlds; ++i) {
+                lower_limit += participating_weights[i];
+                upper_limit += participating_weights[i+1];
+                for (int j = 0; j < n_participating_worlds; ++j) {
+                    double u_sample = u_samples[j];
+                    if ((u_sample > lower_limit) && (u_sample < upper_limit)) {
+                        ncopies[participating_worlds[i]]++;
                     }
-                    else {
-                        int floor_val = static_cast<int>(impotance_weights[i]);
-                        ncopies[i] = (u_sample < impotance_weights[i] - floor_val) ? floor_val + 1 : floor_val;
-                    }
-                    current_nworlds += ncopies[i];
                 }
             }
+            
             // Assign a copy to each world that has at least one copy
             for (int i = 0; i < nworlds; ++i) {
                 if (ncopies[i] > 0) {
@@ -69,17 +97,17 @@ void RouletteSplitting::communicate(dVec& coord, dVec& momenta) {
                     }
                 }           
             }
+            
             // Adjust statistical weights
-            for (int i = 0; i < nworlds; ++i) {
-                if ((impotance_weights[i] < 1) && (assigned_worlds[i] == i)) {
-                    statistical_weights[i] *= 1 / impotance_weights[i];
-                } else {
-                    statistical_weights[i] = statistical_weights[assigned_worlds[i]] / ncopies[assigned_worlds[i]];
-                }
+            for (int i = 0; i < n_participating_worlds; ++i) {
+                new_statistical_weights[participating_worlds[i]] = 
+                    old_statistical_weights[assigned_worlds[participating_worlds[i]]] / 
+                    (n_participating_worlds * importance_weights[assigned_worlds[participating_worlds[i]]] / sum);
             }
         }
-        // Broadcast the statistical weights to all worlds
-        MPI_Bcast(statistical_weights.data(), nworlds, MPI_DOUBLE, 0, bead_world);        
+        // Broadcast the weights to all worlds
+        MPI_Bcast(new_statistical_weights.data(), nworlds, MPI_DOUBLE, 0, bead_world);
+        statistical_weight = new_statistical_weights[walker_id];
     }
     // Broadcast the assigned worlds to all worlds
     MPI_Bcast(assigned_worlds, nworlds, MPI_INT, 0, MPI_COMM_WORLD);

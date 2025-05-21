@@ -38,6 +38,9 @@ Params::Params(const std::string& filename, const int& rank, const int& world_si
     sim["wfreq"] = reader.GetLong(Sections::SIMULATION, "wfreq", 0);
     if (long wfreq = std::get<long>(sim["wfreq"]); wfreq < 0)
         throw std::invalid_argument(std::format("The specified frequency of walkers communication ({}) is less than zero!", wfreq));
+    sim["roullete_thershold"] = reader.GetReal(Sections::SIMULATION, "roullete_thershold", 0);
+    sim["splitting_thershold"] = reader.GetReal(Sections::SIMULATION, "splitting_thershold", 0);
+    sim["roullete_splitting_normalized_thershold"] = reader.GetReal(Sections::SIMULATION, "roullete_splitting_normalized_thershold", 0);
 
     sim["seed"] = static_cast<unsigned int>(std::stod(reader.Get(Sections::SIMULATION, "seed", "1234")));
 
@@ -155,7 +158,10 @@ Params::Params(const std::string& filename, const int& rank, const int& world_si
             throw std::invalid_argument("The number of processes must be equal to the number of beads when using no walkers communication!");
         }
         walkers_communication_type = "no_communication";
-    } else if (walkers_communication_type == "roulette_splitting_cycle_prob") {
+    } else if (world_size == nbeads) {
+        throw std::invalid_argument("The number of processes must be larger than the number of beads when using multipl walkers!");
+    }
+    if (walkers_communication_type == "roulette_splitting_cycle_prob") {
         if (!bosonic) {
             throw std::invalid_argument("Roulette splitting according to cummulative cycle probabilities is only available for bosonic simulations!");
         }

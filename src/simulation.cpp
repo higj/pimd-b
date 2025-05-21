@@ -619,7 +619,8 @@ void Simulation::initializeWalkersCommunication(Params& param_obj) {
     if (walker_communication_type == "no_communication") {
         walker_communication = std::make_unique<WalkersCommunicationBase>();
     } else if (walker_communication_type == "roulette_splitting_cycle_prob") {
-        walker_communication = std::make_unique<RouletteSplittingCycleProb>(nproc/nbeads, this_bead, walker_id, bead_world, rand_gen, *bosonic_exchange);
+        walker_communication = std::make_unique<RouletteSplittingCycleProb>(param_obj, nproc/nbeads, this_bead, walker_id, 
+                                                                            bead_world, rand_gen, *bosonic_exchange);
     }
 }
 
