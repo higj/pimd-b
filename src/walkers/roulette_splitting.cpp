@@ -39,42 +39,59 @@ void RouletteSplitting::communicate(dVec& coord, dVec& momenta) {
             std::vector<int> participating_worlds;
             std::vector<double> participating_weights;
             participating_weights.push_back(0.0);
-            int n_participating_worlds = 0;
+            int n_allowed_to_die = 0;
+            int n_allowed_to_split = 0;
+            
             for (int i = 0; i < nworlds; ++i) {
-                bool allowed_to_die = ((importance_weights[i] * normalization < 1) && (importance_weights[i] < roullete_thershold));
-                bool allowed_to_split = ((importance_weights[i] * normalization > 1) && (importance_weights[i] > splitting_thershold));
-                if (allowed_to_die || allowed_to_split) {
-                    participating_worlds.push_back(i);
-                    participating_weights.push_back(importance_weights[i]);
-                    n_participating_worlds++;
+                bool allowed_to_die = ((importance_weights[i] * normalization < 1) && (importance_weights[i] < roullete_thershold) && 
+                                       (1 - importance_weights[i] * normalization > roullete_splitting_normalized_thershold));
+                bool allowed_to_split = ((importance_weights[i] * normalization > 1) && (importance_weights[i] > splitting_thershold) &&
+                                        (importance_weights[i] * normalization - 1 > roullete_splitting_normalized_thershold));
+                if (allowed_to_die) {
+                    n_allowed_to_die++;
+                } else if (allowed_to_split) {
+                    n_allowed_to_split++;
                 } else {
                     ncopies[i] = 1;
+                    continue;
                 }
+                participating_worlds.push_back(i);
+                participating_weights.push_back(importance_weights[i]);
             }
 
-            // Normalize the participating weights
+            int n_participating_worlds = n_allowed_to_die + n_allowed_to_split;
             double sum = std::accumulate(participating_weights.begin(), participating_weights.end(), 0.0);
-            for (double& v : participating_weights) {
-                v /= sum;
-            }
-            
-            // Create an array of random numbers
-            std::vector<double> u_samples(n_participating_worlds);
-            for (int i = 0; i < n_participating_worlds; ++i) {
-                u_samples[i] = u_dist(rand_gen);
-            }
 
-            // Sample copies of the worlds
-            double lower_limit = 0;
-            double upper_limit = 0;
-            for (int i = 0; i < n_participating_worlds; ++i) {
-                lower_limit += participating_weights[i];
-                upper_limit += participating_weights[i+1];
-                for (int j = 0; j < n_participating_worlds; ++j) {
-                    double u_sample = u_samples[j];
-                    if ((u_sample > lower_limit) && (u_sample < upper_limit)) {
-                        ncopies[participating_worlds[i]]++;
+            if ((n_allowed_to_die >0) && (n_allowed_to_split > 0))
+            {
+                // Normalize the participating weights
+                for (double& v : participating_weights) {
+                    v /= sum;
+                }
+                
+                // Create an array of random numbers
+                std::vector<double> u_samples(n_participating_worlds);
+                for (int i = 0; i < n_participating_worlds; ++i) {
+                    u_samples[i] = u_dist(rand_gen);
+                }
+
+                // Sample copies of the worlds
+                double lower_limit = 0;
+                double upper_limit = 0;
+                for (int i = 0; i < n_participating_worlds; ++i) {
+                    lower_limit += participating_weights[i];
+                    upper_limit += participating_weights[i+1];
+                    for (int j = 0; j < n_participating_worlds; ++j) {
+                        double u_sample = u_samples[j];
+                        if ((u_sample > lower_limit) && (u_sample < upper_limit)) {
+                            ncopies[participating_worlds[i]]++;
+                        }
                     }
+                }
+            } else {
+                // If there are no worlds that are allowed to die or split, assign one copy to each world
+                for (int i = 0; i < nworlds; ++i) {
+                    ncopies[i] = 1;
                 }
             }
             
@@ -97,12 +114,13 @@ void RouletteSplitting::communicate(dVec& coord, dVec& momenta) {
                     }
                 }           
             }
-            
-            // Adjust statistical weights
-            for (int i = 0; i < n_participating_worlds; ++i) {
-                new_statistical_weights[participating_worlds[i]] = 
-                    old_statistical_weights[assigned_worlds[participating_worlds[i]]] / 
-                    (n_participating_worlds * importance_weights[assigned_worlds[participating_worlds[i]]] / sum);
+            if ((n_allowed_to_die >0) && (n_allowed_to_split > 0)) {
+                // Adjust statistical weights
+                for (int i = 0; i < n_participating_worlds; ++i) {
+                    new_statistical_weights[participating_worlds[i]] = 
+                        old_statistical_weights[assigned_worlds[participating_worlds[i]]] / 
+                        (n_participating_worlds * importance_weights[assigned_worlds[participating_worlds[i]]] / sum);
+                }
             }
         }
         // Broadcast the weights to all worlds

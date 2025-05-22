@@ -315,8 +315,12 @@ void BosonicExchange::printBosonicDebug() {
 
 double BosonicExchange::getCumulativeCycleProb() const {
     double cumulative_cycle_prob = 0.0;
+    for (int l = 0; l < nbosons - 1; l++) {
+        cumulative_cycle_prob += connection_probabilities[nbosons * l + (l + 1)];
+    }
+
     for (int u = 0; u < nbosons; u++) {
-        for (int l = u; l < nbosons; l++) {
+        for (int l = u + 1; l < nbosons; l++) {
             cumulative_cycle_prob += connection_probabilities[nbosons * l + u];
         }
     }
