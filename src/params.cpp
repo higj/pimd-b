@@ -158,9 +158,9 @@ Params::Params(const std::string& filename, const int& rank, const int& world_si
             throw std::invalid_argument("The number of processes must be equal to the number of beads when using no walkers communication!");
         }
         walkers_communication_type = "no_communication";
-    } else if (world_size == nbeads) {
-        throw std::invalid_argument("The number of processes must be larger than the number of beads when using multipl walkers!");
-    }
+    } //else if (world_size == nbeads) {
+      //  throw std::invalid_argument("The number of processes must be larger than the number of beads when using multipl walkers!");
+   // }
     if (walkers_communication_type == "roulette_splitting_cycle_prob") {
         if (!bosonic) {
             throw std::invalid_argument("Roulette splitting according to cummulative cycle probabilities is only available for bosonic simulations!");

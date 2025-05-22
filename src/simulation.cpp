@@ -272,7 +272,7 @@ void Simulation::run() {
         }
 
         // Save the observables at the specified frequency
-        if ((step % wfreq == 0) && (step > finish_potential_activation)) {
+        if ((step % wfreq == 0) && (step > 0)) {
             walker_communication->communicate(coord, momenta);
         }
 
