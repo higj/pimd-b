@@ -41,7 +41,7 @@ void EnergyObservable::calculateKinetic() {
             *m_context.coord,
             *m_context.prev_coord, 
             m_context.spring_constant,
-            MINIM, /// TODO: MINIM should become a parameter (mic_spring and mic_potential)
+            m_context.pbc && MINIM, /// TODO: MINIM should become a parameter (mic_spring and mic_potential)
             m_context.box_size
         );
 #if IPI_CONVENTION
@@ -85,8 +85,12 @@ void EnergyObservable::calculatePotential() {
     if (m_context.force_mgr->cutoff != 0.0) {
         for (int ptcl_one = 0; ptcl_one < m_context.natoms; ++ptcl_one) {
             for (int ptcl_two = ptcl_one + 1; ptcl_two < m_context.natoms; ++ptcl_two) {
-                /// TODO: ADD MINIM IMAGE !!
                 dVec diff = coord.getSeparation(ptcl_one, ptcl_two);  // Vectorial distance
+
+                /// TODO: MINIM should become a parameter (mic_spring and mic_potential)
+                if (m_context.pbc && MINIM) {
+                    applyMinimumImage(diff, m_context.box_size);
+                }
 
                 if (const double distance = diff.norm(); distance < m_context.force_mgr->cutoff || m_context.force_mgr->cutoff < 0.0) {
                     dVec force_on_one = (-1.0) * m_context.force_mgr->m_int_potential->gradV(diff);

@@ -24,6 +24,7 @@ struct ClassicalObservableContext {
     double mass;
     double spring_constant;
     double box_size;
+    bool pbc;
     bool bosonic;
     std::string thermostat_type;
 };

@@ -65,7 +65,7 @@ void ClassicalObservable::calculateSpringEnergy() {
             *m_context.coord,
             *m_context.prev_coord,
             m_context.spring_constant,
-            MINIM, /// TODO: MINIM should become a parameter (mic_spring and mic_potential)
+            m_context.pbc && MINIM, /// TODO: MINIM should become a parameter (mic_spring and mic_potential)
             m_context.box_size
         );
     }

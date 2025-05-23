@@ -295,6 +295,7 @@ std::vector<std::shared_ptr<Observable>> Simulation::initializeObservables(
                     .beta = config->beta,
                     .spring_constant = config->spring_constant,
                     .box_size = config->box_size,
+                    .pbc = config->pbc,
                     .bosonic = config->bosonic,
                     .ext_pot_name = config->ext_pot_name,
                     .int_pot_name = config->int_pot_name
@@ -319,6 +320,7 @@ std::vector<std::shared_ptr<Observable>> Simulation::initializeObservables(
                     .mass = config->mass,
                     .spring_constant = config->spring_constant,
                     .box_size = config->box_size,
+                    .pbc = config->pbc,
                     .bosonic = config->bosonic,
                     .thermostat_type = config->thermostat_type
                 },

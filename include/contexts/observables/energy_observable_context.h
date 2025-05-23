@@ -22,6 +22,7 @@ struct EnergyObservableContext {
     double beta;
     double spring_constant;
     double box_size;
+    bool pbc;
     bool bosonic;
     std::string ext_pot_name;
     std::string int_pot_name;

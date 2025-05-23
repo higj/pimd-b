@@ -41,6 +41,16 @@ void applyMinimumImage(double& dx, double L) {
     dx -= L * floor(dx / L + 0.5);
 }
 
+void applyMinimumImage(dVec& dx_arr, double L)
+{
+    for (int i = 0; i < dx_arr.len(); ++i) {
+        for (int axis = 0; axis < NDIM; ++axis) {
+            applyMinimumImage(dx_arr(i, axis), L);
+            //dx_arr(i, axis) -= L * floor(dx_arr(i, axis) / L + 0.5);
+        }
+    }
+}
+
 void periodicWrap(double& x, double L) {
     x -= L * std::nearbyint(x / L);
 }

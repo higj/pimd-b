@@ -36,8 +36,12 @@ void ForceFieldManager::updatePhysicalForces(SystemState& state) const
         for (int ptcl_two = ptcl_one + 1; ptcl_two < m_config->natoms; ++ptcl_two) {
             // Get the vector distance between the two particles.
             // Here "diff" contains just one vector of dimension NDIM.
-            /// TODO: ADD MINIM IMAGE!!
             dVec diff = state.coord.getSeparation(ptcl_one, ptcl_two);
+
+            /// TODO: MINIM should become a parameter (mic_spring and mic_potential)
+            if (m_config->pbc && MINIM) {
+                applyMinimumImage(diff, m_config->box_size);
+            }
 
             // If the distance between the particles exceeds the cutoff length
             // then we assume the interaction is negligible and do not bother
