@@ -262,10 +262,10 @@ double BosonicExchange::primEstimator() {
         for (int k = m; k > 0; --k) {
             const double e_kn_val = getEnk(m, k);
 
-            sig += (prim_est[m - k] - e_kn_val) * exp(-m_context.beta * (e_kn_val + V[m - k] - e_shift));
+            sig += (prim_est[m - k] - e_kn_val) * exp(-m_context.thermo_beta * (e_kn_val + V[m - k] - e_shift));
         }
 
-        const double sig_denom_m = m * exp(-m_context.beta * (V[m] - e_shift));
+        const double sig_denom_m = m * exp(-m_context.thermo_beta * (V[m] - e_shift));
 
         prim_est[m] = sig / sig_denom_m;
     }
