@@ -71,7 +71,12 @@ double FactorialBosonicExchange::getMinExteriorSpringEnergy() {
             std::array<double, NDIM> sums = {};
 
             // First bead of some particle (depending on the permutation) minus last bead of the l-th particle
-            diff2 += getBeadsSeparationSquared(x_first_bead, l, x_last_bead, lastBeadNeighbor(l));
+            //diff2 += getBeadsSeparationSquared(x_first_bead, l, x_last_bead, lastBeadNeighbor(l));
+            if (m_context.this_bead == 0) {
+                diff2 += getBeadsSeparationSquared(*m_context.x, l, *m_context.x_prev, lastBeadNeighbor(l));
+            } else {
+                diff2 += getBeadsSeparationSquared(*m_context.x_next, l, *m_context.x, lastBeadNeighbor(l));
+            }
         }
 
         // Compare the current total exterior spring energy with the minimum total exterior spring energy found so far
@@ -120,8 +125,12 @@ double FactorialBosonicExchange::effectivePotential() {
  */
 void FactorialBosonicExchange::springForceLastBead(dVec& f) {
     /// TODO: Why not assignFirstLast here?
-    const dVec x_first_bead = *m_context.x_next;
-    const dVec x_last_bead = *m_context.x;
+    //const dVec x_first_bead = *m_context.x_next;
+    //const dVec x_last_bead = *m_context.x;
+    dVec x_first_bead(m_context.nbosons);
+    dVec x_last_bead(m_context.nbosons);
+
+    assignFirstLast(x_first_bead, x_last_bead);
 
     dVec temp_force(m_context.nbosons);
     double denom_weight = 0.0;
@@ -135,7 +144,8 @@ void FactorialBosonicExchange::springForceLastBead(dVec& f) {
             double diff_next[NDIM];
 
             // First bead (1) of some particle (depending on the permutation) minus last bead (P) of the l-th particle
-            getBeadsSeparation(x_last_bead, l, x_first_bead, lastBeadNeighbor(l), diff_next);
+            //getBeadsSeparation(x_last_bead, l, x_first_bead, lastBeadNeighbor(l), diff_next);
+            getBeadsSeparation(*m_context.x, l, *m_context.x_next, lastBeadNeighbor(l), diff_next);
 
             // Coordinate differences corresponding to exterior beads
             for (int axis = 0; axis < NDIM; ++axis) {
@@ -145,7 +155,8 @@ void FactorialBosonicExchange::springForceLastBead(dVec& f) {
             double diff_prev[NDIM];
 
             // Previous bead (P-1) of the l-th particle minus last bead (P) of the l-th particle
-            getBeadsSeparation(x_last_bead, l, *m_context.x_prev, l, diff_prev);
+            //getBeadsSeparation(x_last_bead, l, *m_context.x_prev, l, diff_prev);
+            getBeadsSeparation(*m_context.x, l, *m_context.x_prev, l, diff_prev);
 
             for (int axis = 0; axis < NDIM; ++axis) {
                 sums[axis] += diff_prev[axis] + diff_next[axis];
@@ -178,8 +189,12 @@ void FactorialBosonicExchange::springForceLastBead(dVec& f) {
  * @param[out] f Spring forces acting on the particles at time-slice 1.
  */
 void FactorialBosonicExchange::springForceFirstBead(dVec& f) {
-    const dVec x_first_bead = *m_context.x;
-    const dVec x_last_bead = *m_context.x_prev;
+    //const dVec x_first_bead = *m_context.x;
+    //const dVec x_last_bead = *m_context.x_prev;
+    dVec x_first_bead(m_context.nbosons);
+    dVec x_last_bead(m_context.nbosons);
+
+    assignFirstLast(x_first_bead, x_last_bead);
 
     dVec temp_force(m_context.nbosons);
     double denom_weight = 0.0;
@@ -193,7 +208,8 @@ void FactorialBosonicExchange::springForceFirstBead(dVec& f) {
             double diff_prev[NDIM];
 
             // Last bead (P) of some particle (depending on the permutation) minus first bead (1) of the l-th particle
-            getBeadsSeparation(x_first_bead, l, x_last_bead, firstBeadNeighbor(l), diff_prev);
+            //getBeadsSeparation(x_first_bead, l, x_last_bead, firstBeadNeighbor(l), diff_prev);
+            getBeadsSeparation(*m_context.x, l, *m_context.x_prev, firstBeadNeighbor(l), diff_prev);
 
             // Coordinate differences corresponding to exterior beads
             for (int axis = 0; axis < NDIM; ++axis) {
@@ -203,7 +219,8 @@ void FactorialBosonicExchange::springForceFirstBead(dVec& f) {
             double diff_next[NDIM];
 
             // Next bead (2) of the l-th particle minus first bead (1) of the l-th particle
-            getBeadsSeparation(x_first_bead, l, *m_context.x_next, l, diff_next);
+            //getBeadsSeparation(x_first_bead, l, *m_context.x_next, l, diff_next);
+            getBeadsSeparation(*m_context.x, l, *m_context.x_next, l, diff_next);
 
             for (int axis = 0; axis < NDIM; ++axis) {
                 sums[axis] += diff_prev[axis] + diff_next[axis];
