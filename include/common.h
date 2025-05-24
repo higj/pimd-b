@@ -252,6 +252,13 @@ public:
         return sep;
     }
 
+    /**
+     * Reset all values in the vector array to zero (or default value of type T).
+     */
+    void reset() {
+        std::fill(m_arr.begin(), m_arr.end(), T());
+    }
+
 private:
     int m_rows; // Number of vectors in the array
     std::vector<T> m_arr; // 1D array to store the vectors

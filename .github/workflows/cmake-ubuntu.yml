@@ -57,8 +57,8 @@ jobs:
     strategy:
       matrix:
         include:
-          #- alg_type_name: naive-bosonic
-          #  alg_type_val: 1
+          - alg_type_name: naive-bosonic
+            alg_type_val: 1
           - alg_type_name: new-bosonic
             alg_type_val: 0
 

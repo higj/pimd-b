@@ -1,7 +1,8 @@
 #pragma once
 
-#include <vector>
 #include "bosonic_exchange/bosonic_exchange_base.h"
+
+#include <vector>
 
 class BosonicExchange final : public BosonicExchangeBase {
 public:

@@ -66,7 +66,7 @@ def run_simulation(executable_dir, input_file):
     
     mpirun_bin_dir = os.environ['OPENMPI_BIN']
     mpi = Path(mpirun_bin_dir) / 'mpirun'
-    mpirun_command = [mpi, '--oversubscribe', '-np', str(nbeads), (executable_dir / 'pimdb').as_posix(), '-partition', f"{nbeads}x1", '-in', input_file.as_posix()]
+    mpirun_command = [mpi, '--oversubscribe', '-np', str(nbeads), (executable_dir / 'pimdb').as_posix(), '-in', input_file.as_posix()]
     
     # Windows version
     #mpirun_command = ['mpiexec', '-n', str(nbeads), (executable_dir / 'pimdb.exe').as_posix(), '-in', input_file.as_posix()]

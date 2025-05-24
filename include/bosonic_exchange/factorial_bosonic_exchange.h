@@ -1,7 +1,8 @@
 #pragma once
 
-#include "common.h"
 #include "bosonic_exchange/bosonic_exchange_base.h"
+
+#include <vector>
 
 class FactorialBosonicExchange final : public BosonicExchangeBase {
 public:
@@ -21,12 +22,12 @@ protected:
     void springForceLastBead(dVec& f) override;
 
 private:
-    int firstBeadNeighbor(int ptcl_idx) const;
-    int lastBeadNeighbor(int ptcl_idx) const;
+    [[nodiscard]] int firstBeadNeighbor(int ptcl_idx) const;
+    [[nodiscard]] int lastBeadNeighbor(int ptcl_idx) const;
 
     double getMinExteriorSpringEnergy();
 
-    std::vector<int> labels;  // Particle labels
+    std::vector<int> m_labels;  // Particle labels
 
-    double e_shift;
+    double m_e_shift;
 };
