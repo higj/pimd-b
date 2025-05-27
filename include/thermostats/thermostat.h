@@ -16,5 +16,5 @@ public:
     virtual double getAdditionToH();
 protected:
     ThermostatContext m_context;
-    std::unique_ptr<Coupling> coupling;
+    std::unique_ptr<Coupling> m_coupling;
 };

@@ -138,7 +138,9 @@ std::shared_ptr<NormalModes> Simulation::initializeNormalModes(
     const std::shared_ptr<SimulationConfig>& config,
     const std::shared_ptr<SystemState>& state)
 {
-    if (config->propagator_type == "normal_modes")
+    /// TODO: Perhaps we should initialize NormalModes regardless of the propagator type and/or coupling?
+    if (const bool couple_to_nm = std::get<bool>(config->thermostat_params["nmthermostat"]);
+        config->propagator_type == "normal_modes" || couple_to_nm)
     {
         return std::make_shared<NormalModes>(
             NormalModesContext{

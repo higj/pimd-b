@@ -65,7 +65,7 @@ void NoseHooverThermostat::momentaUpdate() {
     double current_energy = 0.0;
     for (int ptcl_idx = 0; ptcl_idx < m_context.natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
-            const double momentum_for_calc = coupling->getMomentumForCalc(ptcl_idx, axis);
+            const double momentum_for_calc = m_coupling->getMomentumForCalc(ptcl_idx, axis);
             current_energy += momentum_for_calc * momentum_for_calc;
         }
     }
@@ -77,8 +77,8 @@ void NoseHooverThermostat::momentaUpdate() {
     // Rescale the momenta
     for (int ptcl_idx = 0; ptcl_idx < m_context.natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
-            double momentum_for_calc = coupling->getMomentumForCalc(ptcl_idx, axis);
-            double& momentum_for_update = coupling->getMomentumForUpdate(ptcl_idx, axis);
+            double momentum_for_calc = m_coupling->getMomentumForCalc(ptcl_idx, axis);
+            double& momentum_for_update = m_coupling->getMomentumForUpdate(ptcl_idx, axis);
             momentum_for_update = momentum_for_calc * scale;
         }
     }
@@ -158,7 +158,7 @@ void NoseHooverNpThermostat::momentaUpdate() {
         // Calculates the current energy in the system
         double current_energy = 0.0;
         for (int axis = 0; axis < NDIM; ++axis) {
-            double momentum_for_calc = coupling->getMomentumForCalc(ptcl_idx, axis);
+            double momentum_for_calc = m_coupling->getMomentumForCalc(ptcl_idx, axis);
             current_energy += momentum_for_calc * momentum_for_calc;
         }
         current_energy /= m_context.mass;
@@ -168,8 +168,8 @@ void NoseHooverNpThermostat::momentaUpdate() {
 
         // Rescale the momenta
         for (int axis = 0; axis < NDIM; ++axis) {
-            double momentum_for_calc = coupling->getMomentumForCalc(ptcl_idx, axis);
-            double& momentum_for_update = coupling->getMomentumForUpdate(ptcl_idx, axis);
+            double momentum_for_calc = m_coupling->getMomentumForCalc(ptcl_idx, axis);
+            double& momentum_for_update = m_coupling->getMomentumForUpdate(ptcl_idx, axis);
             momentum_for_update = momentum_for_calc * scale;
         }
     }
@@ -201,7 +201,7 @@ NoseHooverNpDimThermostat::NoseHooverNpDimThermostat(const ThermostatContext& co
 void NoseHooverNpDimThermostat::momentaUpdate() {
     for (int ptcl_idx = 0; ptcl_idx < m_context.natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
-            double momentum_for_calc = coupling->getMomentumForCalc(ptcl_idx, axis);
+            double momentum_for_calc = m_coupling->getMomentumForCalc(ptcl_idx, axis);
             // Calculates the current energy in the system
             double current_energy = momentum_for_calc * momentum_for_calc / m_context.mass;
 
@@ -209,7 +209,7 @@ void NoseHooverNpDimThermostat::momentaUpdate() {
             double scale = singleChainStep(current_energy, (ptcl_idx * NDIM + axis) * m_nh_context.nchains);
 
             // Rescale the momentum
-            double& momentum_for_update = coupling->getMomentumForUpdate(ptcl_idx, axis);
+            double& momentum_for_update = m_coupling->getMomentumForUpdate(ptcl_idx, axis);
             momentum_for_update = momentum_for_calc * scale;
         }
     }

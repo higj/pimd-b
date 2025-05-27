@@ -31,7 +31,7 @@ void NormalModesCoupling::mpiCommunication() {
  
 double NormalModesCoupling::getMomentumForCalc(const int ptcl_idx, const int axis) {
     const int glob_idx = m_normal_modes->globIndexAtom(axis, ptcl_idx);
-    return m_normal_modes->coordCartesianToNormal(glob_idx);
+    return m_normal_modes->momentumCartesianToNormal(glob_idx);
 } 
  
 double& NormalModesCoupling::getMomentumForUpdate(const int ptcl_idx, const int axis) {

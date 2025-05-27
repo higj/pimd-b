@@ -1,6 +1,9 @@
 #include "propagators/normal_modes/normal_modes.h"
 #include "propagators/normal_modes/normal_modes_transformation_matrix.h"
 
+//#include <numbers>
+//#include <algorithm>
+
 NormalModes::NormalModes(const NormalModesContext& context) :
     cart_to_nm_mat_row(context.nbeads),
     nm_to_cart_mat_row(context.nbeads),
@@ -10,16 +13,16 @@ NormalModes::NormalModes(const NormalModesContext& context) :
 {
     //// Allocate shared memory
     //if (context.this_bead == 0) {
-    //    MPI_Win_allocate_shared(sim.natoms*sim.nbeads*NDIM*sizeof(double), sizeof(double),
+    //    MPI_Win_allocate_shared(context.natoms * context.nbeads *NDIM*sizeof(double), sizeof(double),
     //        MPI_INFO_NULL, MPI_COMM_WORLD,
     //        &arr_coord_cartesian, &win_coord_cartesian);
-    //    MPI_Win_allocate_shared(sim.natoms*sim.nbeads*NDIM*sizeof(double), sizeof(double),
+    //    MPI_Win_allocate_shared(context.natoms * context.nbeads *NDIM*sizeof(double), sizeof(double),
     //        MPI_INFO_NULL, MPI_COMM_WORLD,
     //        &arr_coord_nm, &win_coord_nm);
-    //    MPI_Win_allocate_shared(sim.natoms*sim.nbeads*NDIM*sizeof(double), sizeof(double),
+    //    MPI_Win_allocate_shared(context.natoms * context.nbeads *NDIM*sizeof(double), sizeof(double),
     //        MPI_INFO_NULL, MPI_COMM_WORLD,
     //        &arr_momenta_cartesian, &win_momenta_cartesian);
-    //    MPI_Win_allocate_shared(sim.natoms*sim.nbeads*NDIM*sizeof(double), sizeof(double),
+    //    MPI_Win_allocate_shared(context.natoms * context.nbeads *NDIM*sizeof(double), sizeof(double),
     //        MPI_INFO_NULL, MPI_COMM_WORLD,
     //        &arr_momenta_nm, &win_momenta_nm);
     //} else {
@@ -46,32 +49,32 @@ NormalModes::NormalModes(const NormalModesContext& context) :
         
     //// Cartesian-to-nm transformation matrix (one row because parallelized)
     //double pref;
-    //double fund_freq = 2 * std::numbers::pi / sim.nbeads * sim.this_bead;
-    //if (sim.this_bead == 0) {
-    //    pref = 1 / sqrt(sim.nbeads);
+    //double fund_freq = 2 * std::numbers::pi / context.nbeads * context.this_bead;
+    //if (context.this_bead == 0) {
+    //    pref = 1 / sqrt(context.nbeads);
     //    std::ranges::fill(cart_to_nm_mat_row, pref);
-    //} else if (sim.this_bead < 0.5 * sim.nbeads) {
-    //    pref = sqrt(2.0 / sim.nbeads);
-    //    for (int i = 0; i < sim.nbeads; ++i)
+    //} else if (context.this_bead < 0.5 * context.nbeads) {
+    //    pref = sqrt(2.0 / context.nbeads);
+    //    for (int i = 0; i < context.nbeads; ++i)
     //        cart_to_nm_mat_row[i] = pref * cos(fund_freq * i);
-    //} else if (sim.this_bead == 0.5 * sim.nbeads) {
-    //    pref = 1 / sqrt(sim.nbeads);
-    //    for (int i = 0; i < sim.nbeads; ++i)
+    //} else if (context.this_bead == 0.5 * context.nbeads) {
+    //    pref = 1 / sqrt(context.nbeads);
+    //    for (int i = 0; i < context.nbeads; ++i)
     //        cart_to_nm_mat_row[i] = pref * (i % 2 == 0 ? 1.0 : -1.0);
     //} else {
-    //    pref = sqrt(2.0 / sim.nbeads);
-    //    for (int i = 0; i < sim.nbeads; ++i)
+    //    pref = sqrt(2.0 / context.nbeads);
+    //    for (int i = 0; i < context.nbeads; ++i)
     //        cart_to_nm_mat_row[i] = -pref * sin(fund_freq * i);
     //}
     //
     //// NM-to-Cartesian transformation matrix row
-    //pref = sqrt(2.0 / sim.nbeads);
-    //nm_to_cart_mat_row[0] = 1 / sqrt(sim.nbeads);
-    //for (int i = 1; i < 0.5 * sim.nbeads; ++i)
+    //pref = sqrt(2.0 / context.nbeads);
+    //nm_to_cart_mat_row[0] = 1 / sqrt(context.nbeads);
+    //for (int i = 1; i < 0.5 * context.nbeads; ++i)
     //    nm_to_cart_mat_row[i] = pref * cos(fund_freq * i);
-    //if (sim.nbeads % 2 == 0)
-    //    nm_to_cart_mat_row[sim.nbeads / 2] = 1 / sqrt(sim.nbeads) * (sim.this_bead % 2 == 0 ? 1.0 : -1.0);
-    //for (int i = std::ceil(0.5 * (sim.nbeads + 1)); i < sim.nbeads; ++i)
+    //if (context.nbeads % 2 == 0)
+    //    nm_to_cart_mat_row[context.nbeads / 2] = 1 / sqrt(context.nbeads) * (context.this_bead % 2 == 0 ? 1.0 : -1.0);
+    //for (int i = std::ceil(0.5 * (context.nbeads + 1)); i < context.nbeads; ++i)
     //    nm_to_cart_mat_row[i] = -pref * sin(fund_freq * i);
 
     TransformationMatrixBuilder builder(context.this_bead, context.nbeads);

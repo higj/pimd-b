@@ -15,8 +15,8 @@ void LangevinThermostat::momentaUpdate() {
     for (int ptcl_idx = 0; ptcl_idx < m_context.natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
             double noise = m_langevin_context.rng->gaussian();
-            double momentum_for_calc = coupling->getMomentumForCalc(ptcl_idx, axis);
-            double& momentum_for_update = coupling->getMomentumForUpdate(ptcl_idx, axis);
+            double momentum_for_calc = m_coupling->getMomentumForCalc(ptcl_idx, axis);
+            double& momentum_for_update = m_coupling->getMomentumForUpdate(ptcl_idx, axis);
             // Perturb the momenta with a Langevin thermostat
             momentum_for_update = m_friction_coefficient * momentum_for_calc + m_noise_coefficient * noise;
         }
