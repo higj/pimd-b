@@ -41,7 +41,7 @@ protected:
      * @param diff Output array to store the distance vector.
      */
     void getExteriorBeadsSeparation(int first_idx, int last_idx, std::array<double, NDIM>& diff) const;
-    //void getBeadsSeparation(const dVec& x1, int l1, const dVec& x2, int l2, double diff[NDIM]) const;
+    void getBeadsSeparation(const dVec& x1, int l1, const dVec& x2, int l2, double diff[NDIM]) const;
 
     /**
      * Calculates the distance squared between two beads.

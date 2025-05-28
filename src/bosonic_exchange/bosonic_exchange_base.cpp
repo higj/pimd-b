@@ -20,7 +20,6 @@ void BosonicExchangeBase::getExteriorBeadsSeparation(int first_idx, int last_idx
     }
 }
 
-/*
 void BosonicExchangeBase::getBeadsSeparation(const dVec& x1, int l1, const dVec& x2, int l2, double diff[NDIM]) const {
     l1 = l1 % m_context.nbosons;
     l2 = l2 % m_context.nbosons;
@@ -34,7 +33,6 @@ void BosonicExchangeBase::getBeadsSeparation(const dVec& x1, int l1, const dVec&
         diff[axis] = dx;
     }
 }
-*/
 /*
 double BosonicExchangeBase::getBeadsSeparationSquared(const dVec& x1, int l1, const dVec& x2, int l2) const {
     double diff[NDIM];
