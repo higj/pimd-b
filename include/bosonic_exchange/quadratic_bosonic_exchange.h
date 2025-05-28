@@ -142,6 +142,5 @@ private:
     std::vector<double> m_prefix_pot;                ///< Forward potentials V^[1,1], V^[1,2], ..., V^[1,N]
     std::vector<double> m_suffix_pot;                ///< Backward potentials V^[1,N], V^[2,N], ..., V^[N,N]
     std::vector<double> m_connection_probabilities;  ///< Connection probabilities
-    std::vector<double> prim_est;                    ///< Primitive estimator values
     double m_log_n_factorial;                        ///< Logarithm of N! for normalization
 };
