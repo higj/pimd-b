@@ -93,7 +93,7 @@ void BosonicExchange::evaluateCycleEnergies() {
             //const double connect_energy = getBeadsSeparationSquared(*m_context.x_last_bead, u, *m_context.x_first_bead, u + 1);
             //const double break_energy = getBeadsSeparationSquared(*m_context.x_first_bead, u + 1, *m_context.x_last_bead, v);
             //const double close_energy = getBeadsSeparationSquared(*m_context.x_first_bead, u, *m_context.x_last_bead, v);
-            const double connect_energy = getExteriorSeparationSquared(u, u + 1);
+            const double connect_energy = getExteriorSeparationSquared(u + 1, u);
             const double break_energy = getExteriorSeparationSquared(u + 1, v);
             const double close_energy = getExteriorSeparationSquared(u, v);
 
@@ -291,11 +291,11 @@ void BosonicExchange::springForceLastBead(dVec& f)
 
         for (int next_l = 0; next_l <= l + 1 && next_l < m_context.nbosons; next_l++)
         {
-            double diff_next[NDIM];
-            getBeadsSeparation(*m_context.x_last_bead, l, *m_context.x_first_bead, next_l, diff_next);
+            /*double diff_next[NDIM];
+            getBeadsSeparation(*m_context.x_last_bead, l, *m_context.x_first_bead, next_l, diff_next);*/
 
-            /*std::array<double, NDIM> diff_next;
-            getExteriorBeadsSeparation(next_l, l, diff_next);*/
+            std::array<double, NDIM> diff_next;
+            getExteriorBeadsSeparation(next_l, l, diff_next);
 
             const double prob = m_connection_probabilities[m_context.nbosons * l + next_l];
 
@@ -330,18 +330,18 @@ void BosonicExchange::springForceFirstBead(dVec& f)
 
         for (int prev_l = std::max(0, l - 1); prev_l < m_context.nbosons; prev_l++)
         {
-            double diff_prev[NDIM];
-            getBeadsSeparation(*m_context.x_first_bead, l, *m_context.x_last_bead, prev_l, diff_prev);
+            /*double diff_prev[NDIM];
+            getBeadsSeparation(*m_context.x_first_bead, l, *m_context.x_last_bead, prev_l, diff_prev);*/
 
-            /*std::array<double, NDIM> diff_prev;
-            getExteriorBeadsSeparation(l, prev_l, diff_prev);*/
+            std::array<double, NDIM> diff_prev;
+            getExteriorBeadsSeparation(l, prev_l, diff_prev);
 
             const double prob = m_connection_probabilities[m_context.nbosons * prev_l + l];
 
             for (int axis = 0; axis < NDIM; ++axis)
             {
-                sums[axis] += prob * diff_prev[axis];
-                //sums[axis] -= prob * diff_prev[axis];
+                //sums[axis] += prob * diff_prev[axis];
+                sums[axis] -= prob * diff_prev[axis];
             }
         }
 
