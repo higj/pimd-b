@@ -14,7 +14,6 @@
  */
 class BosonicExchangeBase {
 public:
-    /// TODO: Make context accept x_first_bead, x_last_bead, x_neighbor_bead as parameters, so that we can avoid assignFirstLast
     explicit BosonicExchangeBase(const BosonicExchangeContext& context);
     virtual ~BosonicExchangeBase() = default;
     ///BosonicExchangeBase(const BosonicExchangeBase&) = delete;
@@ -32,7 +31,6 @@ public:
     virtual void printBosonicDebug() = 0;
 
 protected:
-    //void assignFirstLast(dVec& x_first_bead, dVec& x_last_bead) const;
     /**
      * Calculates the vector distance between two beads of an exterior spring (first minus last).
      *
@@ -41,18 +39,6 @@ protected:
      * @param diff Output array to store the distance vector.
      */
     void getExteriorBeadsSeparation(int first_idx, int last_idx, std::array<double, NDIM>& diff) const;
-    void getBeadsSeparation(const dVec& x1, int l1, const dVec& x2, int l2, double diff[NDIM]) const;
-
-    /**
-     * Calculates the distance squared between two beads.
-     *
-     * @param x1 Coordinates of the first bead.
-     * @param l1 Particle index of the first bead.
-     * @param x2 Coordinates of the second bead.
-     * @param l2 Particle index of the second bead.
-     * @return Distance squared between the two beads.
-     */
-    //[[nodiscard]] double getBeadsSeparationSquared(const dVec& x1, int l1, const dVec& x2, int l2) const;
 
     /**
      * Calculates the distance squared between two beads of an exterior spring.
