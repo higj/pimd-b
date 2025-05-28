@@ -113,6 +113,22 @@ std::shared_ptr<ExchangeState> Simulation::initializeExchangeState(
     const std::shared_ptr<SimulationConfig>& config,
     const std::shared_ptr<SystemState>& state)
 {
+    std::shared_ptr<dVec> x_first_bead;
+    std::shared_ptr<dVec> x_last_bead;
+    std::shared_ptr<dVec> x_neighbor_bead;
+
+    if (config->this_bead == 0)
+    {
+        x_first_bead = std::shared_ptr<dVec>(state, &state->coord);
+        x_last_bead = std::shared_ptr<dVec>(state, &state->prev_coord);
+        x_neighbor_bead = std::shared_ptr<dVec>(state, &state->next_coord);
+    } else
+    {
+        x_first_bead = std::shared_ptr<dVec>(state, &state->next_coord);
+        x_last_bead = std::shared_ptr<dVec>(state, &state->coord);
+        x_neighbor_bead = std::shared_ptr<dVec>(state, &state->prev_coord);
+    }
+
     const auto bosonic_context = BosonicExchangeContext{
         .nbosons = config->natoms,
         .nbeads = config->nbeads,
@@ -120,9 +136,9 @@ std::shared_ptr<ExchangeState> Simulation::initializeExchangeState(
         .beta_half_k = config->beta_half_k,
         .beta = config->beta,
         .thermo_beta = config->thermo_beta,
-        .x = std::shared_ptr<dVec>(state, &state->coord),
-        .x_prev = std::shared_ptr<dVec>(state, &state->prev_coord),
-        .x_next = std::shared_ptr<dVec>(state, &state->next_coord),
+        .x_first_bead = x_first_bead,
+        .x_last_bead = x_last_bead,
+        .x_neighbor_bead = x_neighbor_bead,
         .pbc = config->pbc,
         .box_size = config->box_size,
         .this_bead = config->this_bead

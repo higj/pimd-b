@@ -9,7 +9,7 @@ TransformationMatrixBuilder::TransformationMatrixBuilder(const int this_bead, co
     m_fundamental_frequency(2 * std::numbers::pi / nbeads * this_bead) {
 }
 
-void TransformationMatrixBuilder::buildCartToNM(double* cart_to_nm_mat_row) const {
+void TransformationMatrixBuilder::buildCartesianToNormalModes(double* cart_to_nm_mat_row) const {
     double prefactor;
 
     if (m_this_bead == 0) {
@@ -44,7 +44,7 @@ void TransformationMatrixBuilder::buildCartToNM(double* cart_to_nm_mat_row) cons
     }
 }
 
-void TransformationMatrixBuilder::buildNMToCart(double* nm_to_cart_mat_row) const {
+void TransformationMatrixBuilder::buildNormalModesToCartesian(double* nm_to_cart_mat_row) const {
     const double prefactor = sqrt(2.0 / m_nbeads);
 
     // Zero mode

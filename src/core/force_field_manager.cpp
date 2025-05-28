@@ -79,6 +79,19 @@ void ForceFieldManager::updateSpringForces(SystemState& state, const ExchangeSta
     updateDistinguishableSpringForces(state);
 }
 
+void ForceFieldManager::applyMinimumImageIfNeeded(double& diff) const {
+#if MINIM
+    if (m_config->pbc) {
+        applyMinimumImage(diff, m_config->box_size);
+    }
+#endif
+}
+
+void ForceFieldManager::addSpringForceContribution(SystemState& state, int ptcl_idx, int axis, double coord_diff) const {
+    applyMinimumImageIfNeeded(coord_diff);
+    state.spring_forces(ptcl_idx, axis) += m_config->spring_constant * coord_diff;
+}
+
 /**
  * Updates the spring forces exerted on the beads.
  * In the distinguishable case, the force is given by Eqn. (12.6.4) in Tuckerman (1st ed).
@@ -91,12 +104,8 @@ void ForceFieldManager::updateDistinguishableSpringForces(SystemState& state) co
             double diff_prev = state.prev_coord(ptcl_idx, axis) - state.coord(ptcl_idx, axis);
             double diff_next = state.next_coord(ptcl_idx, axis) - state.coord(ptcl_idx, axis);
 
-#if MINIM
-            if (m_config->pbc) {
-                applyMinimumImage(diff_prev, m_config->box_size);
-                applyMinimumImage(diff_next, m_config->box_size);
-            }
-#endif
+            applyMinimumImageIfNeeded(diff_prev);
+            applyMinimumImageIfNeeded(diff_next);
 
             state.spring_forces(ptcl_idx, axis) = m_config->spring_constant * (diff_prev + diff_next);
         }
@@ -112,10 +121,35 @@ void ForceFieldManager::updateDistinguishableSpringForces(SystemState& state) co
  * @param state Object representing the current state of the system, including forces acting on particles.
  * @param exchange_state Object representing the state of the exchange algorithm.
  */
-void ForceFieldManager::updateBosonicSpringForces(SystemState& state, const ExchangeState& exchange_state)
+void ForceFieldManager::updateBosonicSpringForces(SystemState& state, const ExchangeState& exchange_state) const
 {
     exchange_state.bosonic_exchange->prepare();
     exchange_state.bosonic_exchange->exteriorSpringForce(state.spring_forces);
+
+    // Bosonic exchange class only calculates the contribution due to the exterior spring.
+    // However, beads 1 and P are also affected by the interior spring (due to beads 2 and P-1, respectively).
+    if (m_config->this_bead == 0) {
+        for (int ptcl_idx = 0; ptcl_idx < m_config->natoms; ++ptcl_idx) {
+            for (int axis = 0; axis < NDIM; ++axis) {
+                const double diff_next = state.next_coord(ptcl_idx, axis) - state.coord(ptcl_idx, axis);
+                addSpringForceContribution(state, ptcl_idx, axis, diff_next);
+                //applyMinimumImageIfNeeded(diff_next);
+                //state.spring_forces(ptcl_idx, axis) += m_config->spring_constant * diff_next;
+            }
+        }
+
+        return;
+    }
+
+    // The following is the spring force contribution acting on the last bead, due to the spring between P-1 and P
+    for (int ptcl_idx = 0; ptcl_idx < m_config->natoms; ++ptcl_idx) {
+        for (int axis = 0; axis < NDIM; ++axis) {
+            const double diff_prev = state.prev_coord(ptcl_idx, axis) - state.coord(ptcl_idx, axis);
+            addSpringForceContribution(state, ptcl_idx, axis, diff_prev);
+            //applyMinimumImageIfNeeded(diff_prev);
+            //state.spring_forces(ptcl_idx, axis) += m_config->spring_constant * diff_prev;
+        }
+    }
 }
 
 /**

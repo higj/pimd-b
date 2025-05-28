@@ -70,7 +70,7 @@ void BosonicExchangeBase::exteriorSpringForce(dVec& f) {
  * @param[out] x_first_bead The coordinates of the particles in the first time-slice.
  * @param[out] x_last_bead The coordinates of the particles in the last time-slice.
  */
-void BosonicExchangeBase::assignFirstLast(dVec& x_first_bead, dVec& x_last_bead) const {
+/*void BosonicExchangeBase::assignFirstLast(dVec& x_first_bead, dVec& x_last_bead) const {
     if (m_context.this_bead == 0) {
         x_first_bead = *m_context.x;
         x_last_bead = *m_context.x_prev;
@@ -79,3 +79,4 @@ void BosonicExchangeBase::assignFirstLast(dVec& x_first_bead, dVec& x_last_bead)
         x_last_bead = *m_context.x;
     }
 }
+*/

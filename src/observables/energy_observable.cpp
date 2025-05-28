@@ -34,7 +34,7 @@ void EnergyObservable::calculateKinetic() {
     // Then, subtract the spring energies. In the case of bosons, the exterior
     // spring energy requires separate treatment.
     if (m_context.this_bead == 0 && m_context.bosonic) {
-        quantities["kinetic"] += m_context.exchange_state->bosonic_exchange->primEstimator();
+        quantities["kinetic"] += m_context.exchange_state->bosonic_exchange->primitiveEnergyEstimator();
     } else {
         /// TODO: Think about best way to pass minimum_image and box_size. Presumably, we need to pass Box object here?
         double spring_energy = RingPolymerUtils::classicalSpringEnergy(

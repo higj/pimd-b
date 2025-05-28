@@ -10,19 +10,6 @@ NormalModesPropagator::NormalModesPropagator(const PropagatorContext& context, c
     m_c = cos(m_freq * m_context.dt);
     m_s = sin(m_freq * m_context.dt);
     m_omega = m_context.mass * m_freq;
-
-    /*m_normal_modes = std::make_unique<NormalModes>(
-        NormalModesContext{
-            //.coord = std::make_shared<const dVec>(context.state->coord),
-            //.momenta = std::make_shared<dVec>(context.state->momenta),
-            .coord = std::shared_ptr<const dVec>(context.state, &context.state->coord),
-            .momenta = std::shared_ptr<dVec>(context.state, &context.state->momenta),
-            .natoms = context.natoms,
-            .nbeads = context.nbeads,
-            .this_bead = context.this_bead,
-        }
-    );
-    */
 }
 
 void NormalModesPropagator::step() {
@@ -52,7 +39,7 @@ void NormalModesPropagator::step() {
     MPI_Barrier(MPI_COMM_WORLD);
     for (int ptcl_idx = 0; ptcl_idx < m_context.natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
-            int glob_idx = m_normal_modes->globIndexAtom(axis, ptcl_idx);
+            const int glob_idx = m_normal_modes->globIndexAtom(axis, ptcl_idx);
             // NM-to-Cartesian transformation
             const double coord_cartesian = m_normal_modes->coordNormalToCartesian(glob_idx);
             const double momentum_cartesian = m_normal_modes->momentumNormalToCartesian(glob_idx);
@@ -70,11 +57,6 @@ void NormalModesPropagator::step() {
             m_context.state->momenta(ptcl_idx, axis) = m_normal_modes->arr_momenta_cartesian[glob_idx + m_context.this_bead];
         }
     }
-
-    /*sim.updateNeighboringCoordinates();
-    sim.updateForces();
-    sim.updatePhysicalForces(ext_forces);
-    sim.updateSpringForces(spring_forces);*/
 
     // Remember to update the neighboring coordinates after every coordinate propagation
     m_context.state->updateNeighboringCoordinates();

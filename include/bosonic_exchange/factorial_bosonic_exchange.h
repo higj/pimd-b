@@ -11,7 +11,7 @@ public:
 
     double effectivePotential() override;
     void prepare() override;
-    double primEstimator() override;
+    double primitiveEnergyEstimator() override;
 
     double getDistinctProbability() override;
     double getLongestProbability() override;

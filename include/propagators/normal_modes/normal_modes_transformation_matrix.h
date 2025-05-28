@@ -11,24 +11,25 @@ class TransformationMatrixBuilder {
 public:
     /**
      * @brief Constructor that initializes the builder with simulation parameters.
-     * @param simulation Reference to the simulation object containing parameters.
+     * @param this_bead The index of the current bead in the simulation.
+     * @param nbeads Total number of beads in the simulation.
      */
-    TransformationMatrixBuilder(const int this_bead, const int nbeads);
+    TransformationMatrixBuilder(int this_bead, int nbeads);
 
     /**
      * @brief Fills the Cartesian-to-NM transformation matrix row.
      * @param cart_to_nm_mat_row Output array to be filled with matrix row values.
      */
-    void buildCartToNM(double* cart_to_nm_mat_row) const;
+    void buildCartesianToNormalModes(double* cart_to_nm_mat_row) const;
 
     /**
      * @brief Fills the NM-to-Cartesian transformation matrix row.
      * @param nm_to_cart_mat_row Output array to be filled with matrix row values.
      */
-    void buildNMToCart(double* nm_to_cart_mat_row) const;
+    void buildNormalModesToCartesian(double* nm_to_cart_mat_row) const;
 private:
-    const int m_this_bead;
-    const int m_nbeads;
-    const int m_half_nbeads;
-    const double m_fundamental_frequency;
+    int m_this_bead;
+    int m_nbeads;
+    int m_half_nbeads;
+    double m_fundamental_frequency;
 };
