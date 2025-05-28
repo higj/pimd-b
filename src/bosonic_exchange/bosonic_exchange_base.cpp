@@ -1,19 +1,26 @@
 #include <cassert>
+#include <array>
 
 #include "bosonic_exchange/bosonic_exchange_base.h"
 
 BosonicExchangeBase::BosonicExchangeBase(const BosonicExchangeContext& context) : m_context(context) {
 }
 
-/**
- * Calculates the vector distance between two beads (second minus first).
- *
- * @param x1 Coordinates of the first bead.
- * @param l1 Particle index of the first bead.
- * @param x2 Coordinates of the second bead.
- * @param l2 Particle index of the second bead.
- * @param[out] diff Vector distance between the two beads.
- */
+void BosonicExchangeBase::getExteriorBeadsSeparation(int first_idx, int last_idx, std::array<double, NDIM>& diff) const {
+    first_idx = first_idx % m_context.nbosons;
+    last_idx = last_idx % m_context.nbosons;
+
+    for (int axis = 0; axis < NDIM; ++axis) {
+        double dx = (*m_context.x_first_bead)(first_idx, axis) - (*m_context.x_last_bead)(last_idx, axis);
+#if MINIM
+        if (m_context.pbc)
+            applyMinimumImage(dx, m_context.box_size);
+#endif
+        diff[axis] = dx;
+    }
+}
+
+/*
 void BosonicExchangeBase::getBeadsSeparation(const dVec& x1, int l1, const dVec& x2, int l2, double diff[NDIM]) const {
     l1 = l1 % m_context.nbosons;
     l2 = l2 % m_context.nbosons;
@@ -27,19 +34,25 @@ void BosonicExchangeBase::getBeadsSeparation(const dVec& x1, int l1, const dVec&
         diff[axis] = dx;
     }
 }
-
-/**
- * Calculates the distance squared between two beads.
- * 
- * @param x1 Coordinates of the first bead.
- * @param l1 Particle index of the first bead.
- * @param x2 Coordinates of the second bead.
- * @param l2 Particle index of the second bead.
- * @return Distance squared between the two beads.
- */
+*/
+/*
 double BosonicExchangeBase::getBeadsSeparationSquared(const dVec& x1, int l1, const dVec& x2, int l2) const {
     double diff[NDIM];
     getBeadsSeparation(x1, l1, x2, l2, diff);
+
+    double dist_sqrd = 0.0;
+
+    for (int axis = 0; axis < NDIM; ++axis) {
+        dist_sqrd += diff[axis] * diff[axis];
+    }
+
+    return dist_sqrd;
+}
+*/
+
+double BosonicExchangeBase::getExteriorSeparationSquared(int first_idx, int last_idx) const {
+    std::array<double, NDIM> diff;
+    getExteriorBeadsSeparation(first_idx, last_idx, diff);
 
     double dist_sqrd = 0.0;
 

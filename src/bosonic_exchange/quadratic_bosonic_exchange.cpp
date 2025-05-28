@@ -81,7 +81,8 @@ void BosonicExchange::evaluateCycleEnergies() {
     // Compute cycle energies using Eqs. 5-7 from the paper
     for (int v = 0; v < m_context.nbosons; ++v) {
         // Initialize single-particle cycle energy E^[v,v] (Algorithm 1, line 5)
-        const double diagonal_energy = getBeadsSeparationSquared(*m_context.x_first_bead, v, *m_context.x_last_bead, v);
+        //const double diagonal_energy = getBeadsSeparationSquared(*m_context.x_first_bead, v, *m_context.x_last_bead, v);
+        const double diagonal_energy = getExteriorSeparationSquared(v, v);
         setEnk(v + 1, 1, half_spring_k * diagonal_energy);
 
         // Build up multi-particle cycles (Algorithm 1, lines 6-7)
@@ -89,9 +90,12 @@ void BosonicExchange::evaluateCycleEnergies() {
             const int cycle_length = v - u + 1;
 
             // Calculate energies needed to compute the cycle E^[u,v] from E^[u+1,v]
-            const double connect_energy = getBeadsSeparationSquared(*m_context.x_last_bead, u, *m_context.x_first_bead, u + 1);
-            const double break_energy = getBeadsSeparationSquared(*m_context.x_first_bead, u + 1, *m_context.x_last_bead, v);
-            const double close_energy = getBeadsSeparationSquared(*m_context.x_first_bead, u, *m_context.x_last_bead, v);
+            //const double connect_energy = getBeadsSeparationSquared(*m_context.x_last_bead, u, *m_context.x_first_bead, u + 1);
+            //const double break_energy = getBeadsSeparationSquared(*m_context.x_first_bead, u + 1, *m_context.x_last_bead, v);
+            //const double close_energy = getBeadsSeparationSquared(*m_context.x_first_bead, u, *m_context.x_last_bead, v);
+            const double connect_energy = getExteriorSeparationSquared(u, u + 1);
+            const double break_energy = getExteriorSeparationSquared(u + 1, v);
+            const double close_energy = getExteriorSeparationSquared(u, v);
 
             // Compute E^[u,v]
             const double previous_cycle_energy = getEnk(v + 1, v - u);
@@ -287,9 +291,11 @@ void BosonicExchange::springForceLastBead(dVec& f)
 
         for (int next_l = 0; next_l <= l + 1 && next_l < m_context.nbosons; next_l++)
         {
-            double diff_next[NDIM];
+            //double diff_next[NDIM];
+            //getBeadsSeparation(*m_context.x_last_bead, l, *m_context.x_first_bead, next_l, diff_next);
 
-            getBeadsSeparation(*m_context.x_last_bead, l, *m_context.x_first_bead, next_l, diff_next);
+            std::array<double, NDIM> diff_next;
+            getExteriorBeadsSeparation(next_l, l, diff_next);
 
             const double prob = m_connection_probabilities[m_context.nbosons * l + next_l];
 
@@ -324,15 +330,18 @@ void BosonicExchange::springForceFirstBead(dVec& f)
 
         for (int prev_l = std::max(0, l - 1); prev_l < m_context.nbosons; prev_l++)
         {
-            double diff_prev[NDIM];
+            //double diff_prev[NDIM];
+            //getBeadsSeparation(*m_context.x_first_bead, l, *m_context.x_last_bead, prev_l, diff_prev);
 
-            getBeadsSeparation(*m_context.x_first_bead, l, *m_context.x_last_bead, prev_l, diff_prev);
+            std::array<double, NDIM> diff_prev;
+            getExteriorBeadsSeparation(l, prev_l, diff_prev);
 
             const double prob = m_connection_probabilities[m_context.nbosons * prev_l + l];
 
             for (int axis = 0; axis < NDIM; ++axis)
             {
-                sums[axis] += prob * diff_prev[axis];
+                //sums[axis] += prob * diff_prev[axis];
+                sums[axis] -= prob * diff_prev[axis];
             }
         }
 

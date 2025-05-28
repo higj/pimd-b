@@ -121,12 +121,10 @@ std::shared_ptr<ExchangeState> Simulation::initializeExchangeState(
     {
         x_first_bead = std::shared_ptr<dVec>(state, &state->coord);
         x_last_bead = std::shared_ptr<dVec>(state, &state->prev_coord);
-        x_neighbor_bead = std::shared_ptr<dVec>(state, &state->next_coord);
     } else
     {
         x_first_bead = std::shared_ptr<dVec>(state, &state->next_coord);
         x_last_bead = std::shared_ptr<dVec>(state, &state->coord);
-        x_neighbor_bead = std::shared_ptr<dVec>(state, &state->prev_coord);
     }
 
     const auto bosonic_context = BosonicExchangeContext{
@@ -138,7 +136,6 @@ std::shared_ptr<ExchangeState> Simulation::initializeExchangeState(
         .thermo_beta = config->thermo_beta,
         .x_first_bead = x_first_bead,
         .x_last_bead = x_last_bead,
-        .x_neighbor_bead = x_neighbor_bead,
         .pbc = config->pbc,
         .box_size = config->box_size,
         .this_bead = config->this_bead

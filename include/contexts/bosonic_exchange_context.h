@@ -12,7 +12,6 @@ struct BosonicExchangeContext {
     double thermo_beta;
     std::shared_ptr<const dVec> x_first_bead;
     std::shared_ptr<const dVec> x_last_bead;
-    std::shared_ptr<const dVec> x_neighbor_bead;
     bool pbc;
     double box_size;
     int this_bead;
