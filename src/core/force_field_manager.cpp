@@ -20,12 +20,6 @@ ForceFieldManager::ForceFieldManager(const std::shared_ptr<const SimulationConfi
     }
 }
 
-/**
- * Updates the physical forces acting on the particles. This includes both the forces
- * due external potentials and the interaction forces between the particles.
- *
- * @param state Object representing the current state of the system, including forces acting on particles.
- */
 void ForceFieldManager::updatePhysicalForces(SystemState& state) const
 {
     // Calculate the external forces acting on the particles
@@ -67,12 +61,6 @@ void ForceFieldManager::updatePhysicalForces(SystemState& state) const
     }
 }
 
-/**
- * Updates the spring forces array.
- *
- * @param state Object representing the current state of the system, including forces acting on particles.
- * @param exchange_state Object representing the state of the exchange algorithm.
- */
 void ForceFieldManager::updateSpringForces(SystemState& state, const ExchangeState& exchange_state) const
 {
     if (exchange_state.is_bosonic_bead)
@@ -104,12 +92,6 @@ void ForceFieldManager::addSpringForceContribution(SystemState& state, int ptcl_
     state.spring_forces(ptcl_idx, axis) += m_config->spring_constant * coord_diff;
 }
 
-/**
- * Updates the spring forces exerted on the beads.
- * In the distinguishable case, the force is given by Eqn. (12.6.4) in Tuckerman (1st ed).
- *
- * @param state Object representing the current state of the system, including forces acting on particles.
- */
 void ForceFieldManager::updateDistinguishableSpringForces(SystemState& state) const
 {
     for (int ptcl_idx = 0; ptcl_idx < m_config->natoms; ++ptcl_idx)
@@ -127,16 +109,6 @@ void ForceFieldManager::updateDistinguishableSpringForces(SystemState& state) co
     }
 }
 
-/**
- * Updates the spring forces exerted on the beads.
- * In the bosonic case, by default, the forces are evaluated using the algorithm
- * described in https://doi.org/10.1063/5.0173749. It is also possible to perform the
- * bosonic simulation using the original (inefficient) algorithm, that takes into
- * account all the N! permutations, by setting FACTORIAL_BOSONIC_ALGORITHM to true.
- *
- * @param state Object representing the current state of the system, including forces acting on particles.
- * @param exchange_state Object representing the state of the exchange algorithm.
- */
 void ForceFieldManager::updateBosonicSpringForces(SystemState& state, const ExchangeState& exchange_state) const
 {
     exchange_state.bosonic_exchange->prepare();
@@ -145,7 +117,7 @@ void ForceFieldManager::updateBosonicSpringForces(SystemState& state, const Exch
     if (m_config->nbeads == 1)
     {
         // For bosonic simulations with a single imaginary time slice (P=1),
-        // no inter-slice spring exist - only permutation-related springs within the same slice.
+        // no inter-slice springs exist - only permutation-related springs within the same slice.
         // These should already have been handled by exteriorSpringForce, so we can exit early.
         // In the distinguishable case, P=1 implies no springs at all, as only diagonal
         // elements of the density matrix are relevant.
@@ -183,13 +155,6 @@ void ForceFieldManager::updateBosonicSpringForces(SystemState& state, const Exch
     }
 }
 
-/**
- * Initializes the potential based on the input parameters.
- *
- * @param potential_name Name of the potential.
- * @param potential_options Physical parameters of the potential.
- * @return Pointer to the initialized potential.
- */
 std::unique_ptr<Potential> ForceFieldManager::initializePotential(const std::string& potential_name,
                                                                   const VariantMap& potential_options) const
 {
