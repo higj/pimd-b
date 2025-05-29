@@ -18,9 +18,7 @@ void VelocityVerletPropagator::step() {
 
     // Third step: forces are updated using the new positions
     /// TODO: Passing state and exchange_state every time we need to update forces is not ideal (delegate this to the force manager)?
-    /// TODO: It could be simpler to have m_context.force_mgr->updateForces();
-    m_context.force_mgr->updateSpringForces(*m_context.state, *m_context.exchange_state);
-    m_context.force_mgr->updatePhysicalForces(*m_context.state);
+    m_context.force_mgr->updateForces(*m_context.state, *m_context.exchange_state);
 
     // Fourth step: momenta are propagated once more ("B" step)
     momentStep();

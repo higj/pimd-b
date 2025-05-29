@@ -18,6 +18,7 @@ public:
      * @param state Object representing the current state of the system, including forces acting on particles.
      */
     void updatePhysicalForces(SystemState& state) const;
+
     /**
      * Updates the spring forces array.
      *
@@ -25,6 +26,14 @@ public:
      * @param exchange_state Object representing the state of the exchange algorithm.
      */
     void updateSpringForces(SystemState& state, const ExchangeState& exchange_state) const;
+
+    /**
+     * Updates both the spring and physical forces' arrays.
+     *
+     * @param state Object representing the current state of the system, including forces acting on particles.
+     * @param exchange_state Object representing the state of the exchange algorithm.
+     */
+    void updateForces(SystemState& state, const ExchangeState& exchange_state) const;
 
     std::unique_ptr<Potential> ext_potential;
     std::unique_ptr<Potential> int_potential;

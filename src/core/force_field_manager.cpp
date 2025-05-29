@@ -76,6 +76,15 @@ void ForceFieldManager::updateSpringForces(SystemState& state, const ExchangeSta
     updateDistinguishableSpringForces(state);
 }
 
+void ForceFieldManager::updateForces(SystemState& state, const ExchangeState& exchange_state) const
+{
+    // First, update the spring forces based on the current state of the system.
+    updateSpringForces(state, exchange_state);
+
+    // Then, update the physical forces acting on the particles.
+    updatePhysicalForces(state);
+}
+
 void ForceFieldManager::applyMinimumImageIfNeeded(double& diff) const
 {
 #if MINIM
