@@ -48,7 +48,7 @@ void NormalModesPropagator::step() {
         }
     }
 
-    // Update forces
+    // Update coordinates and momenta
     MPI_Barrier(MPI_COMM_WORLD);
     for (int ptcl_idx = 0; ptcl_idx < m_context.natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
@@ -62,8 +62,7 @@ void NormalModesPropagator::step() {
     m_context.state->updateNeighboringCoordinates();
 
     // Third step: forces are updated using the new positions
-    m_context.force_mgr->updateSpringForces(*m_context.state, *m_context.exchange_state);
-    m_context.force_mgr->updatePhysicalForces(*m_context.state);
+    m_context.force_mgr->updateForces(*m_context.state, *m_context.exchange_state);
     
     // Propagate momenta under external forces
     momentaExternalForces();
