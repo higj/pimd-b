@@ -138,7 +138,7 @@ private:
      */
     void evaluateSuffixPotential();
 
-    std::vector<double> E_kn;                        ///< Energies for (k, n) pairs
+    std::vector<double> m_cycle_energies;            ///< Array of cycle energies E(k,N) = E^[N-k+1,N]
     std::vector<double> m_prefix_pot;                ///< Forward potentials V^[1,1], V^[1,2], ..., V^[1,N]
     std::vector<double> m_suffix_pot;                ///< Backward potentials V^[1,N], V^[2,N], ..., V^[N,N]
     std::vector<double> m_connection_probabilities;  ///< Connection probabilities

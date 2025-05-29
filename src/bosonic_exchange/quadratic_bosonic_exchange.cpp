@@ -5,7 +5,7 @@
 #include "bosonic_exchange/quadratic_bosonic_exchange.h"
 
 BosonicExchange::BosonicExchange(const BosonicExchangeContext& context) : BosonicExchangeBase(context),
-                                                                          E_kn(context.nbosons * (context.nbosons + 1) /
+                                                                          m_cycle_energies(context.nbosons * (context.nbosons + 1) /
                                                                               2),
                                                                           m_prefix_pot(context.nbosons + 1),
                                                                           m_suffix_pot(context.nbosons + 1),
@@ -39,6 +39,9 @@ void BosonicExchange::evaluateCycleEnergies()
     {
         // Initialize single-particle cycle energy E^[v,v] (Algorithm 1, line 5)
         const double diagonal_energy = getExteriorSeparationSquared(v, v);
+
+        // By definition, E(k,m) = E^[m-k+1,m], so E^[v,v] corresponds to E(k=1,m=v).
+        // Since we are using a 0-based index, we need to set E^[v+1,v+1] = E(1,v+1).
         setEnk(v + 1, 1, half_spring_k * diagonal_energy);
 
         // Build up multi-particle cycles (Algorithm 1, lines 6-7)
@@ -52,7 +55,7 @@ void BosonicExchange::evaluateCycleEnergies()
             const double close_energy = getExteriorSeparationSquared(u, v);
 
             // Compute E^[u,v]
-            const double previous_cycle_energy = getEnk(v + 1, v - u);
+            const double previous_cycle_energy = getEnk(v + 1, v - u); // E^[u+1,v] corresponds to E(k=v-u,m=v+1), for 0-based indexing
             const double spring_correction = half_spring_k * (
                 connect_energy // connect u to u+1
                 - break_energy // break cycle [u+1,v] 
@@ -70,6 +73,7 @@ void BosonicExchange::evaluateCycleEnergies()
                 );
             }
 
+            // Set the energies of all the cycles for the current v
             setEnk(v + 1, cycle_length, total_cycle_energy);
         }
     }
@@ -78,13 +82,13 @@ void BosonicExchange::evaluateCycleEnergies()
 double BosonicExchange::getEnk(int m, int k) const
 {
     const int end_of_m = m * (m + 1) / 2;
-    return E_kn[end_of_m - k];
+    return m_cycle_energies[end_of_m - k];
 }
 
 void BosonicExchange::setEnk(int m, int k, double val)
 {
     const int end_of_m = m * (m + 1) / 2;
-    E_kn[end_of_m - k] = val;
+    m_cycle_energies[end_of_m - k] = val;
 }
 
 void BosonicExchange::evaluatePrefixPotential()
@@ -101,6 +105,7 @@ void BosonicExchange::evaluatePrefixPotential()
         // and add the prefix potential of the remaining particles.
         for (int k = 1; k <= last_idx; k++)
         {
+            // E^[v-k+1,v] corresponds to E(k,v). Note that here both "k" and "v" ("last_idx") are 1-based indices.
             subdivision_potentials[k - 1] = getEnk(last_idx, k) + m_prefix_pot[last_idx - k];
 
             // Shift for the energies in the exponents to avoid numerical instability (Xiong & Xiong method)
@@ -142,6 +147,8 @@ void BosonicExchange::evaluateSuffixPotential()
         // and add the suffix potential of the remaining particles.
         for (int ell = first_idx; ell < m_context.nbosons; ell++)
         {
+            // E^[u,ell] corresponds to E(ell-u+1,ell+1), since "u" ("first_idx") and "ell" are 0-based indices.
+            // This is because the last element of the suffix potential, V^[N+1,N], is at index N, and not N+1.
             subdivision_potentials[ell] = getEnk(ell + 1, ell - first_idx + 1) + m_suffix_pot[ell + 1];
 
             // Shift for the energies in the exponents to avoid numerical instability (Xiong & Xiong method)
@@ -184,7 +191,7 @@ double BosonicExchange::getVn(int n) const
 
 double BosonicExchange::getEknSerialOrder(int i) const
 {
-    return E_kn[i];
+    return m_cycle_energies[i];
 }
 
 void BosonicExchange::evaluateConnectionProbabilities()
