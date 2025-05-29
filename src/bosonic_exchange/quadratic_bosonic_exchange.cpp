@@ -49,17 +49,17 @@ void BosonicExchange::evaluateCycleEnergies()
         {
             const int cycle_length = v - u + 1;
 
-            // Calculate energies needed to compute the cycle E^[u,v] from E^[u+1,v]
-            const double connect_energy = getExteriorSeparationSquared(u + 1, u);
-            const double break_energy = getExteriorSeparationSquared(u + 1, v);
-            const double close_energy = getExteriorSeparationSquared(u, v);
+            // Calculate squared distances needed to compute the cycle energy E^[u,v] from E^[u+1,v]
+            const double connect_diff = getExteriorSeparationSquared(u + 1, u);
+            const double break_diff = getExteriorSeparationSquared(u + 1, v);
+            const double close_diff = getExteriorSeparationSquared(u, v);
 
             // Compute E^[u,v]
             const double previous_cycle_energy = getEnk(v + 1, v - u); // E^[u+1,v] corresponds to E(k=v-u,m=v+1), for 0-based indexing
             const double spring_correction = half_spring_k * (
-                connect_energy // connect u to u+1
-                - break_energy // break cycle [u+1,v] 
-                + close_energy // close cycle from v to u
+                connect_diff // connect u to u+1
+                - break_diff // break cycle [u+1,v] 
+                + close_diff // close cycle from v to u
             );
 
             const double total_cycle_energy = previous_cycle_energy + spring_correction;
