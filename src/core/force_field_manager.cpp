@@ -6,8 +6,8 @@
 
 ForceFieldManager::ForceFieldManager(const std::shared_ptr<const SimulationConfig>& config) : m_config(config)
 {
-    m_ext_potential = initializePotential(m_config->ext_pot_name, m_config->ext_pot_params);
-    m_int_potential = initializePotential(m_config->int_pot_name, m_config->int_pot_params);
+    ext_potential = initializePotential(m_config->ext_pot_name, m_config->ext_pot_params);
+    int_potential = initializePotential(m_config->int_pot_name, m_config->int_pot_params);
 
     // If the interaction potential is set to "free", then the cutoff distance is meaningless
     cutoff = (m_config->int_pot_name == "free") ? 0.0 : std::get<double>(m_config->int_pot_params.at("cutoff"));
@@ -23,7 +23,7 @@ ForceFieldManager::ForceFieldManager(const std::shared_ptr<const SimulationConfi
 void ForceFieldManager::updatePhysicalForces(SystemState& state) const
 {
     // Calculate the external forces acting on the particles
-    state.physical_forces = (-1.0) * m_ext_potential->gradV(state.coord);
+    state.physical_forces = (-1.0) * ext_potential->gradV(state.coord);
 
     if (cutoff == 0.0)
         return;
@@ -49,7 +49,7 @@ void ForceFieldManager::updatePhysicalForces(SystemState& state) const
             // calculated for all distances.
             if (const double distance = diff.norm(); distance < cutoff || cutoff < 0.0)
             {
-                dVec force_on_one = (-1.0) * m_int_potential->gradV(diff);
+                dVec force_on_one = (-1.0) * int_potential->gradV(diff);
 
                 for (int axis = 0; axis < NDIM; ++axis)
                 {

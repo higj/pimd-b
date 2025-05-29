@@ -26,8 +26,8 @@ public:
      */
     void updateSpringForces(SystemState& state, const ExchangeState& exchange_state) const;
 
-    std::unique_ptr<Potential> m_ext_potential;
-    std::unique_ptr<Potential> m_int_potential;
+    std::unique_ptr<Potential> ext_potential;
+    std::unique_ptr<Potential> int_potential;
     double cutoff = -1.0; // Interaction potential cutoff
 
 private:

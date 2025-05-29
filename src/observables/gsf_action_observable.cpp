@@ -9,10 +9,10 @@ GSFActionObservable::GSFActionObservable(const GSFActionObservableContext& obs_c
 void GSFActionObservable::calculate() {
     double alpha = 0.0;
     const auto& coord = *m_context.coord;
-    double total_potential = m_context.force_mgr->m_ext_potential->V(coord);
+    double total_potential = m_context.force_mgr->ext_potential->V(coord);
 
     dVec gradients(m_context.natoms);
-    gradients = m_context.force_mgr->m_ext_potential->gradV(coord);
+    gradients = m_context.force_mgr->ext_potential->gradV(coord);
 
     if (m_context.force_mgr->cutoff != 0.0) {
         for (int ptcl_one = 0; ptcl_one < m_context.natoms; ++ptcl_one) {
@@ -21,8 +21,8 @@ void GSFActionObservable::calculate() {
                 dVec diff = coord.getSeparation(ptcl_one, ptcl_two);  // Vectorial distance
 
                 if (const double distance = diff.norm(); distance < m_context.force_mgr->cutoff || m_context.force_mgr->cutoff < 0.0) {
-                    total_potential += m_context.force_mgr->m_int_potential->V(diff);
-                    gradients = gradients + m_context.force_mgr->m_int_potential->gradV(diff);
+                    total_potential += m_context.force_mgr->int_potential->V(diff);
+                    gradients = gradients + m_context.force_mgr->int_potential->gradV(diff);
                 }
             }
         }

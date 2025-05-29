@@ -69,11 +69,11 @@ void EnergyObservable::calculatePotential() {
     const auto& coord = *m_context.coord;
 
     if (m_context.ext_pot_name != "free") {
-        ext_pot = m_context.force_mgr->m_ext_potential->V(coord);
+        ext_pot = m_context.force_mgr->ext_potential->V(coord);
         potential += ext_pot;
 
         dVec physical_forces(m_context.natoms);
-        physical_forces = (-1.0) * m_context.force_mgr->m_ext_potential->gradV(coord);
+        physical_forces = (-1.0) * m_context.force_mgr->ext_potential->gradV(coord);
 
         for (int ptcl_idx = 0; ptcl_idx < m_context.natoms; ++ptcl_idx) {
             for (int axis = 0; axis < NDIM; ++axis) {
@@ -93,9 +93,9 @@ void EnergyObservable::calculatePotential() {
                 }
 
                 if (const double distance = diff.norm(); distance < m_context.force_mgr->cutoff || m_context.force_mgr->cutoff < 0.0) {
-                    dVec force_on_one = (-1.0) * m_context.force_mgr->m_int_potential->gradV(diff);
+                    dVec force_on_one = (-1.0) * m_context.force_mgr->int_potential->gradV(diff);
 
-                    double int_pot_val = m_context.force_mgr->m_int_potential->V(diff);
+                    double int_pot_val = m_context.force_mgr->int_potential->V(diff);
                     potential += int_pot_val;
                     int_pot += int_pot_val;
 
