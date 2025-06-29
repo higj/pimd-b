@@ -53,4 +53,9 @@ protected:
     const dVec& x;
     const dVec& x_prev;
     const dVec& x_next;
+
+    virtual void assignIndirectionCoords();
+    dVec indirection_x;
+    dVec indirection_x_prev;
+    dVec indirection_x_next; 
 };

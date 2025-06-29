@@ -1,9 +1,12 @@
 #pragma once
 
+#include <vector>
+
 class RanMars {
 public:
 	RanMars(int);
 	~RanMars();
+	void shuffle(std::vector<int>& arr);
 	double uniform();
 	double gaussian();
 	double gaussian(double mu, double sigma);

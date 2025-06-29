@@ -23,9 +23,11 @@ Params::Params(const std::string& filename, const int& rank, const int& world_si
 
     if (int nchains = std::get<int>(sim["nchains"]); nchains < 1)
         throw std::invalid_argument(std::format("The specified number of Nose-Hoover chains ({}) is less than one!", nchains));
-
-    sim["steps"] = static_cast<long>(
-        std::stod(reader.Get(Sections::SIMULATION, "steps", "1e5")));  // Scientific notation
+    
+    long steps = static_cast<long>(
+        std::stod(reader.Get(Sections::SIMULATION, "steps", "1e5"))); // Scientific notation
+    sim["steps"] = steps;
+    sim["shuffle_timer"] = reader.GetReal(Sections::SIMULATION, "shuffle_timer", steps + 1);
     sim["sfreq"] = reader.GetLong(Sections::SIMULATION, "sfreq", 1000); /// @todo: Add support for scientific notation
     sim["nbeads"] = reader.GetInteger(Sections::SIMULATION, "nbeads", 4);
 

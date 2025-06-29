@@ -56,6 +56,21 @@ RanMars::~RanMars()
 }
 
 /* ----------------------------------------------------------------------
+   Fisher-Yates Shuffle
+------------------------------------------------------------------------- */
+
+void RanMars::shuffle(std::vector<int>& arr) {
+    int n = arr.size();
+    for (int i = n - 1; i > 0; i--) {
+        // Generate a random index in range [0, i]
+        int j = static_cast<int>(uniform() * (i + 1));
+
+        // Swap arr[i] and arr[j]
+        std::swap(arr[i], arr[j]);
+    }
+}
+
+/* ----------------------------------------------------------------------
    uniform RN
 ------------------------------------------------------------------------- */
 
