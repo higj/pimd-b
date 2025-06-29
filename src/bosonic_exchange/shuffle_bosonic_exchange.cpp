@@ -11,6 +11,7 @@ BosonicExchangeShuffle::BosonicExchangeShuffle(Params& param_obj, const dVec& co
     unsigned int params_seed;
     getVariant(param_obj.sim["seed"], params_seed);
     mars_gen = std::make_unique<RanMars>(params_seed);
+    assignIndirectionCoords();
 }
 
 void BosonicExchangeShuffle::assignIndirectionCoords() {
@@ -23,16 +24,15 @@ void BosonicExchangeShuffle::assignIndirectionCoords() {
            MPI_Probe(0, 0, MPI_COMM_WORLD, &status);
            MPI_Recv(indexes.data(), nbosons, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         }
-
-        for (int i = 0; i < nbosons; i++) {
-            for (int axis = 0; axis < NDIM; ++axis) {
-                indirection_x(i, axis) = x(indexes[i], axis);
-                indirection_x_prev(i, axis) = x_prev(indexes[i], axis);
-                indirection_x_next(i, axis) = x_next(indexes[i], axis);
-            }
-        }
 	step = 0;
     } else {
 	step += 1;
+    }
+    for (int i = 0; i < nbosons; i++) {
+        for (int axis = 0; axis < NDIM; ++axis) {
+            indirection_x(i, axis) = x(indexes[i], axis);
+            indirection_x_prev(i, axis) = x_prev(indexes[i], axis);
+            indirection_x_next(i, axis) = x_next(indexes[i], axis);
+        }
     }
 }
