@@ -14,20 +14,25 @@ BosonicExchangeShuffle::BosonicExchangeShuffle(Params& param_obj, const dVec& co
 }
 
 void BosonicExchangeShuffle::assignIndirectionCoords() {
-    if (this_bead == 0) {
-         mars_gen->shuffle(indexes);
-         MPI_Send(indexes.data(), nbosons, MPI_INT, nbeads - 1, 0, MPI_COMM_WORLD);
-    } else {
-       MPI_Status status;
-       MPI_Probe(0, 0, MPI_COMM_WORLD, &status);
-       MPI_Recv(indexes.data(), nbosons, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    }
-
-    for (int i = 0; i < nbosons; i++) {
-        for (int axis = 0; axis < NDIM; ++axis) {
-            indirection_x(i, axis) = x(indexes[i], axis);
-            indirection_x_prev(i, axis) = x_prev(indexes[i], axis);
-            indirection_x_next(i, axis) = x_next(indexes[i], axis);
+    if (step == timer) {
+        if (this_bead == 0) {
+             mars_gen->shuffle(indexes);
+             MPI_Send(indexes.data(), nbosons, MPI_INT, nbeads - 1, 0, MPI_COMM_WORLD);
+        } else {
+           MPI_Status status;
+           MPI_Probe(0, 0, MPI_COMM_WORLD, &status);
+           MPI_Recv(indexes.data(), nbosons, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         }
+
+        for (int i = 0; i < nbosons; i++) {
+            for (int axis = 0; axis < NDIM; ++axis) {
+                indirection_x(i, axis) = x(indexes[i], axis);
+                indirection_x_prev(i, axis) = x_prev(indexes[i], axis);
+                indirection_x_next(i, axis) = x_next(indexes[i], axis);
+            }
+        }
+	step = 0;
+    } else {
+	step += 1;
     }
 }
