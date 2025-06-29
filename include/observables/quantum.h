@@ -24,4 +24,6 @@ private:
     Potential& int_potential;
     dVec& physical_forces;
     int& md_step;
+    double int_pot_cutoff, size;
+    bool pbc;
 };
