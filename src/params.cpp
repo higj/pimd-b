@@ -23,9 +23,11 @@ Params::Params(const std::string& filename, const int& rank, const int& world_si
 
     if (int nchains = std::get<int>(sim["nchains"]); nchains < 1)
         throw std::invalid_argument(std::format("The specified number of Nose-Hoover chains ({}) is less than one!", nchains));
-
-    sim["steps"] = static_cast<long>(
-        std::stod(reader.Get(Sections::SIMULATION, "steps", "1e5")));  // Scientific notation
+    
+    long steps = static_cast<long>(
+        std::stod(reader.Get(Sections::SIMULATION, "steps", "1e5"))); // Scientific notation
+    sim["steps"] = steps;
+    sim["shuffle_timer"] = reader.GetReal(Sections::SIMULATION, "shuffle_timer", steps + 1);
     sim["sfreq"] = reader.GetLong(Sections::SIMULATION, "sfreq", 1000); /// @todo: Add support for scientific notation
     sim["nbeads"] = reader.GetInteger(Sections::SIMULATION, "nbeads", 4);
 
@@ -158,9 +160,9 @@ Params::Params(const std::string& filename, const int& rank, const int& world_si
             throw std::invalid_argument("The number of processes must be equal to the number of beads when using no walkers communication!");
         }
         walkers_communication_type = "no_communication";
-    } else if (world_size == nbeads) {
-        throw std::invalid_argument("The number of processes must be larger than the number of beads when using multipl walkers!");
-    }
+    } //else if (world_size == nbeads) {
+      //  throw std::invalid_argument("The number of processes must be larger than the number of beads when using multipl walkers!");
+   // }
     if (walkers_communication_type == "roulette_splitting_cycle_prob") {
         if (!bosonic) {
             throw std::invalid_argument("Roulette splitting according to cummulative cycle probabilities is only available for bosonic simulations!");

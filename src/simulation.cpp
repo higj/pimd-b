@@ -272,7 +272,7 @@ void Simulation::run() {
         }
 
         // Save the observables at the specified frequency
-        if ((step % wfreq == 0) && (step > finish_potential_activation)) {
+        if ((step % wfreq == 0) && (step > 0)) {
             walker_communication->communicate(coord, momenta);
         }
 
@@ -684,7 +684,7 @@ void Simulation::initializeExchangeAlgorithm(Params& param_obj) {
 #if FACTORIAL_BOSONIC_ALGORITHM
         bosonic_exchange = std::make_unique<FactorialBosonicExchange>(param_obj, coord, prev_coord, next_coord, this_bead);
 #else
-        bosonic_exchange = std::make_unique<BosonicExchange>(param_obj, coord, prev_coord, next_coord, this_bead);
+        bosonic_exchange = std::make_unique<BosonicExchangeShuffle>(param_obj, coord, prev_coord, next_coord, this_bead);
 #endif
     }
 }

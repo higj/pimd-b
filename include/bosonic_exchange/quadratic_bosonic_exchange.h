@@ -3,7 +3,7 @@
 #include "common.h"
 #include "bosonic_exchange/bosonic_exchange_base.h"
 
-class BosonicExchange final : public BosonicExchangeBase {
+class BosonicExchange : public BosonicExchangeBase {
 public:
     BosonicExchange(Params& param_obj, const dVec& coord, const dVec& prev_coord, const dVec& next_coord, const int this_bead);
     ~BosonicExchange() override = default;

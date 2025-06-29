@@ -4,6 +4,9 @@ BosonicExchangeBase::BosonicExchangeBase(Params& param_obj, const dVec& coord, c
     x(coord),
     x_prev(prev_coord),
     x_next(next_coord), 
+    indirection_x(coord),
+    indirection_x_prev(prev_coord),
+    indirection_x_next(next_coord),
     this_bead(this_bead) {
     getVariant(param_obj.sys["natoms"], nbosons);
     getVariant(param_obj.sim["nbeads"], nbeads);
@@ -22,6 +25,12 @@ BosonicExchangeBase::BosonicExchangeBase(Params& param_obj, const dVec& coord, c
 #if IPI_CONVENTION
     beta /= nbeads;
 #endif
+}
+
+void BosonicExchangeBase::assignIndirectionCoords() {
+    indirection_x = x;
+    indirection_x_prev = x_prev;
+    indirection_x_next = x_next;
 }
 
 /**
@@ -91,11 +100,11 @@ void BosonicExchangeBase::exteriorSpringForce(dVec& f) {
  */
 void BosonicExchangeBase::assignFirstLast(dVec& x_first_bead, dVec& x_last_bead) const {
     if (this_bead == 0) {
-        x_first_bead = x;
-        x_last_bead = x_prev;
+        x_first_bead = indirection_x;
+        x_last_bead = indirection_x_prev;
     } else {
-        x_first_bead = x_next;
-        x_last_bead = x;
+        x_first_bead = indirection_x_next;
+        x_last_bead = indirection_x;
     }
 }
 

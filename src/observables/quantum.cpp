@@ -19,7 +19,6 @@ QuantumObservable::QuantumObservable(Params& param_obj, int _freq, const std::st
     int_pot_cutoff = (interaction_potential_name == "free") ? 0.0 : std::get<double>(param_obj.interaction_pot["cutoff"]);
     getVariant(param_obj.sim["pbc"], pbc);
     getVariant(param_obj.sys["size"], size);
-
     if (external_potential_name == "free" && interaction_potential_name == "free") {
         initialize({ "kinetic" });
     } else if (external_potential_name == "free" || interaction_potential_name == "free") {

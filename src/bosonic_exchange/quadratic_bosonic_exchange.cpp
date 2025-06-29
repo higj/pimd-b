@@ -28,6 +28,7 @@ void BosonicExchange::evaluateBosonicEnergies() {
  * Typically used after coordinate updates.
  */
 void BosonicExchange::prepare() {
+    assignIndirectionCoords();
     evaluateBosonicEnergies();
 }
 
@@ -163,7 +164,7 @@ void BosonicExchange::springForceLastBead(dVec& f) {
         for (int next_l = 0; next_l <= l + 1 && next_l < nbosons; next_l++) {
             double diff_next[NDIM];
 
-            getBeadsSeparation(x, l, x_next, next_l, diff_next);
+            getBeadsSeparation(indirection_x, l, indirection_x_next, next_l, diff_next);
 
             double prob = connection_probabilities[nbosons * l + next_l];
 
@@ -173,7 +174,7 @@ void BosonicExchange::springForceLastBead(dVec& f) {
         }
 
         double diff_prev[NDIM];
-        getBeadsSeparation(x, l, x_prev, l, diff_prev);
+        getBeadsSeparation(indirection_x, l, indirection_x_prev, l, diff_prev);
 
         for (int axis = 0; axis < NDIM; ++axis) {
             sums[axis] += diff_prev[axis];
@@ -192,7 +193,7 @@ void BosonicExchange::springForceFirstBead(dVec& f) {
         for (int prev_l = std::max(0, l - 1); prev_l < nbosons; prev_l++) {
             double diff_prev[NDIM];
 
-            getBeadsSeparation(x, l, x_prev, prev_l, diff_prev);
+            getBeadsSeparation(indirection_x, l, indirection_x_prev, prev_l, diff_prev);
 
             double prob = connection_probabilities[nbosons * prev_l + l];
 
@@ -202,7 +203,7 @@ void BosonicExchange::springForceFirstBead(dVec& f) {
         }
 
         double diff_next[NDIM];
-        getBeadsSeparation(x, l, x_next, l, diff_next);
+        getBeadsSeparation(indirection_x, l, indirection_x_next, l, diff_next);
 
         for (int axis = 0; axis < NDIM; ++axis) {
             sums[axis] += diff_next[axis];
