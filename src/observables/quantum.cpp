@@ -2,6 +2,7 @@
 #include "bosonic_exchange.h"
 #include "potentials.h"
 #include "units.h"
+#include "common.h"
 #include <ranges>
 
 /**
@@ -15,6 +16,10 @@ QuantumObservable::QuantumObservable(Params& param_obj, int _freq, const std::st
         
     external_potential_name = std::get<std::string>(param_obj.external_pot["name"]);
     interaction_potential_name = std::get<std::string>(param_obj.interaction_pot["name"]);
+    int_pot_cutoff = (interaction_potential_name == "free") ? 0.0 : std::get<double>(param_obj.interaction_pot["cutoff"]);
+    getVariant(param_obj.sim["pbc"], pbc);
+    getVariant(param_obj.sys["size"], size);
+
     if (external_potential_name == "free" && interaction_potential_name == "free") {
         initialize({ "kinetic" });
     } else if (external_potential_name == "free" || interaction_potential_name == "free") {
@@ -75,6 +80,21 @@ void QuantumObservable::calculatePotential() {
         for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
             for (int axis = 0; axis < NDIM; ++axis) {
                 virial -= coord(ptcl_idx, axis) * physical_forces(ptcl_idx, axis);
+            }
+        }
+    }
+
+
+    if (int_pot_cutoff != 0.0) {
+        for (int ptcl_one = 0; ptcl_one < natoms; ++ptcl_one) {
+            for (int ptcl_two = ptcl_one + 1; ptcl_two < natoms; ++ptcl_two) {
+                dVec diff = getSeparation(ptcl_one, ptcl_two, MINIM, pbc, coord, size);  // Vectorial distance
+
+                if (const double distance = diff.norm(); distance < int_pot_cutoff || int_pot_cutoff < 0.0) {
+                    double int_pot_val = int_potential.getV(diff, md_step);
+                    potential += int_pot_val;
+                    int_pot += int_pot_val;
+                }
             }
         }
     }
