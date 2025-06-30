@@ -55,6 +55,7 @@ public:
     Simulation(const int& rank, const int& nproc, Params& param_obj, unsigned int seed = static_cast<unsigned int>(time(nullptr)));
     ~Simulation();
 
+    std::vector<int> indexes;
     dVec coord, momenta, forces, spring_forces, physical_forces;
     dVec prev_coord, next_coord;
 

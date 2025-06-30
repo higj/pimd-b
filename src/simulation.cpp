@@ -5,6 +5,7 @@
 #include <chrono>
 #include <array>
 #include <cassert>
+#include <numeric>
 #include "mpi.h"
 #include "states.h"
 #include "observables.h"
@@ -34,6 +35,9 @@ Simulation::Simulation(const int& rank, const int& nproc, Params& param_obj, uns
     getVariant(param_obj.sys["temperature"], temperature);
     getVariant(param_obj.sys["natoms"], natoms);
     getVariant(param_obj.sys["size"], size);
+
+    indexes.resize(natoms);
+    std::iota(indexes.begin(), indexes.end(), 0);
 
     beta = 1.0 / (Constants::kB * temperature);
 
@@ -112,7 +116,7 @@ double Simulation::classicalSpringEnergy() const {
 
     for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
-            double diff = prev_coord(ptcl_idx, axis) - coord(ptcl_idx, axis);
+            double diff = prev_coord(indexes[ptcl_idx], axis) - coord(indexes[ptcl_idx], axis);
 
 #if MINIM
             if (pbc) {
@@ -392,10 +396,10 @@ void Simulation::updateForces() {
         for (int axis = 0; axis < NDIM; ++axis) {
 #if IPI_CONVENTION
             // i-Pi convention; exp[-(beta/P)*H_cl]
-            forces(ptcl_idx, axis) = spring_forces(ptcl_idx, axis) + physical_forces(ptcl_idx, axis);
+            forces(indexes[ptcl_idx], axis) = spring_forces(indexes[ptcl_idx], axis) + physical_forces(indexes[ptcl_idx], axis);
 #else
             // Corresponds to Eqn. (12.6.4) from Tuckerman; exp[-beta*H_cl]
-            forces(ptcl_idx, axis) = spring_forces(ptcl_idx, axis) + physical_forces(ptcl_idx, axis) / nbeads;
+            forces(indexes[ptcl_idx], axis) = spring_forces(indexes[ptcl_idx], axis) + physical_forces(indexes[ptcl_idx], axis) / nbeads;
 #endif
         }
     }
@@ -430,8 +434,8 @@ void Simulation::updateSpringForces() {
     // the force is calculated based on the standard expression for distinguishable particles.
     for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
-            double diff_prev = prev_coord(ptcl_idx, axis) - coord(ptcl_idx, axis);
-            double diff_next = next_coord(ptcl_idx, axis) - coord(ptcl_idx, axis);
+            double diff_prev = prev_coord(indexes[ptcl_idx], axis) - coord(indexes[ptcl_idx], axis);
+            double diff_next = next_coord(indexes[ptcl_idx], axis) - coord(indexes[ptcl_idx], axis);
 
 #if MINIM
             if (pbc) {
@@ -439,7 +443,7 @@ void Simulation::updateSpringForces() {
                 applyMinimumImage(diff_next, size);
             }
 #endif
-            spring_forces(ptcl_idx, axis) = spring_constant * (diff_prev + diff_next);
+            spring_forces(indexes[ptcl_idx], axis) = spring_constant * (diff_prev + diff_next);
         }
     }
 }
@@ -453,7 +457,7 @@ void Simulation::updatePhysicalForces() {
     dVec external_forces = (-1.0) * ext_potential->gradV(coord);
     for (int ptcl_one = 0; ptcl_one < natoms; ++ptcl_one) {
         for (int axis = 0; axis < NDIM; ++axis) {
-            physical_forces(ptcl_one, axis) = external_forces(ptcl_one, axis);
+            physical_forces(indexes[ptcl_one], axis) = external_forces(indexes[ptcl_one], axis);
         }
     }
 
@@ -473,8 +477,8 @@ void Simulation::updatePhysicalForces() {
                     dVec force_on_one = (-1.0) * int_potential->gradV(diff);
 
                     for (int axis = 0; axis < NDIM; ++axis) {
-                        physical_forces(ptcl_one, axis) += force_on_one(0, axis);
-                        physical_forces(ptcl_two, axis) -= force_on_one(0, axis);
+                        physical_forces(indexes[ptcl_one], axis) += force_on_one(0, axis);
+                        physical_forces(indexes[ptcl_two], axis) -= force_on_one(0, axis);
                     }
                 }
             }
