@@ -25,7 +25,7 @@ public:
 protected:
     void springForceFirstBead(dVec& f) override;
     void springForceLastBead(dVec& f) override;
-
+    std::vector<double> connection_probabilities;
 private:
     void evaluateBosonicEnergies();
     void evaluateCycleEnergies();
@@ -40,7 +40,6 @@ private:
     std::vector<double> E_kn;
     std::vector<double> V;
     std::vector<double> V_backwards;
-    std::vector<double> connection_probabilities;
 
     std::vector<double> temp_nbosons_array;
 

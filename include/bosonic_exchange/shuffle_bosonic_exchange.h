@@ -12,6 +12,8 @@ public:
 
 protected:
     void assignIndirectionCoords() override;
+    void springForceFirstBead(dVec& f) override;
+    void springForceLastBead(dVec& f) override;
 private:
     void shuffle();
     int timer;
