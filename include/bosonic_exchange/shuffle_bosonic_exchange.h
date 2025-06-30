@@ -13,6 +13,7 @@ public:
 protected:
     void assignIndirectionCoords() override;
 private:
+    void shuffle();
     int timer;
     int step;
     std::vector<int> indexes;
