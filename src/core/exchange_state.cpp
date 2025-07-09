@@ -8,6 +8,7 @@ void ExchangeState::initialize(const BosonicExchangeContext& context, const bool
     is_bosonic_bead = bosonic && (context.this_bead == 0 || context.this_bead == context.nbeads - 1);
 
     // If the imaginary time-slice is either 1 or P, initialize the bosonic exchange algorithm
+    // CR: otherwise it remains uninitialized?
     if (is_bosonic_bead) {
 #if FACTORIAL_BOSONIC_ALGORITHM
         bosonic_exchange = std::make_unique<FactorialBosonicExchange>(context);

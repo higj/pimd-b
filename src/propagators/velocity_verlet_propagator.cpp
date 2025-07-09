@@ -14,6 +14,7 @@ void VelocityVerletPropagator::step() {
     coordsStep();
 
     // Remember to update the neighboring coordinates after every coordinate propagation
+    // CR: then put it at the end of coordsStep()?
     m_context.state->updateNeighboringCoordinates();
 
     // Third step: forces are updated using the new positions

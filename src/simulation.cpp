@@ -38,6 +38,7 @@ Simulation::Simulation(const int& rank, const int& nproc, const std::string& con
     const auto state = std::make_shared<SystemState>(rank, nproc, config->natoms, config->nbeads);
 
     // Initialize the simulation box, as well as the particle positions and velocities
+    // CR: cleanup comments
     //const auto box = initializeBox(config, state, rng);
     //box->initializeMomenta(state->momenta, rng);
     initializePositions(config, state, rng);
@@ -75,6 +76,7 @@ Simulation::Simulation(const int& rank, const int& nproc, const std::string& con
         .state = state,
         .exchange_state = exchange_state,
         .rng = rng,
+        // CR: clean comment
         //.box = box,
         .force_mgr = force_mgr,
         .normal_modes = normal_modes,
@@ -289,6 +291,9 @@ std::vector<std::shared_ptr<Observable>> Simulation::initializeObservables(
             UNKNOWN
         };
 
+        // CR: What is the role of the separation between observable types?
+        // CR: "classical" seems to need access to most of the things?
+
         ObservableType type = UNKNOWN;
         if (obs_name == "energy") type = ENERGY;
         else if (obs_name == "classical") type = CLASSICAL;
@@ -436,6 +441,7 @@ std::vector<std::shared_ptr<Dump>> Simulation::initializeDumps(
 
         case VELOCITY:
             dumps.push_back(std::make_shared<VelocityDump>(
+                    // CR: this struct seems to be used only in velocity_dump.cpp?
                 VelocityDumpContext{
                     .momenta = std::shared_ptr<dVec>(state, &state->momenta),
                     .natoms = config->natoms,

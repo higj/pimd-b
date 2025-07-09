@@ -49,6 +49,7 @@ int main(int argc, char** argv) {
         if (!display_info) {
             printMsg(LOGO, rank);
 
+            // CR: obsolete comment?
             // Initialize the random number generator seed based on the current time
             Simulation sim(rank, size, config_filename);
             sim.run();

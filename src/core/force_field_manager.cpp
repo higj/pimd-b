@@ -61,6 +61,7 @@ void ForceFieldManager::updatePhysicalForces(SystemState& state) const
     }
 }
 
+// CR: if it handles PIMD forces, it is a ForceManager, not a ForceFieldManager
 void ForceFieldManager::updateSpringForces(SystemState& state, const ExchangeState& exchange_state) const
 {
     if (exchange_state.is_bosonic_bead)
