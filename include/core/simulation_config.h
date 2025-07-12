@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common.h"
+
 #include <string>
 
 // Holds immutable configuration parameters, parsed from the configuration file

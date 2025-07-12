@@ -2,8 +2,8 @@
 
 #include <memory>
 #include <vector>
-#include "simulation_config.h"
 
+struct SimulationConfig;
 class SystemState;
 class ExchangeState;
 class RandomGenerators;
