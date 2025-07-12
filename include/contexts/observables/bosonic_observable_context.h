@@ -2,7 +2,7 @@
 
 #include <memory>
 
-struct ExchangeState;
+class ExchangeState;
 
 /**
  * Parameters unique to the bosonic observable.

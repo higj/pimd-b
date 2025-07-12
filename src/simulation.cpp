@@ -4,16 +4,21 @@
 #include "params.h"
 
 #include "core/system_state.h"
-#include "core/force_field_manager.h"
+#include "core/force_manager.h"
 #include "core/random_generators.h"
 #include "contexts/bosonic_exchange_context.h"
-#include "contexts/propagator_context.h"
 #include "momentum_initializers.h"
 #include "position_initializers.h"
 
+//#include "contexts/spring_context.h"
+//#include "contexts/velocity_context.h"
+//#include "contexts/thermal_context.h"
+//#include "contexts/box_context.h"
+//#include "contexts/normal_modes_context.h"
+
+#include "propagators.h"
 #include "dumps.h"
 #include "observables.h"
-#include "propagators.h"
 #include "thermostats.h"
 
 #include <ranges>
@@ -37,10 +42,7 @@ Simulation::Simulation(const int& rank, const int& nproc, const std::string& con
     // Initialize the simulation state
     const auto state = std::make_shared<SystemState>(rank, nproc, config->natoms, config->nbeads);
 
-    // Initialize the simulation box, as well as the particle positions and velocities
-    // CR: cleanup comments
-    //const auto box = initializeBox(config, state, rng);
-    //box->initializeMomenta(state->momenta, rng);
+    // Initialize particle positions and velocities
     initializePositions(config, state, rng);
     initializeMomenta(config, state, rng);
 
@@ -48,9 +50,7 @@ Simulation::Simulation(const int& rank, const int& nproc, const std::string& con
     state->updateNeighboringCoordinates();
 
     // Initialize the force manager
-    const auto force_mgr = std::make_shared<ForceFieldManager>(config);
-    /// TODO: Get rid of initialize methods. Initialize everything in the constructor
-    //force_mgr->initialize(config);
+    const auto force_mgr = std::make_shared<ForceManager>(config);
 
     // Initialize the exchange state
     const auto exchange_state = initializeExchangeState(config, state);
@@ -76,8 +76,6 @@ Simulation::Simulation(const int& rank, const int& nproc, const std::string& con
         .state = state,
         .exchange_state = exchange_state,
         .rng = rng,
-        // CR: clean comment
-        //.box = box,
         .force_mgr = force_mgr,
         .normal_modes = normal_modes,
         .propagator = propagator,
@@ -88,28 +86,6 @@ Simulation::Simulation(const int& rank, const int& nproc, const std::string& con
 }
 
 Simulation::~Simulation() = default;
-
-//std::shared_ptr<Box> Simulation::initializeBox(
-//    const std::shared_ptr<SimulationConfig>& config,
-//    const std::shared_ptr<SystemState>& state,
-//    const std::shared_ptr<RandomGenerators>& rng)
-//{
-//    /*
-//        std::shared_ptr<dVec> coord;
-//    //std::shared_ptr<dVec> momenta;
-//    std::shared_ptr<RandomGenerators> rng;
-//    int natoms;
-//    double box_size;
-//    std::string init_pos_type;
-//    */
-//    return std::make_shared<Box>(BoxContext{
-//        .coord = std::shared_ptr<dVec>(state, &state->coord),
-//        .rng = rng,
-//        .natoms = config->natoms,
-//        .box_size = config->box_size,
-//        .init_pos_type = config->init_pos_type
-//    });
-//}
 
 std::shared_ptr<ExchangeState> Simulation::initializeExchangeState(
     const std::shared_ptr<SimulationConfig>& config,
@@ -143,9 +119,11 @@ std::shared_ptr<ExchangeState> Simulation::initializeExchangeState(
         .this_bead = config->this_bead
     };
 
-    auto exchange_state = std::make_shared<ExchangeState>();
-    /// TODO: Get rid of initialize methods. Initialize everything in the constructor
-    exchange_state->initialize(bosonic_context, config->bosonic);
+    auto exchange_state = std::make_shared<ExchangeState>(
+        bosonic_context,
+        config->bosonic
+    );
+
     return exchange_state;
 }
 
@@ -158,13 +136,12 @@ std::shared_ptr<NormalModes> Simulation::initializeNormalModes(
         config->propagator_type == "normal_modes" || couple_to_nm)
     {
         return std::make_shared<NormalModes>(
-            NormalModesContext{
-                .coord = std::shared_ptr<dVec>(state, &state->coord),
-                .momenta = std::shared_ptr<dVec>(state, &state->momenta),
-                .natoms = config->natoms,
-                .nbeads = config->nbeads,
-                .this_bead = config->this_bead,
-            });
+            std::shared_ptr<dVec>(state, &state->coord),
+            std::shared_ptr<dVec>(state, &state->momenta),
+            config->natoms,
+            config->nbeads,
+            config->this_bead
+        );
     }
     return {nullptr};
 }
@@ -173,32 +150,37 @@ std::shared_ptr<Propagator> Simulation::initializePropagator(
     const std::shared_ptr<SimulationConfig>& config,
     const std::shared_ptr<SystemState>& state,
     const std::shared_ptr<NormalModes>& normal_modes,
-    const std::shared_ptr<ForceFieldManager>& force_mgr,
+    const std::shared_ptr<ForceManager>& force_mgr,
     const std::shared_ptr<ExchangeState>& exchange_state)
 {
-    const auto propagator_context = PropagatorContext{
-        .state = state,
-        .force_mgr = force_mgr,
-        .exchange_state = exchange_state,
-        .dt = config->dt,
-        .natoms = config->natoms,
-        .nbeads = config->nbeads,
-        .mass = config->mass,
+    SpringContext spring_context{
         .omega_p = config->omega_p,
-        .spring_constant = config->spring_constant,
-        .this_bead = config->this_bead,
-        .bosonic = config->bosonic,
+        .spring_constant = config->spring_constant
     };
 
-    /// TODO: Maybe pass a smaller propagator context to propagator types, and then add more specific parameters as additional arguments?
     if (config->propagator_type == "cartesian")
     {
-        return std::make_shared<VelocityVerletPropagator>(propagator_context);
+        return std::make_shared<VelocityVerletPropagator>(
+            state,
+            force_mgr,
+            exchange_state,
+            spring_context,
+            config->mass,
+            config->dt
+        );
     }
 
     if (config->propagator_type == "normal_modes")
     {
-        return std::make_shared<NormalModesPropagator>(propagator_context, normal_modes);
+        return std::make_shared<NormalModesPropagator>(
+            state,
+            force_mgr,
+            exchange_state,
+            spring_context,
+            config->mass,
+            config->dt,
+            normal_modes
+        );
     }
 
     return {nullptr};
@@ -210,51 +192,51 @@ std::shared_ptr<Thermostat> Simulation::initializeThermostat(
     const std::shared_ptr<NormalModes>& normal_modes,
     const std::shared_ptr<RandomGenerators>& rng)
 {
-    // General thermostat parameters needed in every case
-    const auto thermostat_context = ThermostatContext{
-        .state = state,
-        .normal_modes = normal_modes,
-        .couple_to_nm = std::get<bool>(config->thermostat_params["nmthermostat"]),
+    ThermalContext thermal_ctx{
         .beta = config->beta,
-        .thermo_beta = config->thermo_beta,
-        .natoms = config->natoms,
-        .nbeads = config->nbeads,
-        .dt = config->dt,
-        .mass = config->mass
+        .thermo_beta = config->thermo_beta
+    };
+
+    NormalModesContext nm_ctx{
+        .normal_modes = normal_modes,
+        .couple_to_nm = std::get<bool>(config->thermostat_params["nmthermostat"])
     };
 
     if (config->thermostat_type == "langevin")
     {
+        double gamma = std::get<double>(config->thermostat_params["gamma"]);
+
         return std::make_shared<LangevinThermostat>(
-            thermostat_context,
-            LangevinThermostatContext{
-                .rng = rng,
-                .gamma = std::get<double>(config->thermostat_params["gamma"]),
-            });
+            thermal_ctx,
+            nm_ctx,
+            state,
+            rng,
+            gamma,
+            config->dt,
+            config->mass
+        );
     }
 
-    auto nh_context = NoseHooverThermostatContext{
-        .nchains = std::get<int>(config->thermostat_params["nchains"]),
-    };
+    int nchains = std::get<int>(config->thermostat_params["nchains"]);
 
     if (config->thermostat_type == "nose_hoover")
     {
-        return std::make_shared<NoseHooverThermostat>(thermostat_context, nh_context);
+        return std::make_shared<NoseHooverThermostat>(thermal_ctx, nm_ctx, state, nchains, config->dt, config->mass);
     }
 
     if (config->thermostat_type == "nose_hoover_np")
     {
-        return std::make_shared<NoseHooverNpThermostat>(thermostat_context, nh_context);
+        return std::make_shared<NoseHooverNpThermostat>(thermal_ctx, nm_ctx, state, nchains, config->dt, config->mass);
     }
 
     if (config->thermostat_type == "nose_hoover_np_dim")
     {
-        return std::make_shared<NoseHooverNpDimThermostat>(thermostat_context, nh_context);
+        return std::make_shared<NoseHooverNpDimThermostat>(thermal_ctx, nm_ctx, state, nchains, config->dt, config->mass);
     }
 
     if (config->thermostat_type == "none")
     {
-        return std::make_shared<Thermostat>(ThermostatContext{});
+        return std::make_shared<Thermostat>(thermal_ctx, nm_ctx, state);
     }
 
     return {nullptr};
@@ -264,7 +246,7 @@ std::vector<std::shared_ptr<Observable>> Simulation::initializeObservables(
     const std::shared_ptr<SimulationConfig>& config,
     const std::shared_ptr<SystemState>& state,
     const std::shared_ptr<ExchangeState>& exchange_state,
-    const std::shared_ptr<ForceFieldManager>& force_mgr,
+    const std::shared_ptr<ForceManager>& force_mgr,
     const std::shared_ptr<Thermostat>& thermostat)
 {
     std::vector<std::shared_ptr<Observable>> observables;
@@ -292,7 +274,11 @@ std::vector<std::shared_ptr<Observable>> Simulation::initializeObservables(
         };
 
         // CR: What is the role of the separation between observable types?
+        // JH: They represent different types of observable categories. For example, if
+        //      one requests "energy", it makes sense to calculate the different types of energies (primitive KE, virial KE, PE, etc.),
+        //      but not calculate other estimators (unless the user asks for it).
         // CR: "classical" seems to need access to most of the things?
+        // JH: Everything passed to it is eventually used.
 
         ObservableType type = UNKNOWN;
         if (obs_name == "energy") type = ENERGY;
@@ -429,11 +415,8 @@ std::vector<std::shared_ptr<Dump>> Simulation::initializeDumps(
         {
         case POSITION:
             dumps.push_back(std::make_shared<PositionDump>(
-                PositionDumpContext{
-                    .coord = std::shared_ptr<dVec>(state, &state->coord),
-                    .natoms = config->natoms,
-                    .this_bead = config->this_bead
-                },
+                std::shared_ptr<dVec>(state, &state->coord),
+                config->this_bead,
                 config->sfreq, /// TODO: Generalize the save frequency option to dumps, observables, etc.
                 correct_unit
             ));
@@ -441,13 +424,13 @@ std::vector<std::shared_ptr<Dump>> Simulation::initializeDumps(
 
         case VELOCITY:
             dumps.push_back(std::make_shared<VelocityDump>(
-                    // CR: this struct seems to be used only in velocity_dump.cpp?
-                VelocityDumpContext{
+                // CR: this struct seems to be used only in velocity_dump.cpp?
+                // JH: Yes, it is used only in velocity_dump.cpp. It is a context for the VelocityDump class.
+                VelocityContext{
                     .momenta = std::shared_ptr<dVec>(state, &state->momenta),
-                    .natoms = config->natoms,
-                    .this_bead = config->this_bead,
                     .mass = config->mass
                 },
+                config->this_bead,
                 config->sfreq, /// TODO: Generalize the save frequency option to dumps, observables, etc.
                 correct_unit
             ));
@@ -455,9 +438,8 @@ std::vector<std::shared_ptr<Dump>> Simulation::initializeDumps(
 
         case FORCE:
             dumps.push_back(std::make_shared<ForceDump>(
-                ForceDumpContext{
-                    .state = state,
-                },
+                state,
+                config->this_bead,
                 config->sfreq, /// TODO: Generalize the save frequency option to dumps, observables, etc.
                 correct_unit
             ));
@@ -636,8 +618,8 @@ void Simulation::run()
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
-    const double sim_exec_time_end = MPI_Wtime();
 
+    const double sim_exec_time_end = MPI_Wtime();
     const double wall_time = sim_exec_time_end - sim_exec_time_start;
 
     printStatus(std::format("Simulation finished running successfully (Runtime = {:.3} sec)", wall_time),

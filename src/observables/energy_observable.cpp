@@ -1,6 +1,6 @@
 #include "observables/energy_observable.h"
 #include "core/exchange_state.h"
-#include "core/force_field_manager.h"
+#include "core/force_manager.h"
 #include "bosonic_exchange/bosonic_exchange_base.h"
 #include "ring_polymer_utils.h"
 

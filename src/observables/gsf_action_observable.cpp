@@ -1,5 +1,5 @@
 #include "observables/gsf_action_observable.h"
-#include "core/force_field_manager.h"
+#include "core/force_manager.h"
 
 GSFActionObservable::GSFActionObservable(const GSFActionObservableContext& obs_context, int out_freq, const std::string& out_unit) :
     Observable(out_freq, out_unit), m_context(obs_context) {

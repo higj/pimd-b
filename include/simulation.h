@@ -62,7 +62,7 @@ public:
         const std::shared_ptr<SimulationConfig>& config,
         const std::shared_ptr<SystemState>& state,
         const std::shared_ptr<NormalModes>& normal_modes,
-        const std::shared_ptr<ForceFieldManager>& force_mgr, 
+        const std::shared_ptr<ForceManager>& force_mgr, 
         const std::shared_ptr<ExchangeState>& exchange_state
     );
     
@@ -96,7 +96,7 @@ public:
         const std::shared_ptr<SimulationConfig>& config,
         const std::shared_ptr<SystemState>& state,
         const std::shared_ptr<ExchangeState>& exchange_state,
-        const std::shared_ptr<ForceFieldManager>& force_mgr,
+        const std::shared_ptr<ForceManager>& force_mgr,
         const std::shared_ptr<Thermostat>& thermostat
     );
 

@@ -8,7 +8,7 @@ public:
     /**
      * @brief Generic state class constructor
      */
-    explicit Dump(int out_freq, const std::string& out_unit);
+    explicit Dump(int this_bead, int out_freq, const std::string& out_unit);
 
     /**
      * @brief Closes the file upon destruction.
@@ -19,6 +19,7 @@ public:
     virtual void output(int step) = 0;   
 
 protected:
+    int m_this_bead;           // Index of the current imaginary time slice
     int m_out_freq;            // Frequency at which the dump occurs
     std::string m_out_unit;    // Units of the dump quantities
     std::ofstream m_out_file;  // Output file stream

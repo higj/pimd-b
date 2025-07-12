@@ -3,7 +3,7 @@
 #include <vector>
 #include "mpi.h"
 
-#include "contexts/normal_modes_context.h"
+#include "common.h"
 
 /**
  * @class NormalModes
@@ -20,9 +20,19 @@ class NormalModes
 public:
     /**
      * @brief Constructs the NormalModes object and allocates necessary resources.
-     * @param context The context containing system and MPI information.
+     * @param coord The shared pointer to the Cartesian coordinates of the system.
+     * @param momenta The shared pointer to the momenta of the atoms.
+     * @param natoms The number of atoms in the system.
+     * @param nbeads The number of imaginary time slices.
+     * @param this_bead The index of the current MPI bead (process).
      */
-    explicit NormalModes(const NormalModesContext& context);
+    explicit NormalModes(
+        const std::shared_ptr<const dVec>& coord, 
+        const std::shared_ptr<dVec>& momenta,
+        int natoms,
+        int nbeads,
+        int this_bead
+    );
 
     /**
      * @brief Destructor. Releases allocated resources and MPI windows.
@@ -86,7 +96,10 @@ public:
      * @param atom The atom index.
      * @return The global index in the array.
      */
-    [[nodiscard]] int globIndexAtom(const int axis, int atom) const { return axis * m_axis_stride + atom * m_atom_stride; }
+    [[nodiscard]] int globIndexAtom(const int axis, int atom) const
+    {
+        return axis * m_axis_stride + atom * m_atom_stride;
+    }
 
     /**
      * @brief Updates the Cartesian momenta from the current normal mode momenta.
@@ -132,5 +145,9 @@ private:
      */
     [[nodiscard]] int globIndexBead(int axis, int atom, int bead) const { return globIndexAtom(axis, atom) + bead; };
 
-    NormalModesContext m_context; ///< Context with ring-polymer phase-space data and current bead information.
+    std::shared_ptr<const dVec> m_coord;
+    std::shared_ptr<dVec> m_momenta;
+    int m_natoms;
+    int m_nbeads;
+    int m_this_bead;
 };

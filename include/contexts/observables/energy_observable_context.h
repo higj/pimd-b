@@ -6,7 +6,7 @@
 #include <string>
 
 class ExchangeState;
-class ForceFieldManager;
+class ForceManager;
 
 /**
  * Parameters needed to calculate energy observables.
@@ -15,7 +15,7 @@ struct EnergyObservableContext {
     std::shared_ptr<ExchangeState> exchange_state;
     std::shared_ptr<const dVec> coord;
     std::shared_ptr<const dVec> prev_coord;
-    std::shared_ptr<ForceFieldManager> force_mgr;
+    std::shared_ptr<ForceManager> force_mgr;
     int natoms;
     int nbeads;
     int this_bead;

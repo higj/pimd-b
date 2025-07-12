@@ -4,11 +4,9 @@
 #include <memory>
 
 /**
- * Parameters required for the velocities dump.
+ * Data associated with the velocity of the beads.
  */
-struct VelocityDumpContext {
+struct VelocityContext {
     std::shared_ptr<const dVec> momenta;
-    int natoms;
-    int this_bead;
     double mass;
 };

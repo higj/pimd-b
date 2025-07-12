@@ -1,16 +1,26 @@
 #include "propagators/normal_modes/normal_modes.h"
 #include "propagators/normal_modes/normal_modes_transformation_matrix.h"
 
-NormalModes::NormalModes(const NormalModesContext& context) :
-    cart_to_nm_mat_row(context.nbeads),
-    nm_to_cart_mat_row(context.nbeads),
-    m_axis_stride(context.natoms * context.nbeads),
-    m_atom_stride(context.nbeads),
-    m_context(context)
+NormalModes::NormalModes(
+    const std::shared_ptr<const dVec>& coord,
+    const std::shared_ptr<dVec>& momenta,
+    int natoms,
+    int nbeads,
+    int this_bead
+) :
+    cart_to_nm_mat_row(nbeads),
+    nm_to_cart_mat_row(nbeads),
+    m_axis_stride(natoms * nbeads),
+    m_atom_stride(nbeads),
+    m_coord(coord),
+    m_momenta(momenta),
+    m_natoms(natoms),
+    m_nbeads(nbeads),
+    m_this_bead(this_bead)
 {
-    allocateAllSharedMemory(context.this_bead);
+    allocateAllSharedMemory(this_bead);
 
-    const TransformationMatrixBuilder builder(context.this_bead, context.nbeads);
+    const TransformationMatrixBuilder builder(this_bead, nbeads);
 
     // Build both transformation matrices
     builder.buildCartesianToNormalModes(cart_to_nm_mat_row.data());
@@ -50,7 +60,7 @@ void NormalModes::allocateSharedMemory(SharedMemory& mem, const size_t size, con
 void NormalModes::allocateAllSharedMemory(int this_bead)
 {
     // Calculate total memory size needed for each array
-    const size_t array_size = static_cast<size_t>(m_context.natoms * m_context.nbeads * NDIM) * sizeof(double);
+    const size_t array_size = static_cast<size_t>(m_natoms * m_nbeads * NDIM) * sizeof(double);
 
     // Define all shared memory structures
     SharedMemory coord_cartesian;
@@ -79,13 +89,13 @@ void NormalModes::allocateAllSharedMemory(int this_bead)
 
 void NormalModes::shareData() const
 {
-    for (int ptcl_idx = 0; ptcl_idx < m_context.natoms; ++ptcl_idx)
+    for (int ptcl_idx = 0; ptcl_idx < m_natoms; ++ptcl_idx)
     {
         for (int axis = 0; axis < NDIM; ++axis)
         {
             const int glob_idx = globIndexAtom(axis, ptcl_idx);
-            arr_coord_cartesian[glob_idx + m_context.this_bead] = (*m_context.coord)(ptcl_idx, axis);
-            arr_momenta_cartesian[glob_idx + m_context.this_bead] = (*m_context.momenta)(ptcl_idx, axis);
+            arr_coord_cartesian[glob_idx + m_this_bead] = (*m_coord)(ptcl_idx, axis);
+            arr_momenta_cartesian[glob_idx + m_this_bead] = (*m_momenta)(ptcl_idx, axis);
         }
     }
 }
@@ -93,7 +103,7 @@ void NormalModes::shareData() const
 double NormalModes::coordCartesianToNormal(const int glob_idx) const
 {
     double coord_nm = 0;
-    for (int bead_idx = 0; bead_idx < m_context.nbeads; ++bead_idx)
+    for (int bead_idx = 0; bead_idx < m_nbeads; ++bead_idx)
     {
         coord_nm += cart_to_nm_mat_row[bead_idx] * arr_coord_cartesian[glob_idx + bead_idx];
     }
@@ -103,7 +113,7 @@ double NormalModes::coordCartesianToNormal(const int glob_idx) const
 double NormalModes::momentumCartesianToNormal(const int glob_idx) const
 {
     double momentum_nm = 0;
-    for (int bead_idx = 0; bead_idx < m_context.nbeads; ++bead_idx)
+    for (int bead_idx = 0; bead_idx < m_nbeads; ++bead_idx)
     {
         momentum_nm += cart_to_nm_mat_row[bead_idx] * arr_momenta_cartesian[glob_idx + bead_idx];
     }
@@ -113,7 +123,7 @@ double NormalModes::momentumCartesianToNormal(const int glob_idx) const
 double NormalModes::coordNormalToCartesian(const int glob_idx) const
 {
     double coord_cartesian = 0;
-    for (int bead_idx = 0; bead_idx < m_context.nbeads; ++bead_idx)
+    for (int bead_idx = 0; bead_idx < m_nbeads; ++bead_idx)
     {
         coord_cartesian += nm_to_cart_mat_row[bead_idx] * arr_coord_nm[glob_idx + bead_idx];
     }
@@ -123,7 +133,7 @@ double NormalModes::coordNormalToCartesian(const int glob_idx) const
 double NormalModes::momentumNormalToCartesian(const int glob_idx) const
 {
     double momentum_cartesian = 0;
-    for (int bead_idx = 0; bead_idx < m_context.nbeads; ++bead_idx)
+    for (int bead_idx = 0; bead_idx < m_nbeads; ++bead_idx)
     {
         momentum_cartesian += nm_to_cart_mat_row[bead_idx] * arr_momenta_nm[glob_idx + bead_idx];
     }
@@ -132,13 +142,13 @@ double NormalModes::momentumNormalToCartesian(const int glob_idx) const
 
 void NormalModes::updateCartesianMomenta() const
 {
-    for (int ptcl_idx = 0; ptcl_idx < m_context.natoms; ++ptcl_idx)
+    for (int ptcl_idx = 0; ptcl_idx < m_natoms; ++ptcl_idx)
     {
         for (int axis = 0; axis < NDIM; ++axis)
         {
             int glob_idx = globIndexAtom(axis, ptcl_idx);
-            arr_momenta_cartesian[glob_idx + m_context.this_bead] = momentumNormalToCartesian(glob_idx);
-            (*m_context.momenta)(ptcl_idx, axis) = arr_momenta_cartesian[glob_idx + m_context.this_bead];
+            arr_momenta_cartesian[glob_idx + m_this_bead] = momentumNormalToCartesian(glob_idx);
+            (*m_momenta)(ptcl_idx, axis) = arr_momenta_cartesian[glob_idx + m_this_bead];
         }
     }
 }

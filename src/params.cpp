@@ -175,7 +175,7 @@ void Params::loadThermostatParams(SimulationConfig& config) const {
     // Handle normal mode thermostat coupling
     bool nmthermostat = m_reader.GetBoolean(Sections::SIMULATION, "nmthermostat", false);
     if (nmthermostat && config.thermostat_type == "none") {
-        throw std::invalid_argument("nmthermostat cannot be used in nve ensemble!");
+        throw std::invalid_argument("nmthermostat cannot be used in NVE ensemble!");
     }
 
     // Only set nmthermostat if we're using a thermostat

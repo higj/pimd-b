@@ -1,10 +1,10 @@
 #include <utility>
 
-#include "core/force_field_manager.h"
+#include "core/force_manager.h"
 #include "potentials.h"
 #include "bosonic_exchange/bosonic_exchange_base.h"
 
-ForceFieldManager::ForceFieldManager(const std::shared_ptr<const SimulationConfig>& config) : m_config(config)
+ForceManager::ForceManager(const std::shared_ptr<const SimulationConfig>& config) : m_config(config)
 {
     ext_potential = initializePotential(m_config->ext_pot_name, m_config->ext_pot_params);
     int_potential = initializePotential(m_config->int_pot_name, m_config->int_pot_params);
@@ -20,7 +20,7 @@ ForceFieldManager::ForceFieldManager(const std::shared_ptr<const SimulationConfi
     }
 }
 
-void ForceFieldManager::updatePhysicalForces(SystemState& state) const
+void ForceManager::updatePhysicalForces(SystemState& state) const
 {
     // Calculate the external forces acting on the particles
     state.physical_forces = (-1.0) * ext_potential->gradV(state.coord);
@@ -61,8 +61,8 @@ void ForceFieldManager::updatePhysicalForces(SystemState& state) const
     }
 }
 
-// CR: if it handles PIMD forces, it is a ForceManager, not a ForceFieldManager
-void ForceFieldManager::updateSpringForces(SystemState& state, const ExchangeState& exchange_state) const
+// CR: if it handles PIMD forces, it is a ForceManager, not a ForceManager
+void ForceManager::updateSpringForces(SystemState& state, const ExchangeState& exchange_state) const
 {
     if (exchange_state.is_bosonic_bead)
     {
@@ -77,7 +77,7 @@ void ForceFieldManager::updateSpringForces(SystemState& state, const ExchangeSta
     updateDistinguishableSpringForces(state);
 }
 
-void ForceFieldManager::updateForces(SystemState& state, const ExchangeState& exchange_state) const
+void ForceManager::updateForces(SystemState& state, const ExchangeState& exchange_state) const
 {
     // First, update the spring forces based on the current state of the system.
     updateSpringForces(state, exchange_state);
@@ -86,7 +86,7 @@ void ForceFieldManager::updateForces(SystemState& state, const ExchangeState& ex
     updatePhysicalForces(state);
 }
 
-void ForceFieldManager::applyMinimumImageIfNeeded(double& diff) const
+void ForceManager::applyMinimumImageIfNeeded(double& diff) const
 {
 #if MINIM
     if (m_config->pbc)
@@ -96,13 +96,13 @@ void ForceFieldManager::applyMinimumImageIfNeeded(double& diff) const
 #endif
 }
 
-void ForceFieldManager::addSpringForceContribution(SystemState& state, int ptcl_idx, int axis, double coord_diff) const
+void ForceManager::addSpringForceContribution(SystemState& state, int ptcl_idx, int axis, double coord_diff) const
 {
     applyMinimumImageIfNeeded(coord_diff);
     state.spring_forces(ptcl_idx, axis) += m_config->spring_constant * coord_diff;
 }
 
-void ForceFieldManager::updateDistinguishableSpringForces(SystemState& state) const
+void ForceManager::updateDistinguishableSpringForces(SystemState& state) const
 {
     for (int ptcl_idx = 0; ptcl_idx < m_config->natoms; ++ptcl_idx)
     {
@@ -119,7 +119,7 @@ void ForceFieldManager::updateDistinguishableSpringForces(SystemState& state) co
     }
 }
 
-void ForceFieldManager::updateBosonicSpringForces(SystemState& state, const ExchangeState& exchange_state) const
+void ForceManager::updateBosonicSpringForces(SystemState& state, const ExchangeState& exchange_state) const
 {
     exchange_state.bosonic_exchange->prepare();
     exchange_state.bosonic_exchange->exteriorSpringForce(state.spring_forces);
@@ -165,7 +165,7 @@ void ForceFieldManager::updateBosonicSpringForces(SystemState& state, const Exch
     }
 }
 
-std::unique_ptr<Potential> ForceFieldManager::initializePotential(const std::string& potential_name,
+std::unique_ptr<Potential> ForceManager::initializePotential(const std::string& potential_name,
                                                                   const VariantMap& potential_options) const
 {
     if (potential_name == "free")

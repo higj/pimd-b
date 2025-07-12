@@ -1,14 +1,15 @@
 #pragma once
 
 #include "dumps/dump.h"
-#include "contexts/dumps/force_dump_context.h"
+
+class SystemState;
 
 class ForceDump final : public Dump {
 public:
     /**
      * @brief Force dump class constructor.
      */
-    ForceDump(const ForceDumpContext& dump_context, int out_freq, const std::string& out_unit);
+    ForceDump(const std::shared_ptr<SystemState>& state, int this_bead, int out_freq, const std::string& out_unit);
 
     /**
      * @brief Initializes the forces dat file.
@@ -23,5 +24,5 @@ public:
     void output(int step) override;
 
 private:
-    ForceDumpContext m_context;
+    std::shared_ptr<SystemState> m_state;
 };

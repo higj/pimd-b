@@ -1,14 +1,14 @@
 #pragma once
 
 #include "dumps/dump.h"
-#include "contexts/dumps/position_dump_context.h"
+#include "common.h"
 
 class PositionDump final : public Dump {
 public:
     /**
      * @brief Position dump class constructor.
      */
-    PositionDump(const PositionDumpContext& dump_context, int out_freq, const std::string& out_unit);
+    PositionDump(const std::shared_ptr<const dVec>& coord, int this_bead, int out_freq, const std::string& out_unit);
 
     /**
      * @brief Initializes the coordinates xyz file.
@@ -23,5 +23,6 @@ public:
     void output(int step) override;
 
 private:
-    PositionDumpContext m_context;
+    std::shared_ptr<const dVec> m_coord;  // Pointer to the coordinates array
+    int m_natoms;                         // Number of atoms in the quantum system
 };

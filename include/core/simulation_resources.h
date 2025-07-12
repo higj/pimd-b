@@ -5,10 +5,9 @@
 #include "simulation_config.h"
 
 class SystemState;
-struct ExchangeState;
+class ExchangeState;
 class RandomGenerators;
-//class Box;
-class ForceFieldManager;
+class ForceManager;
 class Propagator;
 class Thermostat;
 class NormalModes;
@@ -20,8 +19,7 @@ struct SimulationResources {
     std::shared_ptr<SystemState> state;
     std::shared_ptr<ExchangeState> exchange_state;
     std::shared_ptr<RandomGenerators> rng;
-    //std::shared_ptr<Box> box;
-    std::shared_ptr<ForceFieldManager> force_mgr;
+    std::shared_ptr<ForceManager> force_mgr;
 
     std::shared_ptr<NormalModes> normal_modes;
     std::shared_ptr<Propagator> propagator;

@@ -7,9 +7,9 @@
 #include "exchange_state.h"
 #include "potentials/potential.h"
 
-class ForceFieldManager {
+class ForceManager {
 public:
-    explicit ForceFieldManager(const std::shared_ptr<const SimulationConfig>& config);
+    explicit ForceManager(const std::shared_ptr<const SimulationConfig>& config);
 
     /**
      * Updates the physical forces acting on the particles. This includes both the forces
