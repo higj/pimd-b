@@ -1,9 +1,10 @@
 #pragma once
 
-#include <vector>
-#include "mpi.h"
-
 #include "common.h"
+
+#include <vector>
+#include <memory>
+#include "mpi.h"
 
 /**
  * @class NormalModes
