@@ -19,7 +19,15 @@ public:
      * @brief Construct a new BosonicExchange object.
      * @param context The context containing system parameters and coordinates.
      */
-    explicit BosonicExchange(const BosonicExchangeContext& context);
+    explicit BosonicExchange(
+        const std::shared_ptr<const dVec>& coord_first_bead,
+        const std::shared_ptr<const dVec>& coord_last_bead,
+        const ThermalContext& thermal_ctx,
+        const SpringContext& spring_ctx,
+        const BoxContext& box_ctx,
+        int nbeads,
+        int this_bead
+    );
 
     /**
      * @brief Destructor.

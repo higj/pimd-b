@@ -6,7 +6,15 @@
 
 class FactorialBosonicExchange final : public BosonicExchangeBase {
 public:
-    explicit FactorialBosonicExchange(const BosonicExchangeContext& context);
+    explicit FactorialBosonicExchange(
+        const std::shared_ptr<const dVec>& coord_first_bead,
+        const std::shared_ptr<const dVec>& coord_last_bead,
+        const ThermalContext& thermal_ctx,
+        const SpringContext& spring_ctx,
+        const BoxContext& box_ctx,
+        int nbeads,
+        int this_bead
+    );
     ~FactorialBosonicExchange() override = default;
 
     /**

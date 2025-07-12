@@ -6,7 +6,6 @@
 #include "core/system_state.h"
 #include "core/force_manager.h"
 #include "core/random_generators.h"
-#include "contexts/bosonic_exchange_context.h"
 #include "momentum_initializers.h"
 #include "position_initializers.h"
 
@@ -105,26 +104,26 @@ std::shared_ptr<ExchangeState> Simulation::initializeExchangeState(
         x_last_bead = std::shared_ptr<dVec>(state, &state->coord);
     }
 
-    const auto bosonic_context = BosonicExchangeContext{
-        .nbosons = config->natoms,
-        .nbeads = config->nbeads,
-        .spring_constant = config->spring_constant,
-        .beta_half_k = config->beta_half_k,
-        .beta = config->beta,
-        .thermo_beta = config->thermo_beta,
-        .x_first_bead = x_first_bead,
-        .x_last_bead = x_last_bead,
-        .pbc = config->pbc,
-        .box_size = config->box_size,
-        .this_bead = config->this_bead
-    };
-
-    auto exchange_state = std::make_shared<ExchangeState>(
-        bosonic_context,
+    return std::make_shared<ExchangeState>(
+        x_first_bead,
+        x_last_bead,
+        ThermalContext{
+            .beta = config->beta,
+            .thermo_beta = config->thermo_beta
+        },
+        SpringContext{
+            .omega_p = config->omega_p,
+            .spring_constant = config->spring_constant,
+            .beta_half_k = config->beta_half_k
+        },
+        BoxContext{
+            .box_size = config->box_size,
+            .pbc = config->pbc
+        },
+        config->nbeads,
+        config->this_bead,
         config->bosonic
     );
-
-    return exchange_state;
 }
 
 std::shared_ptr<NormalModes> Simulation::initializeNormalModes(
@@ -153,9 +152,11 @@ std::shared_ptr<Propagator> Simulation::initializePropagator(
     const std::shared_ptr<ForceManager>& force_mgr,
     const std::shared_ptr<ExchangeState>& exchange_state)
 {
+    /// TODO: Pass to initializePropagator the spring_context, mass and dt instead of the entire config?
     SpringContext spring_context{
         .omega_p = config->omega_p,
-        .spring_constant = config->spring_constant
+        .spring_constant = config->spring_constant,
+        .beta_half_k = config->beta_half_k
     };
 
     if (config->propagator_type == "cartesian")
@@ -663,6 +664,7 @@ void Simulation::printReport(double wall_time) const
     report_file << formattedReportLine("Number of atoms", m_context.config->natoms);
     report_file << formattedReportLine("Number of beads", m_context.config->nbeads);
 
+    /// TODO: Limit the number of digits in the output
     double out_temperature = Units::convertToUser("temperature", "kelvin", m_context.config->temperature);
     report_file << formattedReportLine("Temperature", std::format("{} kelvin", out_temperature));
 

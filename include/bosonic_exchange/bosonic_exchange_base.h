@@ -1,7 +1,9 @@
 #pragma once
 
 #include "common.h"
-#include "contexts/bosonic_exchange_context.h"
+#include "contexts/box_context.h"
+#include "contexts/thermal_context.h"
+#include "contexts/spring_context.h"
 
 /**
  * @class BosonicExchangeBase
@@ -14,7 +16,15 @@
  */
 class BosonicExchangeBase {
 public:
-    explicit BosonicExchangeBase(const BosonicExchangeContext& context);
+    explicit BosonicExchangeBase(
+        const std::shared_ptr<const dVec>& coord_first_bead,
+        const std::shared_ptr<const dVec>& coord_last_bead,
+        const ThermalContext& thermal_ctx,
+        const SpringContext& spring_ctx,
+        const BoxContext& box_ctx,
+        int nbeads,
+        int this_bead
+    );
     virtual ~BosonicExchangeBase() = default;
     ///BosonicExchangeBase(const BosonicExchangeBase&) = delete;
     ///BosonicExchangeBase& operator=(const BosonicExchangeBase&) = delete;
@@ -53,5 +63,14 @@ protected:
     virtual void springForceFirstBead(dVec& f) = 0;
     virtual void springForceLastBead(dVec& f) = 0;
 
-    BosonicExchangeContext m_context;
+    std::shared_ptr<const dVec> m_coord_first_bead;
+    std::shared_ptr<const dVec> m_coord_last_bead;
+
+    ThermalContext m_thermal_ctx;
+    SpringContext m_spring_ctx;
+    BoxContext m_box_ctx;
+
+    int m_nbosons;
+    int m_nbeads;
+    int m_this_bead;
 };
