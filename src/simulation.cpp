@@ -320,22 +320,30 @@ std::vector<std::shared_ptr<Observable>> Simulation::initializeObservables(
 
         case CLASSICAL:
             observables.push_back(std::make_shared<ClassicalObservable>(
-                ClassicalObservableContext{
-                    .coord = std::shared_ptr<dVec>(state, &state->coord),
-                    .prev_coord = std::shared_ptr<dVec>(state, &state->prev_coord),
-                    .momenta = std::shared_ptr<dVec>(state, &state->momenta),
-                    .exchange_state = exchange_state,
+                std::shared_ptr<const dVec>(state, &state->coord),
+                std::shared_ptr<const dVec>(state, &state->prev_coord),
+                exchange_state,
+                VelocityContext{
+                    .momenta = std::shared_ptr<const dVec>(state, &state->momenta),
+                    .mass = config->mass
+                },
+                ThermostatContext{
                     .thermostat = thermostat,
-                    .natoms = config->natoms,
-                    .nbeads = config->nbeads,
-                    .this_bead = config->this_bead,
-                    .beta = config->beta,
-                    .mass = config->mass,
-                    .spring_constant = config->spring_constant,
-                    .box_size = config->box_size,
-                    .pbc = config->pbc,
-                    .bosonic = config->bosonic,
                     .thermostat_type = config->thermostat_type
+                },
+                BeadContext{
+                    .nbeads = config->nbeads,
+                    .natoms = config->natoms,
+                    .this_bead = config->this_bead
+                },
+                SpringContext{
+                    .omega_p = config->omega_p,
+                    .spring_constant = config->spring_constant,
+                    .beta_half_k = config->beta_half_k
+                },
+                BoxContext{
+                    .box_size = config->box_size,
+                    .pbc = config->pbc
                 },
                 config->sfreq, /// TODO: Generalize the save frequency option to dumps, observables, etc.
                 correct_unit

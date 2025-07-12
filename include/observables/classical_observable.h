@@ -1,19 +1,48 @@
 #pragma once
 
 #include "observables/observable.h"
-#include "contexts/observables/classical_observable_context.h"
+#include "contexts/velocity_context.h"
+#include "contexts/thermostat_context.h"
+#include "contexts/bead_context.h"
+#include "contexts/spring_context.h"
+#include "contexts/box_context.h"
+
+#include <memory>
+
+class ExchangeState;
+class Thermostat;
 
 class ClassicalObservable final : public Observable {
 public:
     /**
      * @brief Classical observable class constructor.
      */
-    ClassicalObservable(const ClassicalObservableContext& obs_context, int out_freq, const std::string& out_unit);
+    ClassicalObservable(
+        const std::shared_ptr<const dVec>& coord,
+        const std::shared_ptr<const dVec>& prev_coord,
+        const std::shared_ptr<ExchangeState>& exchange_state,
+        const VelocityContext& vel_ctx,
+        const ThermostatContext& thermostat_ctx,
+        const BeadContext& bead_ctx,
+        const SpringContext& spring_ctx,
+        const BoxContext& box_ctx,
+        int out_freq, 
+        const std::string& out_unit
+    );
 
     void calculate() override;
 
 private:
-    ClassicalObservableContext m_context;
+    std::shared_ptr<const dVec> m_coord;
+    std::shared_ptr<const dVec> m_prev_coord;
+    std::shared_ptr<ExchangeState> m_exchange_state;
+
+    VelocityContext m_vel_ctx;
+    ThermostatContext m_thermostat_ctx;
+    BeadContext m_bead_ctx;
+    SpringContext m_spring_ctx;
+    BoxContext m_box_ctx;
+
     bool m_is_nose_hoover = false;  // Is the thermostat a Nose-Hoover?
 
     /**

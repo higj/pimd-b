@@ -27,19 +27,17 @@ EnergyObservable::EnergyObservable(
     m_is_ext_free(force_mgr->ext_potential->isFree()),
     m_is_int_free(force_mgr->int_potential->isFree())
 {
-    std::vector<std::string> observables = {"kinetic"};
+    initialize({"kinetic"});
 
     if (!m_is_ext_free || !m_is_int_free)
     {
-        observables.insert(observables.end(), {"potential", "virial"});
+        initialize({"potential", "virial"});
 
         if (!m_is_ext_free && !m_is_int_free)
         {
-            observables.insert(observables.end(), {"ext_pot", "int_pot"});
+            initialize({"ext_pot", "int_pot"});
         }
     }
-
-    initialize(observables);
 }
 
 void EnergyObservable::calculate()
