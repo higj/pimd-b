@@ -14,7 +14,6 @@ public:
      */
     BosonicObservable(
         const std::shared_ptr<ExchangeState>& exchange_state,
-        int this_bead,
         int out_freq,
         const std::string& out_unit
     );
@@ -26,5 +25,4 @@ public:
 
 private:
     std::shared_ptr<ExchangeState> m_exchange_state;
-    int m_this_bead;
 };

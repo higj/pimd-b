@@ -4,19 +4,17 @@
 
 BosonicObservable::BosonicObservable(
     const std::shared_ptr<ExchangeState>& exchange_state,
-    int this_bead, /// TODO: Consider using BeadContext instead of this_bead
     int out_freq,
     const std::string& out_unit
 ) : Observable(out_freq, out_unit),
-    m_exchange_state(exchange_state),
-    m_this_bead(this_bead)
+    m_exchange_state(exchange_state)
 {
     initialize({"prob_dist", "prob_all"});
 }
 
 void BosonicObservable::calculate()
 {
-    if (m_this_bead == 0)
+    if (m_exchange_state->is_first_bead)
     {
         quantities["prob_dist"] = m_exchange_state->bosonic_exchange->getDistinctProbability();
         quantities["prob_all"] = m_exchange_state->bosonic_exchange->getLongestProbability();

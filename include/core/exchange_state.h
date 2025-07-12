@@ -19,6 +19,8 @@ public:
     );
 
     bool is_bosonic;       // Is the current simulation bosonic?
+    bool is_first_bead;    // Is the current imaginary time slice the first?
+    bool is_last_bead;     // Is the current imaginary time slice the last?
     bool is_bosonic_bead;  // Is the current simulation bosonic and the time-slice is either 1 or P?
     std::unique_ptr<BosonicExchangeBase> bosonic_exchange;
 };

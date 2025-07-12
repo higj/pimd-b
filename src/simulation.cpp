@@ -349,7 +349,6 @@ std::vector<std::shared_ptr<Observable>> Simulation::initializeObservables(
             }
             observables.push_back(std::make_shared<BosonicObservable>(
                 exchange_state,
-                config->this_bead,
                 config->sfreq, /// TODO: Generalize the save frequency option to dumps, observables, etc.
                 correct_unit
             ));
@@ -357,14 +356,21 @@ std::vector<std::shared_ptr<Observable>> Simulation::initializeObservables(
 
         case GSF:
             observables.push_back(std::make_shared<GSFActionObservable>(
-                GSFActionObservableContext{
-                    .coord = std::shared_ptr<dVec>(state, &state->coord),
-                    .force_mgr = force_mgr,
-                    .natoms = config->natoms,
+                std::shared_ptr<const dVec>(state, &state->coord),
+                force_mgr,
+                BeadContext{
                     .nbeads = config->nbeads,
-                    .this_bead = config->this_bead,
+                    .natoms = config->natoms,
+                    .this_bead = config->this_bead
+                },
+                ThermalContext{
                     .beta = config->beta,
-                    .spring_constant = config->spring_constant
+                    .thermo_beta = config->thermo_beta
+                },
+                SpringContext{
+                    .omega_p = config->omega_p,
+                    .spring_constant = config->spring_constant,
+                    .beta_half_k = config->beta_half_k
                 },
                 config->sfreq, /// TODO: Generalize the save frequency option to dumps, observables, etc.
                 correct_unit

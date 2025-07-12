@@ -12,6 +12,8 @@ ExchangeState::ExchangeState(
     bool bosonic
 ) :
     is_bosonic(bosonic),
+    is_first_bead(this_bead == 0),
+    is_last_bead(this_bead == nbeads - 1),
     is_bosonic_bead(bosonic && (this_bead == 0 || this_bead == nbeads - 1))
 {
     // If the imaginary time-slice is either 1 or P, initialize the bosonic exchange algorithm

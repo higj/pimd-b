@@ -1,14 +1,28 @@
 #pragma once
 
 #include "observables/observable.h"
-#include "contexts/observables/gsf_action_observable_context.h"
+#include "common.h"
+#include "contexts/bead_context.h"
+#include "contexts/spring_context.h"
+#include "contexts/thermal_context.h"
 
-class GSFActionObservable final : public Observable {
+class ForceManager;
+
+class GSFActionObservable final : public Observable
+{
 public:
     /**
      * @brief Constructor for the class handling observables associated with the GSF action.
      */
-    GSFActionObservable(const GSFActionObservableContext& obs_context, int out_freq, const std::string& out_unit);
+    GSFActionObservable(
+        const std::shared_ptr<const dVec>& coord,
+        const std::shared_ptr<const ForceManager>& force_mgr,
+        const BeadContext& bead_ctx,
+        const ThermalContext& thermal_ctx,
+        const SpringContext& spring_ctx,
+        int out_freq,
+        const std::string& out_unit
+    );
 
     /**
      * @brief Calculates the natural logarithm of the weight associated with the GSF action,
@@ -17,6 +31,12 @@ public:
      * Any additional estimators used with the GSF action should be calculated here.
      */
     void calculate() override;
+
 private:
-    GSFActionObservableContext m_context;
+    std::shared_ptr<const dVec> m_coord;
+    std::shared_ptr<const ForceManager> m_force_mgr;
+
+    BeadContext m_bead_ctx;
+    ThermalContext m_thermal_ctx;
+    SpringContext m_spring_ctx;
 };
