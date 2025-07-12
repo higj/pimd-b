@@ -2,6 +2,8 @@
 
 #include "dumps/dump.h"
 
+#include <memory>
+
 class SystemState;
 
 class ForceDump final : public Dump {

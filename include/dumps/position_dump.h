@@ -3,6 +3,8 @@
 #include "dumps/dump.h"
 #include "common.h"
 
+#include <memory>
+
 class PositionDump final : public Dump {
 public:
     /**
