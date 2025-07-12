@@ -1,3 +1,3 @@
 #include "potentials/potential.h"
 
-Potential::Potential() : tailV(0.0) {}
+Potential::Potential() : tail_correction(0.0) {}

@@ -25,7 +25,10 @@ public:
      * @param state Object representing the current state of the system, including forces acting on particles.
      * @param exchange_state Object representing the state of the exchange algorithm.
      */
-    void updateSpringForces(SystemState& state, const ExchangeState& exchange_state) const;
+    void updateSpringForces(
+        SystemState& state, 
+        const ExchangeState& exchange_state
+    ) const;
 
     /**
      * Updates both the spring and physical forces' arrays.
@@ -33,7 +36,10 @@ public:
      * @param state Object representing the current state of the system, including forces acting on particles.
      * @param exchange_state Object representing the state of the exchange algorithm.
      */
-    void updateForces(SystemState& state, const ExchangeState& exchange_state) const;
+    void updateForces(
+        SystemState& state,
+        const ExchangeState& exchange_state
+    ) const;
 
     std::unique_ptr<Potential> ext_potential;
     std::unique_ptr<Potential> int_potential;
@@ -49,7 +55,10 @@ private:
      * @param potential_options Physical parameters of the potential.
      * @return Pointer to the initialized potential.
      */
-    std::unique_ptr<Potential> initializePotential(const std::string& potential_name, const VariantMap& potential_options) const;
+    [[nodiscard]] std::unique_ptr<Potential> initializePotential(
+        const std::string& potential_name, 
+        const VariantMap& potential_options
+    ) const;
 
     /**
      * Helper function to apply minimum image if needed.
@@ -59,7 +68,12 @@ private:
     /**
      * Helper function to calculate and accumulate spring force contribution
      */
-    void addSpringForceContribution(SystemState& state, int ptcl_idx, int axis, double coord_diff) const;
+    void addSpringForceContribution(
+        SystemState& state, 
+        int ptcl_idx, 
+        int axis, 
+        double coord_diff
+    ) const;
 
     /**
      * Updates the spring forces exerted on the beads.
@@ -79,5 +93,8 @@ private:
      * @param state Object representing the current state of the system, including forces acting on particles.
      * @param exchange_state Object representing the state of the exchange algorithm.
      */
-    void updateBosonicSpringForces(SystemState& state, const ExchangeState& exchange_state) const;
+    void updateBosonicSpringForces(
+        SystemState& state,
+        const ExchangeState& exchange_state
+    ) const;
 };

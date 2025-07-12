@@ -18,6 +18,8 @@ public:
     // Potential laplacian
     double laplacianV(const dVec& x) override;
 
+    [[nodiscard]] bool isFree() const override { return false; }
+
 private:
     double mass;      // Mass of the particle experiencing the double-well potential
     double strength;  // Height of the well

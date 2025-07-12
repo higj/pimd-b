@@ -290,22 +290,40 @@ std::vector<std::shared_ptr<Observable>> Simulation::initializeObservables(
         switch (type)
         {
         case ENERGY:
+            /*
+             *const std::shared_ptr<ExchangeState>& exchange_state,
+        const std::shared_ptr<const dVec>& coord,
+        const std::shared_ptr<const dVec>& prev_coord,
+        const std::shared_ptr<const ForceManager>& force_mgr,
+        const BeadContext& bead_ctx,
+        const ThermalContext& thermal_ctx,
+        const SpringContext& spring_ctx,
+        const BoxContext& box_ctx,
+        int out_freq, 
+        const std::string& out_unit
+             */
             observables.push_back(std::make_shared<EnergyObservable>(
-                EnergyObservableContext{
-                    .exchange_state = exchange_state,
-                    .coord = std::shared_ptr<dVec>(state, &state->coord),
-                    .prev_coord = std::shared_ptr<dVec>(state, &state->prev_coord),
-                    .force_mgr = force_mgr,
-                    .natoms = config->natoms,
+                exchange_state,
+                std::shared_ptr<const dVec>(state, &state->coord),
+                std::shared_ptr<const dVec>(state, &state->prev_coord),
+                force_mgr,
+                BeadContext{
                     .nbeads = config->nbeads,
-                    .this_bead = config->this_bead,
+                    .natoms = config->natoms,
+                    .this_bead = config->this_bead
+                },
+                ThermalContext{
                     .beta = config->beta,
+                    .thermo_beta = config->thermo_beta
+                },
+                SpringContext{
+                    .omega_p = config->omega_p,
                     .spring_constant = config->spring_constant,
+                    .beta_half_k = config->beta_half_k
+                },
+                BoxContext{
                     .box_size = config->box_size,
-                    .pbc = config->pbc,
-                    .bosonic = config->bosonic,
-                    .ext_pot_name = config->ext_pot_name,
-                    .int_pot_name = config->int_pot_name
+                    .pbc = config->pbc
                 },
                 config->sfreq, /// TODO: Generalize the save frequency option to dumps, observables, etc.
                 correct_unit

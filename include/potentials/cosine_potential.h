@@ -18,6 +18,8 @@ public:
     // Potential laplacian
     double laplacianV(const dVec& x) override;
 
+    [[nodiscard]] bool isFree() const override { return false; }
+
 private:
     double amplitude;   // Amplitude of the potential (V_0)
     double wavelength;  // Wavelength of the potential (L)

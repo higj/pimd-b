@@ -4,48 +4,73 @@
 #include "bosonic_exchange/bosonic_exchange_base.h"
 #include "ring_polymer_utils.h"
 
-/**
- * @brief Energy observable class constructor.
- */
-EnergyObservable::EnergyObservable(const EnergyObservableContext& obs_context, int out_freq, const std::string& out_unit) :
-    Observable(out_freq, out_unit), m_context(obs_context) {
-    if (obs_context.ext_pot_name == "free" && obs_context.int_pot_name == "free") {
-        initialize({ "kinetic" });
-    } else if (obs_context.ext_pot_name == "free" || obs_context.int_pot_name == "free") {
-        initialize({ "kinetic", "potential", "virial" });
-    } else {
-        initialize({ "kinetic", "potential", "ext_pot", "int_pot", "virial" });
+EnergyObservable::EnergyObservable(
+        const std::shared_ptr<ExchangeState>& exchange_state,
+        const std::shared_ptr<const dVec>& coord,
+        const std::shared_ptr<const dVec>& prev_coord,
+        const std::shared_ptr<const ForceManager>& force_mgr,
+        const BeadContext& bead_ctx,
+        const ThermalContext& thermal_ctx,
+        const SpringContext& spring_ctx,
+        const BoxContext& box_ctx,
+        int out_freq,
+        const std::string& out_unit
+    ) : Observable(out_freq, out_unit),
+    m_exchange_state(exchange_state),
+    m_coord_this(coord),
+    m_coord_prev(prev_coord),
+    m_force_mgr(force_mgr),
+    m_bead_ctx(bead_ctx),
+    m_thermal_ctx(thermal_ctx),
+    m_spring_ctx(spring_ctx),
+    m_box_ctx(box_ctx),
+    m_is_ext_free(force_mgr->ext_potential->isFree()),
+    m_is_int_free(force_mgr->int_potential->isFree())
+{
+    std::vector<std::string> observables = {"kinetic"};
+
+    if (!m_is_ext_free || !m_is_int_free)
+    {
+        observables.insert(observables.end(), {"potential", "virial"});
+
+        if (!m_is_ext_free && !m_is_int_free)
+        {
+            observables.insert(observables.end(), {"ext_pot", "int_pot"});
+        }
     }
+
+    initialize(observables);
 }
 
-void EnergyObservable::calculate() {
+void EnergyObservable::calculate()
+{
     calculateKinetic();
     calculatePotential();
 }
 
-/**
- * @brief Calculates the quantum kinetic energy of the system using the primitive kinetic energy estimator.
- * Works both for distinguishable particles and bosons.
- */
-void EnergyObservable::calculateKinetic() {
+void EnergyObservable::calculateKinetic()
+{
     // First, add the constant factor of d*N*P/(2*beta) to the kinetic energy (per bead)
-    quantities["kinetic"] = 0.5 * NDIM * m_context.natoms / m_context.beta;
+    quantities["kinetic"] = 0.5 * NDIM * m_bead_ctx.natoms / m_thermal_ctx.beta;
 
     // Then, subtract the spring energies. In the case of bosons, the exterior
     // spring energy requires separate treatment.
-    if (m_context.this_bead == 0 && m_context.bosonic) {
-        quantities["kinetic"] += m_context.exchange_state->bosonic_exchange->primitiveEnergyEstimator();
-    } else {
+    if (m_bead_ctx.this_bead == 0 && m_exchange_state->is_bosonic)
+    {
+        quantities["kinetic"] += m_exchange_state->bosonic_exchange->primitiveEnergyEstimator();
+    }
+    else
+    {
         /// TODO: Think about best way to pass minimum_image and box_size. Presumably, we need to pass Box object here?
         double spring_energy = RingPolymerUtils::classicalSpringEnergy(
-            *m_context.coord,
-            *m_context.prev_coord, 
-            m_context.spring_constant,
-            m_context.pbc && MINIM, /// TODO: MINIM should become a parameter (mic_spring and mic_potential)
-            m_context.box_size
+            *m_coord_this,
+            *m_coord_prev,
+            m_spring_ctx.spring_constant,
+            m_box_ctx.pbc && MINIM, /// TODO: MINIM should become a parameter (mic_spring and mic_potential)
+            m_box_ctx.box_size
         );
 #if IPI_CONVENTION
-        spring_energy /= m_context.nbeads;
+        spring_energy /= m_bead_ctx.nbeads;
 #endif
 
         quantities["kinetic"] -= spring_energy;
@@ -54,70 +79,77 @@ void EnergyObservable::calculateKinetic() {
     quantities["kinetic"] = Units::convertToUser("energy", m_out_unit, quantities["kinetic"]);
 }
 
-/**
- * @brief Calculates the quantum potential energy of the system, based on the potential energy estimator.
- * The potential energy is the sum of the external potential energy and the interaction potential energy
- * across all time-slices, divided by the number of beads. In addition, the method calculates the virial
- * kinetic energy of the system.
- */
-void EnergyObservable::calculatePotential() {
-    double potential = 0.0;  // Total potential energy
-    double virial = 0.0;     // Virial kinetic energy
-    double int_pot = 0.0;    // Potential energy due to interactions
-    double ext_pot = 0.0;    // Potential energy due to external field
+void EnergyObservable::calculatePotential()
+{
+    double potential = 0.0; // Total potential energy
+    double virial = 0.0; // Virial kinetic energy
+    double int_pot = 0.0; // Potential energy due to interactions
+    double ext_pot = 0.0; // Potential energy due to external field
 
-    const auto& coord = *m_context.coord;
+    const auto& coord = *m_coord_this;
 
-    if (m_context.ext_pot_name != "free") {
-        ext_pot = m_context.force_mgr->ext_potential->V(coord);
+    if (!m_is_ext_free)
+    {
+        ext_pot = m_force_mgr->ext_potential->V(coord);
         potential += ext_pot;
 
-        dVec physical_forces(m_context.natoms);
-        physical_forces = (-1.0) * m_context.force_mgr->ext_potential->gradV(coord);
+        /// TODO: We already have physical_forces in ForceManager, so we can use it instead of calculating it again?
+        dVec physical_forces(m_bead_ctx.natoms);
+        physical_forces = (-1.0) * m_force_mgr->ext_potential->gradV(coord);
 
-        for (int ptcl_idx = 0; ptcl_idx < m_context.natoms; ++ptcl_idx) {
-            for (int axis = 0; axis < NDIM; ++axis) {
+        for (int ptcl_idx = 0; ptcl_idx < m_bead_ctx.natoms; ++ptcl_idx)
+        {
+            for (int axis = 0; axis < NDIM; ++axis)
+            {
                 virial -= coord(ptcl_idx, axis) * physical_forces(ptcl_idx, axis);
             }
         }
     }
 
-    if (m_context.force_mgr->cutoff != 0.0) {
-        for (int ptcl_one = 0; ptcl_one < m_context.natoms; ++ptcl_one) {
-            for (int ptcl_two = ptcl_one + 1; ptcl_two < m_context.natoms; ++ptcl_two) {
-                dVec diff = coord.getSeparation(ptcl_one, ptcl_two);  // Vectorial distance
+    if (m_force_mgr->cutoff != 0.0)
+    {
+        for (int ptcl_one = 0; ptcl_one < m_bead_ctx.natoms; ++ptcl_one)
+        {
+            for (int ptcl_two = ptcl_one + 1; ptcl_two < m_bead_ctx.natoms; ++ptcl_two)
+            {
+                dVec diff = coord.getSeparation(ptcl_one, ptcl_two); // Vectorial distance
 
                 /// TODO: MINIM should become a parameter (mic_spring and mic_potential)
-                if (m_context.pbc && MINIM) {
-                    applyMinimumImage(diff, m_context.box_size);
+                if (m_box_ctx.pbc && MINIM)
+                {
+                    applyMinimumImage(diff, m_box_ctx.box_size);
                 }
 
-                if (const double distance = diff.norm(); distance < m_context.force_mgr->cutoff || m_context.force_mgr->cutoff < 0.0) {
-                    dVec force_on_one = (-1.0) * m_context.force_mgr->int_potential->gradV(diff);
+                if (const double distance = diff.norm(); distance < m_force_mgr->cutoff || m_force_mgr->cutoff < 0.0)
+                {
+                    dVec force_on_one = (-1.0) * m_force_mgr->int_potential->gradV(diff);
 
-                    double int_pot_val = m_context.force_mgr->int_potential->V(diff);
+                    double int_pot_val = m_force_mgr->int_potential->V(diff);
                     potential += int_pot_val;
                     int_pot += int_pot_val;
 
-                    for (int axis = 0; axis < NDIM; ++axis) {
+                    for (int axis = 0; axis < NDIM; ++axis)
+                    {
                         virial -= coord(ptcl_one, axis) * force_on_one(0, axis);
                     }
                 }
             }
         }
     }
-    
-    if (m_context.ext_pot_name != "free" && m_context.int_pot_name != "free") {
-        ext_pot /= m_context.nbeads;
-        int_pot /= m_context.nbeads;
+
+    if (!m_is_ext_free && !m_is_int_free)
+    {
+        ext_pot /= m_bead_ctx.nbeads;
+        int_pot /= m_bead_ctx.nbeads;
 
         quantities["ext_pot"] = Units::convertToUser("energy", m_out_unit, ext_pot);
         quantities["int_pot"] = Units::convertToUser("energy", m_out_unit, int_pot);
     }
 
-    if (m_context.ext_pot_name != "free" || m_context.int_pot_name != "free") {
-        potential /= m_context.nbeads;
-        virial *= 0.5 / m_context.nbeads;
+    if (!m_is_ext_free || !m_is_int_free)
+    {
+        potential /= m_bead_ctx.nbeads;
+        virial *= 0.5 / m_bead_ctx.nbeads;
 
         quantities["potential"] = Units::convertToUser("energy", m_out_unit, potential);
         quantities["virial"] = Units::convertToUser("energy", m_out_unit, virial);
