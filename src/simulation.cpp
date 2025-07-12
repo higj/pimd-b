@@ -290,18 +290,6 @@ std::vector<std::shared_ptr<Observable>> Simulation::initializeObservables(
         switch (type)
         {
         case ENERGY:
-            /*
-             *const std::shared_ptr<ExchangeState>& exchange_state,
-        const std::shared_ptr<const dVec>& coord,
-        const std::shared_ptr<const dVec>& prev_coord,
-        const std::shared_ptr<const ForceManager>& force_mgr,
-        const BeadContext& bead_ctx,
-        const ThermalContext& thermal_ctx,
-        const SpringContext& spring_ctx,
-        const BoxContext& box_ctx,
-        int out_freq, 
-        const std::string& out_unit
-             */
             observables.push_back(std::make_shared<EnergyObservable>(
                 exchange_state,
                 std::shared_ptr<const dVec>(state, &state->coord),
@@ -360,10 +348,8 @@ std::vector<std::shared_ptr<Observable>> Simulation::initializeObservables(
                 throw std::runtime_error("Bosonic observables require bosonic simulation mode");
             }
             observables.push_back(std::make_shared<BosonicObservable>(
-                BosonicObservableContext{
-                    .this_bead = config->this_bead,
-                    .exchange_state = exchange_state
-                },
+                exchange_state,
+                config->this_bead,
                 config->sfreq, /// TODO: Generalize the save frequency option to dumps, observables, etc.
                 correct_unit
             ));

@@ -1,13 +1,30 @@
 #pragma once
 
 #include "observables/observable.h"
-#include "contexts/observables/bosonic_observable_context.h"
 
-class BosonicObservable final : public Observable {
+#include <memory>
+
+class ExchangeState;
+
+class BosonicObservable final : public Observable
+{
 public:
-    BosonicObservable(const BosonicObservableContext& obs_context, int out_freq, const std::string& out_unit);
+    /**
+     * @brief Bosonic observable class constructor.
+     */
+    BosonicObservable(
+        const std::shared_ptr<ExchangeState>& exchange_state,
+        int this_bead,
+        int out_freq,
+        const std::string& out_unit
+    );
 
+    /**
+     * @brief Calculates quantities pertaining to bosonic exchange.
+     */
     void calculate() override;
+
 private:
-    BosonicObservableContext m_context;
+    std::shared_ptr<ExchangeState> m_exchange_state;
+    int m_this_bead;
 };
