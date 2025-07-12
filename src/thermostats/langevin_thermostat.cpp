@@ -11,7 +11,7 @@ LangevinThermostat::LangevinThermostat(
     double gamma,
     double dt,
     double mass
-) : Thermostat(thermal_ctx, nm_ctx, state), m_gamma(gamma), m_dt(dt), m_mass(mass), m_natoms(state->getNumAtoms()) {
+) : Thermostat(thermal_ctx, nm_ctx, state), m_rng(rng), m_gamma(gamma), m_dt(dt), m_mass(mass), m_natoms(state->getNumAtoms()) {
     m_friction_coefficient = exp(-0.5 * gamma * m_dt);
     m_noise_coefficient = sqrt((1 - m_friction_coefficient * m_friction_coefficient) * m_mass / thermal_ctx.thermo_beta);
 }
