@@ -1,7 +1,5 @@
 #pragma once
 
-#include <memory>
-
 #include "bosonic_exchange/bosonic_exchange_base.h"
 
 struct BosonicExchangeContext;

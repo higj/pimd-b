@@ -5,6 +5,8 @@
 #include "contexts/thermal_context.h"
 #include "contexts/spring_context.h"
 
+#include <memory>
+
 /**
  * @class BosonicExchangeBase
  * @brief Abstract base class for bosonic exchange algorithms.

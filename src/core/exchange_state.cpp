@@ -1,7 +1,5 @@
 #include "core/exchange_state.h"
-
 #include "bosonic_exchange.h"
-#include "core/simulation_config.h"
 
 ExchangeState::ExchangeState(
     const std::shared_ptr<const dVec>& coord_first_bead,
