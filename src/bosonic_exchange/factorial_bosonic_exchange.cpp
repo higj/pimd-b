@@ -10,17 +10,16 @@ FactorialBosonicExchange::FactorialBosonicExchange(
     const ThermalContext& thermal_ctx,
     const SpringContext& spring_ctx,
     const BoxContext& box_ctx,
-    int nbeads,
-    int this_bead
+    const BeadContext& bead_ctx
 ) : BosonicExchangeBase(
         coord_first_bead,
         coord_last_bead,
         thermal_ctx,
         spring_ctx,
         box_ctx,
-        nbeads,
-        this_bead),
-    m_labels(coord_first_bead->len())
+        bead_ctx
+    ),
+    m_labels(bead_ctx.natoms)
 {
     // Fill the labels array with numbers from 0 to nbosons-1
     std::iota(m_labels.begin(), m_labels.end(), 0);
@@ -53,7 +52,7 @@ double FactorialBosonicExchange::getMinExteriorSpringEnergy()
     {
         double diff2 = 0.0;
 
-        for (int l = 0; l < m_nbosons; ++l)
+        for (int l = 0; l < m_bead_ctx.natoms; ++l)
         {
             std::array<double, NDIM> sums = {};
 
@@ -81,7 +80,7 @@ double FactorialBosonicExchange::effectivePotential()
         permutation_counter++;
         double diff2 = 0.0;
 
-        for (int ptcl_idx = 0; ptcl_idx < m_nbosons; ++ptcl_idx)
+        for (int ptcl_idx = 0; ptcl_idx < m_bead_ctx.natoms; ++ptcl_idx)
         {
             diff2 += getExteriorSeparationSquared(ptcl_idx, lastBeadNeighbor(ptcl_idx));
         }
@@ -98,14 +97,14 @@ void FactorialBosonicExchange::springForceLastBead(dVec& f)
     /// TODO: Either reset "f" at the beginning of each MD step, or don't "+=" the force later in this function
     f.reset();
 
-    dVec temp_force(m_nbosons);
+    dVec temp_force(m_bead_ctx.natoms);
     double denom_weight = 0.0;
 
     do
     {
         double weight = 0.0;
 
-        for (int l = 0; l < m_nbosons; ++l)
+        for (int l = 0; l < m_bead_ctx.natoms; ++l)
         {
             std::array<double, NDIM> diff_next;
 
@@ -122,7 +121,7 @@ void FactorialBosonicExchange::springForceLastBead(dVec& f)
 
         weight = exp(-m_thermal_ctx.thermo_beta * (0.5 * m_spring_ctx.spring_constant * weight - m_e_shift));
 
-        for (int l = 0; l < m_nbosons; ++l)
+        for (int l = 0; l < m_bead_ctx.natoms; ++l)
         {
             for (int axis = 0; axis < NDIM; ++axis)
             {
@@ -135,7 +134,7 @@ void FactorialBosonicExchange::springForceLastBead(dVec& f)
     while (std::ranges::next_permutation(m_labels).found);
 
     // Normalize the forces by the sum of Boltzmann contributions due to all the permutations
-    for (int l = 0; l < m_nbosons; ++l)
+    for (int l = 0; l < m_bead_ctx.natoms; ++l)
     {
         for (int axis = 0; axis < NDIM; ++axis)
         {
@@ -149,14 +148,14 @@ void FactorialBosonicExchange::springForceFirstBead(dVec& f)
     /// TODO: Either reset "f" at the beginning of each MD step, or don't "+=" the force later in this function
     f.reset();
 
-    dVec temp_force(m_nbosons);
+    dVec temp_force(m_bead_ctx.natoms);
     double denom_weight = 0.0;
 
     do
     {
         double weight = 0.0;
 
-        for (int l = 0; l < m_nbosons; ++l)
+        for (int l = 0; l < m_bead_ctx.natoms; ++l)
         {
             std::array<double, NDIM> diff_prev;
 
@@ -173,7 +172,7 @@ void FactorialBosonicExchange::springForceFirstBead(dVec& f)
 
         weight = exp(-m_thermal_ctx.thermo_beta * (0.5 * m_spring_ctx.spring_constant * weight - m_e_shift));
 
-        for (int l = 0; l < m_nbosons; ++l)
+        for (int l = 0; l < m_bead_ctx.natoms; ++l)
         {
             for (int axis = 0; axis < NDIM; ++axis)
             {
@@ -186,7 +185,7 @@ void FactorialBosonicExchange::springForceFirstBead(dVec& f)
     while (std::ranges::next_permutation(m_labels).found);
 
     // Normalize the forces by the sum of Boltzmann contributions due to all the permutations
-    for (int l = 0; l < m_nbosons; ++l)
+    for (int l = 0; l < m_bead_ctx.natoms; ++l)
     {
         for (int axis = 0; axis < NDIM; ++axis)
         {
@@ -216,7 +215,7 @@ double FactorialBosonicExchange::primitiveEnergyEstimator()
     {
         double weight = 0.0;
 
-        for (int l = 0; l < m_nbosons; ++l)
+        for (int l = 0; l < m_bead_ctx.natoms; ++l)
         {
             // Last bead of some particle (depending on the permutation) minus first bead of the l-th particle
             weight += getExteriorSeparationSquared(l, firstBeadNeighbor(l));
@@ -236,7 +235,7 @@ double FactorialBosonicExchange::primitiveEnergyEstimator()
     double bosonic_spring_energy = numerator / denom_weight;
 
 #if IPI_CONVENTION
-    bosonic_spring_energy /= m_nbeads;
+    bosonic_spring_energy /= m_bead_ctx.nbeads;
 #endif
 
     return (-1.0) * bosonic_spring_energy;

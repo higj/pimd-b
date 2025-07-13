@@ -8,7 +8,7 @@
 class Simulation
 {
 public:
-    Simulation(const int& rank, const int& nproc, const std::string& config_filename);
+    Simulation(int rank, int nproc, const std::string& config_filename);
     ~Simulation();
 
     /**

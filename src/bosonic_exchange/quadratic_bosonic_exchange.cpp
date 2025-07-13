@@ -10,21 +10,19 @@ BosonicExchange::BosonicExchange(
     const ThermalContext& thermal_ctx,
     const SpringContext& spring_ctx,
     const BoxContext& box_ctx,
-    int nbeads,
-    int this_bead
+    const BeadContext& bead_ctx
 ) : BosonicExchangeBase(
         coord_first_bead,
         coord_last_bead,
         thermal_ctx,
         spring_ctx,
         box_ctx,
-        nbeads,
-        this_bead),
-    m_cycle_energies(m_nbosons * (m_nbosons + 1) / 2),
-    m_prefix_pot(m_nbosons + 1),
-    m_suffix_pot(m_nbosons + 1),
-    m_connection_probabilities(m_nbosons * (m_nbosons)),
-    m_log_n_factorial(std::lgamma(m_nbosons + 1))
+        bead_ctx),
+    m_cycle_energies(bead_ctx.natoms * (bead_ctx.natoms + 1) / 2),
+    m_prefix_pot(bead_ctx.natoms + 1),
+    m_suffix_pot(bead_ctx.natoms + 1),
+    m_connection_probabilities(bead_ctx.natoms* (bead_ctx.natoms)),
+    m_log_n_factorial(std::lgamma(bead_ctx.natoms + 1))
 {
     evaluateBosonicEnergies();
 }
@@ -47,7 +45,7 @@ void BosonicExchange::evaluateCycleEnergies()
     const double half_spring_k = 0.5 * m_spring_ctx.spring_constant;
 
     // Compute cycle energies using Eqs. 5-7 from the paper
-    for (int v = 0; v < m_nbosons; ++v)
+    for (int v = 0; v < m_bead_ctx.natoms; ++v)
     {
         // Initialize single-particle cycle energy E^[v,v] (Algorithm 1, line 5)
         const double diagonal_energy = getExteriorSeparationSquared(v, v);
@@ -107,10 +105,10 @@ void BosonicExchange::setEnk(int m, int k, double val)
 void BosonicExchange::evaluatePrefixPotential()
 {
     m_prefix_pot[0] = 0.0;
-    std::vector<double> subdivision_potentials(m_nbosons);
+    std::vector<double> subdivision_potentials(m_bead_ctx.natoms);
 
     // Corresponds to lines 10-11 in Algorithm 1 in the paper ("last_idx" is "v" in the paper)
-    for (int last_idx = 1; last_idx <= m_nbosons; last_idx++)
+    for (int last_idx = 1; last_idx <= m_bead_ctx.natoms; last_idx++)
     {
         double e_shift = std::numeric_limits<double>::max();
 
@@ -148,17 +146,17 @@ void BosonicExchange::evaluatePrefixPotential()
 
 void BosonicExchange::evaluateSuffixPotential()
 {
-    m_suffix_pot[m_nbosons] = 0.0;
-    std::vector<double> subdivision_potentials(m_nbosons);
+    m_suffix_pot[m_bead_ctx.natoms] = 0.0;
+    std::vector<double> subdivision_potentials(m_bead_ctx.natoms);
 
     // Corresponds to lines 14-15 in Algorithm 1 in the paper ("first_idx" is "u" in the paper)
-    for (int first_idx = m_nbosons - 1; first_idx > 0; first_idx--)
+    for (int first_idx = m_bead_ctx.natoms - 1; first_idx > 0; first_idx--)
     {
         double e_shift = std::numeric_limits<double>::max();
 
         // Calculate the cycle energy of the first "ell" particles in the sequence u,...,N
         // and add the suffix potential of the remaining particles.
-        for (int ell = first_idx; ell < m_nbosons; ell++)
+        for (int ell = first_idx; ell < m_bead_ctx.natoms; ell++)
         {
             // E^[u,ell] corresponds to E(ell-u+1,ell+1), since "u" ("first_idx") and "ell" are 0-based indices.
             // This is because the last element of the suffix potential, V^[N+1,N], is at index N, and not N+1.
@@ -170,7 +168,7 @@ void BosonicExchange::evaluateSuffixPotential()
 
         // Calculate the sum of the exponentials
         double sig_denom = 0.0;
-        for (int ell = first_idx; ell < m_nbosons; ell++)
+        for (int ell = first_idx; ell < m_bead_ctx.natoms; ell++)
         {
             sig_denom += 1.0 / (ell + 1) * exp(-m_thermal_ctx.thermo_beta * (subdivision_potentials[ell] - e_shift));
         }
@@ -189,12 +187,12 @@ void BosonicExchange::evaluateSuffixPotential()
     }
 
     // The first suffix potential, V^[u=1,N], coincides with the last prefix potential, V^[1,v=N]
-    m_suffix_pot[0] = m_prefix_pot[m_nbosons];
+    m_suffix_pot[0] = m_prefix_pot[m_bead_ctx.natoms];
 }
 
 double BosonicExchange::effectivePotential()
 {
-    return m_prefix_pot[m_nbosons];
+    return m_prefix_pot[m_bead_ctx.natoms];
 }
 
 double BosonicExchange::getVn(int n) const
@@ -210,39 +208,39 @@ double BosonicExchange::getEknSerialOrder(int i) const
 void BosonicExchange::evaluateConnectionProbabilities()
 {
     // Corresponds to lines 16-17 in Algorithm 1 in the paper
-    for (int l = 0; l < m_nbosons - 1; l++)
+    for (int l = 0; l < m_bead_ctx.natoms - 1; l++)
     {
         const double direct_link_probability = 1.0 - (exp(-m_thermal_ctx.thermo_beta *
             (m_prefix_pot[l + 1] + m_suffix_pot[l + 1] -
-                m_prefix_pot[m_nbosons])));
-        m_connection_probabilities[m_nbosons * l + (l + 1)] = direct_link_probability;
+                m_prefix_pot[m_bead_ctx.natoms])));
+        m_connection_probabilities[m_bead_ctx.natoms * l + (l + 1)] = direct_link_probability;
     }
 
     // Corresponds to lines 18-20 in Algorithm 1 in the paper
-    for (int u = 0; u < m_nbosons; u++)
+    for (int u = 0; u < m_bead_ctx.natoms; u++)
     {
-        for (int l = u; l < m_nbosons; l++)
+        for (int l = u; l < m_bead_ctx.natoms; l++)
         {
             const double close_cycle_probability = 1.0 / (l + 1) *
                 exp(-m_thermal_ctx.thermo_beta * (m_prefix_pot[u] + getEnk(l + 1, l - u + 1) + m_suffix_pot[l + 1]
-                    - m_prefix_pot[m_nbosons]));
-            m_connection_probabilities[m_nbosons * l + u] = close_cycle_probability;
+                    - m_prefix_pot[m_bead_ctx.natoms]));
+            m_connection_probabilities[m_bead_ctx.natoms * l + u] = close_cycle_probability;
         }
     }
 }
 
 void BosonicExchange::springForceLastBead(dVec& f)
 {
-    for (int l = 0; l < m_nbosons; l++)
+    for (int l = 0; l < m_bead_ctx.natoms; l++)
     {
         std::array<double, NDIM> sums = {};
 
-        for (int next_l = 0; next_l <= l + 1 && next_l < m_nbosons; next_l++)
+        for (int next_l = 0; next_l <= l + 1 && next_l < m_bead_ctx.natoms; next_l++)
         {
             std::array<double, NDIM> diff_next;
             getExteriorBeadsSeparation(next_l, l, diff_next);
 
-            const double prob = m_connection_probabilities[m_nbosons * l + next_l];
+            const double prob = m_connection_probabilities[m_bead_ctx.natoms * l + next_l];
 
             for (int axis = 0; axis < NDIM; ++axis)
             {
@@ -259,16 +257,16 @@ void BosonicExchange::springForceLastBead(dVec& f)
 
 void BosonicExchange::springForceFirstBead(dVec& f)
 {
-    for (int l = 0; l < m_nbosons; l++)
+    for (int l = 0; l < m_bead_ctx.natoms; l++)
     {
         std::array<double, NDIM> sums = {};
 
-        for (int prev_l = std::max(0, l - 1); prev_l < m_nbosons; prev_l++)
+        for (int prev_l = std::max(0, l - 1); prev_l < m_bead_ctx.natoms; prev_l++)
         {
             std::array<double, NDIM> diff_prev;
             getExteriorBeadsSeparation(l, prev_l, diff_prev);
 
-            const double prob = m_connection_probabilities[m_nbosons * prev_l + l];
+            const double prob = m_connection_probabilities[m_bead_ctx.natoms * prev_l + l];
 
             for (int axis = 0; axis < NDIM; ++axis)
             {
@@ -286,25 +284,25 @@ void BosonicExchange::springForceFirstBead(dVec& f)
 double BosonicExchange::getDistinctProbability()
 {
     double cycle_energy_sum = 0.0;
-    for (int m = 1; m < m_nbosons + 1; ++m)
+    for (int m = 1; m < m_bead_ctx.natoms + 1; ++m)
     {
         cycle_energy_sum += getEnk(m, 1);
     }
 
-    return exp(-m_thermal_ctx.thermo_beta * (cycle_energy_sum - m_prefix_pot[m_nbosons]) - m_log_n_factorial);
+    return exp(-m_thermal_ctx.thermo_beta * (cycle_energy_sum - m_prefix_pot[m_bead_ctx.natoms]) - m_log_n_factorial);
 }
 
 double BosonicExchange::getLongestProbability()
 {
     return exp(
-        -m_thermal_ctx.thermo_beta * (getEnk(m_nbosons, m_nbosons) - m_prefix_pot[m_nbosons]));
+        -m_thermal_ctx.thermo_beta * (getEnk(m_bead_ctx.natoms, m_bead_ctx.natoms) - m_prefix_pot[m_bead_ctx.natoms]));
 }
 
 double BosonicExchange::primitiveEnergyEstimator()
 {
-    std::vector<double> prim_est(m_nbosons + 1);
+    std::vector<double> prim_est(m_bead_ctx.natoms + 1);
 
-    for (int m = 1; m < m_nbosons + 1; ++m)
+    for (int m = 1; m < m_bead_ctx.natoms + 1; ++m)
     {
         double sig = 0.0;
         // Shift the energies in the exponents to avoid numerical instability (Xiong & Xiong method)
@@ -328,24 +326,23 @@ double BosonicExchange::primitiveEnergyEstimator()
     }
 
 #if IPI_CONVENTION
-    return prim_est[m_nbosons] / m_nbeads;
+    return prim_est[m_bead_ctx.natoms] / m_bead_ctx.nbeads;
 #else
-    return prim_est[m_context->nbosons];
+    return prim_est[m_bead_ctx.natoms];
 #endif
 }
 
 void BosonicExchange::printBosonicDebug()
 {
-    if (m_this_bead == 0)
+    if (m_bead_ctx.this_bead == 0)
     {
         std::ofstream debug;
         debug.open(std::format("{}/bosonic_debug.log", Output::FOLDER_NAME), std::ios::out | std::ios::app);
 
-        /// TODO: Think about access to number of steps; Or maybe move this method to Simulation class?
         //debug << "Step " << sim.getStep() << '\n';
 
         debug << "Bosonic energies:\n";
-        for (int m = 1; m < m_nbosons + 1; ++m)
+        for (int m = 1; m < m_bead_ctx.natoms + 1; ++m)
         {
             debug << "m_prefix_pot[" << m << "] = " << m_prefix_pot[m] << '\n';
         }
@@ -353,12 +350,12 @@ void BosonicExchange::printBosonicDebug()
         debug << "----\n";
 
         debug << "Connection probabilities:\n";
-        for (int l = 0; l < m_nbosons; ++l)
+        for (int l = 0; l < m_bead_ctx.natoms; ++l)
         {
-            for (int u = 0; u < m_nbosons; ++u)
+            for (int u = 0; u < m_bead_ctx.natoms; ++u)
             {
                 debug << std::format("P[l={}, u={}] = {}\n", l, u,
-                                     m_connection_probabilities[m_nbosons * l + u]);
+                                     m_connection_probabilities[m_bead_ctx.natoms * l + u]);
             }
         }
 
@@ -366,7 +363,7 @@ void BosonicExchange::printBosonicDebug()
 
         debug << "getEnk(0, 0) = " << getEnk(0, 0) << '\n';
 
-        for (int m = 1; m < m_nbosons + 1; ++m)
+        for (int m = 1; m < m_bead_ctx.natoms + 1; ++m)
         {
             for (int k = m; k > 0; --k)
             {

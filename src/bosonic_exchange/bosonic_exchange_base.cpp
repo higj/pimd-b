@@ -8,23 +8,20 @@ BosonicExchangeBase::BosonicExchangeBase(
     const ThermalContext& thermal_ctx,
     const SpringContext& spring_ctx,
     const BoxContext& box_ctx,
-    int nbeads,
-    int this_bead
+    const BeadContext& bead_ctx
 ) : m_coord_first_bead(coord_first_bead),
     m_coord_last_bead(coord_last_bead),
     m_thermal_ctx(thermal_ctx),
     m_spring_ctx(spring_ctx),
     m_box_ctx(box_ctx),
-    m_nbosons(coord_first_bead->len()),
-    m_nbeads(nbeads),
-    m_this_bead(this_bead)
+    m_bead_ctx(bead_ctx)
 {
 }
 
 void BosonicExchangeBase::getExteriorBeadsSeparation(int first_idx, int last_idx, std::array<double, NDIM>& diff) const
 {
-    first_idx = first_idx % m_nbosons;
-    last_idx = last_idx % m_nbosons;
+    first_idx = first_idx % m_bead_ctx.natoms;
+    last_idx = last_idx % m_bead_ctx.natoms;
 
     for (int axis = 0; axis < NDIM; ++axis)
     {
@@ -60,7 +57,7 @@ double BosonicExchangeBase::getExteriorSeparationSquared(int first_idx, int last
  */
 void BosonicExchangeBase::exteriorSpringForce(dVec& f)
 {
-    if (m_this_bead == 0)
+    if (m_bead_ctx.this_bead == 0)
     {
         springForceFirstBead(f);
     }

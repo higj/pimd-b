@@ -12,8 +12,7 @@ public:
         const ThermalContext& thermal_ctx,
         const SpringContext& spring_ctx,
         const BoxContext& box_ctx,
-        int nbeads,
-        int this_bead
+        const BeadContext& bead_ctx
     );
     ~FactorialBosonicExchange() override = default;
 

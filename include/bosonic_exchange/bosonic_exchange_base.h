@@ -4,6 +4,7 @@
 #include "contexts/box_context.h"
 #include "contexts/thermal_context.h"
 #include "contexts/spring_context.h"
+#include "contexts/bead_context.h"
 
 #include <memory>
 
@@ -24,8 +25,7 @@ public:
         const ThermalContext& thermal_ctx,
         const SpringContext& spring_ctx,
         const BoxContext& box_ctx,
-        int nbeads,
-        int this_bead
+        const BeadContext& bead_ctx
     );
     virtual ~BosonicExchangeBase() = default;
     ///BosonicExchangeBase(const BosonicExchangeBase&) = delete;
@@ -71,8 +71,5 @@ protected:
     ThermalContext m_thermal_ctx;
     SpringContext m_spring_ctx;
     BoxContext m_box_ctx;
-
-    int m_nbosons;
-    int m_nbeads;
-    int m_this_bead;
+    BeadContext m_bead_ctx;
 };

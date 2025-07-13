@@ -29,11 +29,15 @@
 
 #include "observables_logger.h"
 
-Simulation::Simulation(const int& rank, const int& nproc, const std::string& config_filename): m_step(0)
+Simulation::Simulation(int rank, int nproc, const std::string& config_filename): m_step(0)
 {
     // Load the simulation parameters from the configuration (input) file
     const Params params(config_filename, rank);
     const std::shared_ptr<SimulationConfig> config = params.load();
+
+    if (!config) {
+        throw std::runtime_error("Failed to load configuration");
+    }
 
     // Initialize the random number generator (each process has a unique seed)
     const auto rng = std::make_shared<RandomGenerators>(config->seed + rank);
