@@ -124,8 +124,11 @@ std::shared_ptr<ExchangeState> Simulation::initializeExchangeState(
             .box_size = config->box_size,
             .pbc = config->pbc
         },
-        config->nbeads,
-        config->this_bead,
+        BeadContext{
+            .nbeads = config->nbeads,
+            .natoms = config->natoms,
+            .this_bead = config->this_bead,
+        },
         config->bosonic
     );
 }

@@ -7,14 +7,13 @@ ExchangeState::ExchangeState(
     const ThermalContext& thermal_ctx,
     const SpringContext& spring_ctx,
     const BoxContext& box_ctx,
-    int nbeads,
-    int this_bead,
+    const BeadContext& bead_ctx,
     bool bosonic
 ) :
     is_bosonic(bosonic),
-    is_first_bead(this_bead == 0),
-    is_last_bead(this_bead == nbeads - 1),
-    is_bosonic_bead(bosonic && (this_bead == 0 || this_bead == nbeads - 1))
+    is_first_bead(bead_ctx.this_bead == 0),
+    is_last_bead(bead_ctx.this_bead == bead_ctx.nbeads - 1),
+    is_bosonic_bead(bosonic && (bead_ctx.this_bead == 0 || bead_ctx.this_bead == bead_ctx.nbeads - 1))
 {
     // If the imaginary time-slice is either 1 or P, initialize the bosonic exchange algorithm
     // CR: otherwise it remains uninitialized?
@@ -28,8 +27,7 @@ ExchangeState::ExchangeState(
             thermal_ctx,
             spring_ctx,
             box_ctx,
-            nbeads,
-            this_bead
+            bead_ctx
         );
 #else
         bosonic_exchange = std::make_unique<BosonicExchange>(
@@ -38,8 +36,7 @@ ExchangeState::ExchangeState(
             thermal_ctx,
             spring_ctx,
             box_ctx,
-            nbeads,
-            this_bead
+            bead_ctx
         );
 #endif
     }

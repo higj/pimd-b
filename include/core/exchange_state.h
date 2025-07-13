@@ -2,8 +2,6 @@
 
 #include "bosonic_exchange/bosonic_exchange_base.h"
 
-struct BosonicExchangeContext;
-
 // Holds data related to quantum exchange
 class ExchangeState {
 public:
@@ -13,8 +11,7 @@ public:
         const ThermalContext& thermal_ctx,
         const SpringContext& spring_ctx,
         const BoxContext& box_ctx,
-        int nbeads,
-        int this_bead,
+        const BeadContext& bead_ctx,
         bool bosonic
     );
 
