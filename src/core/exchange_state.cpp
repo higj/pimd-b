@@ -18,6 +18,8 @@ ExchangeState::ExchangeState(
     // If the imaginary time-slice is either 1 or P, initialize the bosonic exchange algorithm
     // CR: otherwise it remains uninitialized?
     // JH: Yes
+    // CR: Don't leave fields uninitialized.
+    // CR: In any case, this class is a very thin wrapper for BosonicExchange. It can be removed
     if (is_bosonic_bead)
     {
 #if FACTORIAL_BOSONIC_ALGORITHM

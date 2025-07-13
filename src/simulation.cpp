@@ -9,6 +9,7 @@
 #include "momentum_initializers.h"
 #include "position_initializers.h"
 
+// CR: remove
 //#include "contexts/spring_context.h"
 //#include "contexts/velocity_context.h"
 //#include "contexts/thermal_context.h"
@@ -46,6 +47,7 @@ Simulation::Simulation(int rank, int nproc, const std::string& config_filename):
     const auto state = std::make_shared<SystemState>(rank, nproc, config->natoms, config->nbeads);
 
     // Initialize particle positions and velocities
+    // CR: My preference is to avoid comments. The code should be clear without them, and in this case it is
     initializePositions(config, state, rng);
     initializeMomenta(config, state, rng);
 
@@ -74,6 +76,7 @@ Simulation::Simulation(int rank, int nproc, const std::string& config_filename):
     const auto dumps = initializeDumps(config, state);
 
     // Load the simulation context with the initialized objects
+    // CR: never used, remove
     m_context = SimulationResources{
         .config = config,
         .state = state,
@@ -111,10 +114,13 @@ std::shared_ptr<ExchangeState> Simulation::initializeExchangeState(
     return std::make_shared<ExchangeState>(
         x_first_bead,
         x_last_bead,
+        // CR: generate each context just once, as a field of Simulation or something
+        // CR: then the information is retrievable through this context wherever you need it
         ThermalContext{
             .beta = config->beta,
             .thermo_beta = config->thermo_beta
         },
+        // CR: same for all
         SpringContext{
             .omega_p = config->omega_p,
             .spring_constant = config->spring_constant,
@@ -285,8 +291,12 @@ std::vector<std::shared_ptr<Observable>> Simulation::initializeObservables(
         // JH: They represent different types of observable categories. For example, if
         //      one requests "energy", it makes sense to calculate the different types of energies (primitive KE, virial KE, PE, etc.),
         //      but not calculate other estimators (unless the user asks for it).
-        // CR: "classical" seems to need access to most of the things?
-        // JH: Everything passed to it is eventually used.
+        // CR: This logic is about interpreting the user's input regarding observables,
+        // CR: which doesn't belong to the class Simulation
+        // CR: First step is to extract methods for each case. So you have generate_energy_observables(),
+        // CR: generate_classical_observables(), etc.
+        // CR: Then the logic above for coinfig->observables_list should be encapsulated in the config class
+        // CR: or an ObservableConfig class
 
         ObservableType type = UNKNOWN;
         if (obs_name == "energy") type = ENERGY;
@@ -408,6 +418,8 @@ std::vector<std::shared_ptr<Dump>> Simulation::initializeDumps(
     std::vector<std::shared_ptr<Dump>> dumps;
     dumps.reserve(config->dumps_list.size()); // Pre-allocate for efficiency
 
+    // CR: same thing here as for observables - this logic should be somewhere else
+
     // Initialize the dump files based on the configuration
     for (const auto& [dump_name, dump_unit] : config->dumps_list)
     {
@@ -450,8 +462,6 @@ std::vector<std::shared_ptr<Dump>> Simulation::initializeDumps(
 
         case VELOCITY:
             dumps.push_back(std::make_shared<VelocityDump>(
-                // CR: this struct seems to be used only in velocity_dump.cpp?
-                // JH: Yes, it is used only in velocity_dump.cpp. It is a context for the VelocityDump class.
                 VelocityContext{
                     .momenta = std::shared_ptr<dVec>(state, &state->momenta),
                     .mass = config->mass
