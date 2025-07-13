@@ -1,25 +1,15 @@
 #include "simulation.h"
-
-#include "common.h"
 #include "params.h"
-
 #include "core/system_state.h"
 #include "core/force_manager.h"
 #include "core/random_generators.h"
 #include "momentum_initializers.h"
 #include "position_initializers.h"
-
-// CR: remove
-//#include "contexts/spring_context.h"
-//#include "contexts/velocity_context.h"
-//#include "contexts/thermal_context.h"
-//#include "contexts/box_context.h"
-//#include "contexts/normal_modes_context.h"
-
 #include "propagators.h"
 #include "dumps.h"
 #include "observables.h"
 #include "thermostats.h"
+#include "observables_logger.h"
 
 #include <ranges>
 #include <fstream>
@@ -28,67 +18,32 @@
 #include <array>
 #include <cassert>
 
-#include "observables_logger.h"
-
 Simulation::Simulation(int rank, int nproc, const std::string& config_filename): m_step(0)
 {
-    // Load the simulation parameters from the configuration (input) file
+    // Parse the simulation parameters from the configuration (input) file
     const Params params(config_filename, rank);
-    const std::shared_ptr<SimulationConfig> config = params.load();
+    m_config = params.load();
 
-    if (!config) {
+    if (!m_config) {
         throw std::runtime_error("Failed to load configuration");
     }
 
-    // Initialize the random number generator (each process has a unique seed)
-    const auto rng = std::make_shared<RandomGenerators>(config->seed + rank);
+    m_rng = std::make_shared<RandomGenerators>(m_config->seed + rank);
+    m_state = std::make_shared<SystemState>(rank, nproc, m_config->natoms, m_config->nbeads);
 
-    // Initialize the simulation state
-    const auto state = std::make_shared<SystemState>(rank, nproc, config->natoms, config->nbeads);
-
-    // Initialize particle positions and velocities
-    // CR: My preference is to avoid comments. The code should be clear without them, and in this case it is
-    initializePositions(config, state, rng);
-    initializeMomenta(config, state, rng);
+    initializePositions(m_config, m_state, m_rng);
+    initializeMomenta(m_config, m_state, m_rng);
 
     // Communicate the new coordinates to the neighboring processes
-    state->updateNeighboringCoordinates();
+    m_state->updateNeighboringCoordinates();
 
-    // Initialize the force manager
-    const auto force_mgr = std::make_shared<ForceManager>(config);
-
-    // Initialize the exchange state
-    const auto exchange_state = initializeExchangeState(config, state);
-
-    // Initialize normal modes (if necessary)
-    const auto normal_modes = initializeNormalModes(config, state);
-
-    // Initialize the time propagation scheme
-    const auto propagator = initializePropagator(config, state, normal_modes, force_mgr, exchange_state);
-
-    // Initialize the thermostat
-    const auto thermostat = initializeThermostat(config, state, normal_modes, rng);
-
-    // Initialize the observables
-    const auto observables = initializeObservables(config, state, exchange_state, force_mgr, thermostat);
-
-    // Initialize the dumps
-    const auto dumps = initializeDumps(config, state);
-
-    // Load the simulation context with the initialized objects
-    // CR: never used, remove
-    m_context = SimulationResources{
-        .config = config,
-        .state = state,
-        .exchange_state = exchange_state,
-        .rng = rng,
-        .force_mgr = force_mgr,
-        .normal_modes = normal_modes,
-        .propagator = propagator,
-        .thermostat = thermostat,
-        .observables = observables,
-        .dumps = dumps
-    };
+    m_force_mgr = std::make_shared<ForceManager>(m_config);
+    m_exchange_state = initializeExchangeState(m_config, m_state);
+    m_normal_modes = initializeNormalModes(m_config, m_state);
+    m_propagator = initializePropagator(m_config, m_state, m_normal_modes, m_force_mgr, m_exchange_state);
+    m_thermostat = initializeThermostat(m_config, m_state, m_normal_modes, m_rng);
+    m_observables = initializeObservables(m_config, m_state, m_exchange_state, m_force_mgr, m_thermostat);
+    m_dumps = initializeDumps(m_config, m_state);
 }
 
 Simulation::~Simulation() = default;
@@ -576,78 +531,78 @@ void Simulation::setStep(const int step)
 
 void Simulation::run()
 {
-    printStatus("Running the simulation", m_context.config->this_bead);
+    printStatus("Running the simulation", m_config->this_bead);
 
     MPI_Barrier(MPI_COMM_WORLD);
     const double sim_exec_time_start = MPI_Wtime();
 
     std::filesystem::create_directory(Output::FOLDER_NAME);
     // Initialize the output file for the observables
-    ObservablesLogger obs_logger(Output::MAIN_FILENAME, m_context.config->this_bead, m_context.observables);
+    ObservablesLogger obs_logger(Output::MAIN_FILENAME, m_config->this_bead, m_observables);
 
     // Initialize the files for the dumps (e.g., xyz, dat)
-    for (const auto& dump : m_context.dumps)
+    for (const auto& dump : m_dumps)
     {
         dump->initialize();
     }
 
     // Main loop performing molecular dynamics steps
-    for (long step = 0; step <= m_context.config->steps; ++step)
+    for (long step = 0; step <= m_config->steps; ++step)
     {
         setStep(step);
 
         // Reset the observables at the beginning of each step
         /// TODO: Do we need this? What if we want accumulation? Does it account for frequency?
-        for (const auto& observable : m_context.observables)
+        for (const auto& observable : m_observables)
         {
             observable->resetValues();
         }
 
         // Dump the desired quantities (e.g., coordinates, forces, etc.) at the specified frequency
-        for (const auto& dump : m_context.dumps)
+        for (const auto& dump : m_dumps)
         {
             dump->output(step);
         }
 
         // Perform a thermostat step
-        m_context.thermostat->step();
+        m_thermostat->step();
 
         // If fixcom=true, the center of mass of the ring polymers is fixed during the simulation
-        if (m_context.config->fixcom)
+        if (m_config->fixcom)
         {
-            m_context.state->zeroMomentum();
+            m_state->zeroMomentum();
         }
 
         // Perform a time propagation step
-        m_context.propagator->step();
+        m_propagator->step();
 
         // Perform a thermostat step
-        m_context.thermostat->step();
+        m_thermostat->step();
 
         // Zero momentum after every thermostat step (if needed)
-        if (m_context.config->fixcom)
+        if (m_config->fixcom)
         {
-            m_context.state->zeroMomentum();
+            m_state->zeroMomentum();
         }
 
 #if PROGRESS
-        printProgress(step, steps, m_context.config->this_bead);
+        printProgress(step, steps, m_config->this_bead);
 #endif
 
         // If we have not reached the thermalization threshold, skip to the next step (thermalization stage)
-        if (step < m_context.config->threshold)
+        if (step < m_config->threshold)
         {
             continue;
         }
 
         // Calculate the observables (production stage)
-        for (const auto& observable : m_context.observables)
+        for (const auto& observable : m_observables)
         {
             observable->calculate();
         }
 
         // Save the observables at the specified frequency
-        if (step % m_context.config->sfreq == 0)
+        if (step % m_config->sfreq == 0)
         {
             obs_logger.log(step);
         }
@@ -659,14 +614,14 @@ void Simulation::run()
     const double wall_time = sim_exec_time_end - sim_exec_time_start;
 
     printStatus(std::format("Simulation finished running successfully (Runtime = {:.3} sec)", wall_time),
-                m_context.config->this_bead);
+                m_config->this_bead);
 
     printReport(wall_time);
 }
 
 void Simulation::printReport(double wall_time) const
 {
-    if (m_context.config->this_bead != 0)
+    if (m_config->this_bead != 0)
         return;
 
     std::ofstream report_file;
@@ -674,7 +629,7 @@ void Simulation::printReport(double wall_time) const
 
     report_file << "---------\nParameters\n---------\n";
 
-    if (m_context.config->bosonic)
+    if (m_config->bosonic)
     {
         report_file << formattedReportLine("Statistics", "Bosonic");
         std::string bosonic_alg_name = "Feldman-Hirshberg";
@@ -690,28 +645,28 @@ void Simulation::printReport(double wall_time) const
         report_file << formattedReportLine("Statistics", "Boltzmannonic");
     }
 
-    report_file << formattedReportLine("Time propagation algorithm", m_context.config->propagator_type);
-    report_file << formattedReportLine("Periodic boundary conditions", m_context.config->pbc);
+    report_file << formattedReportLine("Time propagation algorithm", m_config->propagator_type);
+    report_file << formattedReportLine("Periodic boundary conditions", m_config->pbc);
     report_file << formattedReportLine("Dimension", NDIM);
-    report_file << formattedReportLine("Seed", m_context.config->seed);
-    report_file << formattedReportLine("Coordinate initialization method", m_context.config->init_pos_type);
-    report_file << formattedReportLine("Momentum initialization method", m_context.config->init_vel_type);
-    report_file << formattedReportLine("Number of atoms", m_context.config->natoms);
-    report_file << formattedReportLine("Number of beads", m_context.config->nbeads);
+    report_file << formattedReportLine("Seed", m_config->seed);
+    report_file << formattedReportLine("Coordinate initialization method", m_config->init_pos_type);
+    report_file << formattedReportLine("Momentum initialization method", m_config->init_vel_type);
+    report_file << formattedReportLine("Number of atoms", m_config->natoms);
+    report_file << formattedReportLine("Number of beads", m_config->nbeads);
 
     /// TODO: Limit the number of digits in the output
-    double out_temperature = Units::convertToUser("temperature", "kelvin", m_context.config->temperature);
+    double out_temperature = Units::convertToUser("temperature", "kelvin", m_config->temperature);
     report_file << formattedReportLine("Temperature", std::format("{} kelvin", out_temperature));
 
-    double out_sys_size = Units::convertToUser("length", "angstrom", m_context.config->box_size);
+    double out_sys_size = Units::convertToUser("length", "angstrom", m_config->box_size);
     report_file << formattedReportLine("Linear size of the system", std::format("{} angstroms", out_sys_size));
 
-    double out_mass = Units::convertToUser("mass", "dalton", m_context.config->mass);
+    double out_mass = Units::convertToUser("mass", "dalton", m_config->mass);
     report_file << formattedReportLine("Mass", std::format("{} amu", out_mass));
 
-    report_file << formattedReportLine("Total number of MD steps", m_context.config->steps);
-    report_file << formattedReportLine("Interaction potential name", m_context.config->int_pot_name);
-    report_file << formattedReportLine("External potential name", m_context.config->ext_pot_name);
+    report_file << formattedReportLine("Total number of MD steps", m_config->steps);
+    report_file << formattedReportLine("Interaction potential name", m_config->int_pot_name);
+    report_file << formattedReportLine("External potential name", m_config->ext_pot_name);
 
     report_file << "---------\nFeatures\n---------\n";
     report_file << formattedReportLine("Minimum image convention", MINIM);
@@ -723,7 +678,7 @@ void Simulation::printReport(double wall_time) const
                                                                 std::chrono::duration<double>(wall_time)
                                        ));
     report_file << formattedReportLine("Wall time per step (sec)",
-                                       std::format("{:.5e}", wall_time / m_context.config->steps));
+                                       std::format("{:.5e}", wall_time / m_config->steps));
 
     report_file.close();
 }

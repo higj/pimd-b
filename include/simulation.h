@@ -1,9 +1,20 @@
 #pragma once
 
 #include "common.h"
-#include "core/simulation_resources.h"
 
 #include <string>
+#include <memory>
+
+struct SimulationConfig;
+class SystemState;
+class ExchangeState;
+class RandomGenerators;
+class ForceManager;
+class Propagator;
+class Thermostat;
+class NormalModes;
+class Observable;
+class Dump;
 
 class Simulation
 {
@@ -12,27 +23,45 @@ public:
     ~Simulation();
 
     /**
-     * Initializes the simulation box container.
-     *
-     * @param config Simulation configuration object.
-     * @param state System state object.
-     * @param rng Random number generator object.
-     * @return A shared pointer to the initialized box object.
+     * @brief Gets the current simulation step.
      */
-    /*static std::shared_ptr<Box> initializeBox(
-        const std::shared_ptr<SimulationConfig>& config,
-        const std::shared_ptr<SystemState>& state,
-        const std::shared_ptr<RandomGenerators>& rng);*/
+    [[nodiscard]] int getStep() const;
 
     /**
-     * Initializes the bosonic exchange machinery based on the input parameters.
+     * Sets the current simulation step.
      *
-     * @param config Simulation configuration object containing information about bosonic exchange.
-     * @param state System state object containing information about the current state of the simulation.
-     * @return A shared pointer to the initialized exchange state object.
-    */
+     * @param step The step to set.
+     */
+    void setStep(int step);
+
+    /**
+     * @brief Perform a molecular dynamics run using the OBABO scheme.
+     */
+    void run();
+private:
+    int m_step;
+
+    std::shared_ptr<SimulationConfig> m_config;
+    std::shared_ptr<SystemState> m_state;
+    std::shared_ptr<ExchangeState> m_exchange_state;
+    std::shared_ptr<RandomGenerators> m_rng;
+    std::shared_ptr<ForceManager> m_force_mgr;
+    std::shared_ptr<NormalModes> m_normal_modes;
+    std::shared_ptr<Propagator> m_propagator;
+    std::shared_ptr<Thermostat> m_thermostat;
+
+    std::vector<std::shared_ptr<Observable>> m_observables;
+    std::vector<std::shared_ptr<Dump>> m_dumps;
+
+     /**
+      * Initializes the bosonic exchange machinery based on the input parameters.
+      *
+      * @param config Simulation configuration object containing information about bosonic exchange.
+      * @param state System state object containing information about the current state of the simulation.
+      * @return A shared pointer to the initialized exchange state object.
+     */
     static std::shared_ptr<ExchangeState> initializeExchangeState(
-        const std::shared_ptr<SimulationConfig>& config, 
+        const std::shared_ptr<SimulationConfig>& config,
         const std::shared_ptr<SystemState>& state
     );
 
@@ -62,10 +91,10 @@ public:
         const std::shared_ptr<SimulationConfig>& config,
         const std::shared_ptr<SystemState>& state,
         const std::shared_ptr<NormalModes>& normal_modes,
-        const std::shared_ptr<ForceManager>& force_mgr, 
+        const std::shared_ptr<ForceManager>& force_mgr,
         const std::shared_ptr<ExchangeState>& exchange_state
     );
-    
+
     /**
      * Initializes the thermostat based on the input parameters.
      *
@@ -76,7 +105,7 @@ public:
      * @return A shared pointer to the initialized thermostat object.
     */
     static std::shared_ptr<Thermostat> initializeThermostat(
-        const std::shared_ptr<SimulationConfig>& config, 
+        const std::shared_ptr<SimulationConfig>& config,
         const std::shared_ptr<SystemState>& state,
         const std::shared_ptr<NormalModes>& normal_modes,
         const std::shared_ptr<RandomGenerators>& rng
@@ -109,7 +138,7 @@ public:
      */
     static void initializePositions(
         const std::shared_ptr<SimulationConfig>& config,
-        const std::shared_ptr<SystemState>& state, 
+        const std::shared_ptr<SystemState>& state,
         const std::shared_ptr<RandomGenerators>& rng
     );
 
@@ -122,7 +151,7 @@ public:
      */
     static void initializeMomenta(
         const std::shared_ptr<SimulationConfig>& config,
-        const std::shared_ptr<SystemState>& state, 
+        const std::shared_ptr<SystemState>& state,
         const std::shared_ptr<RandomGenerators>& rng
     );
 
@@ -136,27 +165,6 @@ public:
         const std::shared_ptr<SimulationConfig>& config,
         const std::shared_ptr<SystemState>& state
     );
-
-    /**
-     * @brief Gets the current simulation step.
-     */
-    [[nodiscard]] int getStep() const;
-
-    /**
-     * Sets the current simulation step.
-     *
-     * @param step The step to set.
-     */
-    void setStep(int step);
-
-    /**
-     * @brief Perform a molecular dynamics run using the OBABO scheme.
-     */
-    void run();
-private:
-    int m_step;
-
-    SimulationResources m_context;
 
     /**
      * @brief Prints a summary of the simulation parameters at the end of the simulation.
