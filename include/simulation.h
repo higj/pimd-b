@@ -1,6 +1,13 @@
 #pragma once
 
 #include "common.h"
+#include "contexts/thermal_context.h"
+#include "contexts/bead_context.h"
+#include "contexts/spring_context.h"
+#include "contexts/box_context.h"
+#include "contexts/normal_modes_context.h"
+#include "contexts/thermostat_context.h"
+#include "contexts/velocity_context.h"
 
 #include <string>
 #include <memory>
@@ -56,12 +63,20 @@ private:
      /**
       * Initializes the bosonic exchange machinery based on the input parameters.
       *
-      * @param config Simulation configuration object containing information about bosonic exchange.
+      * @param bosonic Boolean indicating whether the simulation is bosonic or not.
+      * @param thermal_ctx Thermal context object containing information about the thermal properties of the system.
+      * @param spring_ctx Spring context object containing information about the springs in the system.
+      * @param box_ctx Box context object containing information about the simulation box.
+      * @param bead_ctx Bead context object containing information about the beads in the system.
       * @param state System state object containing information about the current state of the simulation.
       * @return A shared pointer to the initialized exchange state object.
      */
     static std::shared_ptr<ExchangeState> initializeExchangeState(
-        const std::shared_ptr<SimulationConfig>& config,
+        bool bosonic,
+        const ThermalContext& thermal_ctx,
+        const SpringContext& spring_ctx,
+        const BoxContext& box_ctx,
+        const BeadContext& bead_ctx,
         const std::shared_ptr<SystemState>& state
     );
 
@@ -80,7 +95,10 @@ private:
     /**
      * Initializes the propagator based on the input parameters.
      *
-     * @param config Simulation configuration object containing information about the propagator.
+     * @param propagator_type Type of the propagator to initialize (e.g., "verlet", "normal modes", etc.).
+     * @param mass Mass of the particles in the system.
+     * @param dt Time step for the simulation.
+     * @param spring_ctx Spring context object containing information about the springs.
      * @param state System state object containing information about the current state of the simulation.
      * @param normal_modes Normal modes object containing information about the normal modes of the system.
      * @param force_mgr Force field manager object containing information about the forces acting on the system.
@@ -88,7 +106,10 @@ private:
      * @return A shared pointer to the initialized propagator object.
     */
     static std::shared_ptr<Propagator> initializePropagator(
-        const std::shared_ptr<SimulationConfig>& config,
+        const std::string& propagator_type,
+        double mass,
+        double dt,
+        const SpringContext& spring_ctx,
         const std::shared_ptr<SystemState>& state,
         const std::shared_ptr<NormalModes>& normal_modes,
         const std::shared_ptr<ForceManager>& force_mgr,
@@ -98,6 +119,8 @@ private:
     /**
      * Initializes the thermostat based on the input parameters.
      *
+     * @param thermal_ctx Thermal context object containing information about the thermal properties of the system.
+     * @param nm_ctx Normal modes context object containing information about the normal modes of the system.
      * @param config Simulation configuration object containing information about the thermostat.
      * @param state System state object containing information about the current state of the simulation.
      * @param normal_modes Normal modes object containing information about the normal modes of the system.
@@ -105,9 +128,10 @@ private:
      * @return A shared pointer to the initialized thermostat object.
     */
     static std::shared_ptr<Thermostat> initializeThermostat(
+        const ThermalContext& thermal_ctx,
+        const NormalModesContext& nm_ctx,
         const std::shared_ptr<SimulationConfig>& config,
         const std::shared_ptr<SystemState>& state,
-        const std::shared_ptr<NormalModes>& normal_modes,
         const std::shared_ptr<RandomGenerators>& rng
     );
 

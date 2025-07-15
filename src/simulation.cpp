@@ -37,11 +37,63 @@ Simulation::Simulation(int rank, int nproc, const std::string& config_filename):
     // Communicate the new coordinates to the neighboring processes
     m_state->updateNeighboringCoordinates();
 
+    // Initialize basic contexts
+    const auto thermal_ctx = ThermalContext{
+    .beta = m_config->beta,
+    .thermo_beta = m_config->thermo_beta
+    };
+
+    const auto spring_ctx = SpringContext{
+        .omega_p = m_config->omega_p,
+        .spring_constant = m_config->spring_constant,
+        .beta_half_k = m_config->beta_half_k
+    };
+
+    const auto box_ctx = BoxContext{
+        .box_size = m_config->box_size,
+        .pbc = m_config->pbc
+    };
+
+    const auto bead_ctx = BeadContext{
+        .nbeads = m_config->nbeads,
+        .natoms = m_config->natoms,
+        .this_bead = m_config->this_bead
+    };
+
+    // Initialize other resources
     m_force_mgr = std::make_shared<ForceManager>(m_config);
-    m_exchange_state = initializeExchangeState(m_config, m_state);
+    m_exchange_state = initializeExchangeState(
+        m_config->bosonic, 
+        thermal_ctx, 
+        spring_ctx, 
+        box_ctx, 
+        bead_ctx,
+        m_state
+    );
+
     m_normal_modes = initializeNormalModes(m_config, m_state);
-    m_propagator = initializePropagator(m_config, m_state, m_normal_modes, m_force_mgr, m_exchange_state);
-    m_thermostat = initializeThermostat(m_config, m_state, m_normal_modes, m_rng);
+    const auto nm_ctx = NormalModesContext{
+        .normal_modes = m_normal_modes,
+        .couple_to_nm = std::get<bool>(m_config->thermostat_params["nmthermostat"])
+    };
+
+    m_propagator = initializePropagator(
+        m_config->propagator_type, 
+        m_config->mass, 
+        m_config->dt, 
+        spring_ctx, 
+        m_state, 
+        m_normal_modes, 
+        m_force_mgr, 
+        m_exchange_state
+    );
+    m_thermostat = initializeThermostat(
+        thermal_ctx,
+        nm_ctx, 
+        m_config,
+        m_state, 
+        m_rng
+    );
     m_observables = initializeObservables(m_config, m_state, m_exchange_state, m_force_mgr, m_thermostat);
     m_dumps = initializeDumps(m_config, m_state);
 }
@@ -49,14 +101,18 @@ Simulation::Simulation(int rank, int nproc, const std::string& config_filename):
 Simulation::~Simulation() = default;
 
 std::shared_ptr<ExchangeState> Simulation::initializeExchangeState(
-    const std::shared_ptr<SimulationConfig>& config,
+    bool bosonic,
+    const ThermalContext& thermal_ctx,
+    const SpringContext& spring_ctx,
+    const BoxContext& box_ctx,
+    const BeadContext& bead_ctx,
     const std::shared_ptr<SystemState>& state)
 {
     std::shared_ptr<dVec> x_first_bead;
     std::shared_ptr<dVec> x_last_bead;
     std::shared_ptr<dVec> x_neighbor_bead;
 
-    if (config->this_bead == 0)
+    if (state->currentBead() == 0)
     {
         x_first_bead = std::shared_ptr<dVec>(state, &state->coord);
         x_last_bead = std::shared_ptr<dVec>(state, &state->prev_coord);
@@ -69,28 +125,11 @@ std::shared_ptr<ExchangeState> Simulation::initializeExchangeState(
     return std::make_shared<ExchangeState>(
         x_first_bead,
         x_last_bead,
-        // CR: generate each context just once, as a field of Simulation or something
-        // CR: then the information is retrievable through this context wherever you need it
-        ThermalContext{
-            .beta = config->beta,
-            .thermo_beta = config->thermo_beta
-        },
-        // CR: same for all
-        SpringContext{
-            .omega_p = config->omega_p,
-            .spring_constant = config->spring_constant,
-            .beta_half_k = config->beta_half_k
-        },
-        BoxContext{
-            .box_size = config->box_size,
-            .pbc = config->pbc
-        },
-        BeadContext{
-            .nbeads = config->nbeads,
-            .natoms = config->natoms,
-            .this_bead = config->this_bead,
-        },
-        config->bosonic
+        thermal_ctx,
+        spring_ctx,
+        box_ctx,
+        bead_ctx,
+        bosonic
     );
 }
 
@@ -114,40 +153,40 @@ std::shared_ptr<NormalModes> Simulation::initializeNormalModes(
 }
 
 std::shared_ptr<Propagator> Simulation::initializePropagator(
-    const std::shared_ptr<SimulationConfig>& config,
+    const std::string& propagator_type,
+    double mass,
+    double dt,
+    const SpringContext& spring_ctx,
     const std::shared_ptr<SystemState>& state,
     const std::shared_ptr<NormalModes>& normal_modes,
     const std::shared_ptr<ForceManager>& force_mgr,
     const std::shared_ptr<ExchangeState>& exchange_state)
 {
-    /// TODO: Pass to initializePropagator the spring_context, mass and dt instead of the entire config?
-    SpringContext spring_context{
-        .omega_p = config->omega_p,
-        .spring_constant = config->spring_constant,
-        .beta_half_k = config->beta_half_k
-    };
-
-    if (config->propagator_type == "cartesian")
+    // JH: propagator_type, mass and dt are passed as arguments instead of the entire config
+    //     because I'm confident that they are necessary and sufficient (along with the other arguments)
+    //     to initialize any current/future propagator. But perhaps passing the entire config is okay too?
+    //     (See the comment in initializeThermostat for a possible reason)
+    if (propagator_type == "cartesian")
     {
         return std::make_shared<VelocityVerletPropagator>(
             state,
             force_mgr,
             exchange_state,
-            spring_context,
-            config->mass,
-            config->dt
+            spring_ctx,
+            mass,
+            dt
         );
     }
 
-    if (config->propagator_type == "normal_modes")
+    if (propagator_type == "normal_modes")
     {
         return std::make_shared<NormalModesPropagator>(
             state,
             force_mgr,
             exchange_state,
-            spring_context,
-            config->mass,
-            config->dt,
+            spring_ctx,
+            mass,
+            dt,
             normal_modes
         );
     }
@@ -156,21 +195,19 @@ std::shared_ptr<Propagator> Simulation::initializePropagator(
 }
 
 std::shared_ptr<Thermostat> Simulation::initializeThermostat(
+    const ThermalContext& thermal_ctx,
+    const NormalModesContext& nm_ctx,
     const std::shared_ptr<SimulationConfig>& config,
     const std::shared_ptr<SystemState>& state,
-    const std::shared_ptr<NormalModes>& normal_modes,
     const std::shared_ptr<RandomGenerators>& rng)
 {
-    ThermalContext thermal_ctx{
-        .beta = config->beta,
-        .thermo_beta = config->thermo_beta
-    };
-
-    NormalModesContext nm_ctx{
-        .normal_modes = normal_modes,
-        .couple_to_nm = std::get<bool>(config->thermostat_params["nmthermostat"])
-    };
-
+    // JH: Here I hesitated a little bit to pass individual parameters instead of "config"
+    //     because it could be that a new thermostat implementation might need new parameters.
+    //     If I had followed the approach of "initializeExchangeState", I would have had to pass
+    //     parameters like, e.g., "nchains", which is too specific (it exposes the existence of
+    //     Nose-Hoover and its unique parameters). Also, passing all the individual parameters
+    //     of all the thermostats would greatly increase the number of arguments and possibly
+    //     hinder readability.
     if (config->thermostat_type == "langevin")
     {
         double gamma = std::get<double>(config->thermostat_params["gamma"]);
