@@ -145,13 +145,13 @@ private:
      * @param thermostat Thermostat object.
      * @return A vector of shared pointers to the initialized observable objects.
      */
-    static std::vector<std::shared_ptr<Observable>> initializeObservables(
+     /*static std::vector<std::shared_ptr<Observable>> initializeObservables(
         const std::shared_ptr<SimulationConfig>& config,
         const std::shared_ptr<SystemState>& state,
         const std::shared_ptr<ExchangeState>& exchange_state,
         const std::shared_ptr<ForceManager>& force_mgr,
         const std::shared_ptr<Thermostat>& thermostat
-    );
+    );*/
 
     /**
      * Initializes the positions of the particles based on the input parameters.

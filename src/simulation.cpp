@@ -7,7 +7,7 @@
 #include "position_initializers.h"
 #include "propagators.h"
 #include "dumps.h"
-#include "observables.h"
+#include "initializers/observable_initializer.h"
 #include "thermostats.h"
 #include "observables_logger.h"
 
@@ -94,7 +94,33 @@ Simulation::Simulation(int rank, int nproc, const std::string& config_filename):
         m_state, 
         m_rng
     );
-    m_observables = initializeObservables(m_config, m_state, m_exchange_state, m_force_mgr, m_thermostat);
+
+    auto velocity_ctx = VelocityContext{
+        .momenta = std::shared_ptr<const dVec>(m_state, &m_state->momenta),
+        .mass = m_config->mass
+    };
+    
+    auto thermostat_ctx = ThermostatContext{
+        .thermostat = m_thermostat,
+        .thermostat_type = m_config->thermostat_type
+    };
+
+    //m_observables = initializeObservables(m_config, m_state, m_exchange_state, m_force_mgr, m_thermostat);
+    const ObservableInitializer obs_init(
+        m_config,
+        m_state,
+        m_exchange_state,
+        m_force_mgr,
+        m_thermostat,
+        bead_ctx,
+        thermal_ctx,
+        spring_ctx,
+        box_ctx,
+        velocity_ctx,
+        thermostat_ctx
+    );
+
+    m_observables = obs_init.createObservables();
     m_dumps = initializeDumps(m_config, m_state);
 }
 
@@ -248,6 +274,7 @@ std::shared_ptr<Thermostat> Simulation::initializeThermostat(
     return {nullptr};
 }
 
+/*
 std::vector<std::shared_ptr<Observable>> Simulation::initializeObservables(
     const std::shared_ptr<SimulationConfig>& config,
     const std::shared_ptr<SystemState>& state,
@@ -399,9 +426,10 @@ std::vector<std::shared_ptr<Observable>> Simulation::initializeObservables(
             throw std::runtime_error("Unknown observable type: " + obs_name);
         }
     }
-
+    
     return observables;
 }
+*/
 
 std::vector<std::shared_ptr<Dump>> Simulation::initializeDumps(
     const std::shared_ptr<SimulationConfig>& config,
