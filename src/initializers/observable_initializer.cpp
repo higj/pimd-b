@@ -31,8 +31,17 @@ ObservableInitializer::ObservableInitializer(
 {
 }
 
-std::shared_ptr<Observable> ObservableInitializer::createEnergyObservable(const std::string& out_unit) const {
+ObservableType ObservableInitializer::getObservableType(const std::string& name)
+{
+    if (name == "energy") return ObservableType::ENERGY;
+    if (name == "classical") return ObservableType::CLASSICAL;
+    if (name == "bosonic") return ObservableType::BOSONIC;
+    if (name == "gsf") return ObservableType::GSF;
+    return ObservableType::UNKNOWN;
+}
 
+std::shared_ptr<Observable> ObservableInitializer::createEnergyObservable(const std::string& out_unit) const
+{
     return std::make_shared<EnergyObservable>(
         m_exchange_state,
         std::shared_ptr<const dVec>(m_state, &m_state->coord),
@@ -47,8 +56,8 @@ std::shared_ptr<Observable> ObservableInitializer::createEnergyObservable(const 
     );
 }
 
-std::shared_ptr<Observable> ObservableInitializer::createClassicalObservable(const std::string& out_unit) const {
-
+std::shared_ptr<Observable> ObservableInitializer::createClassicalObservable(const std::string& out_unit) const
+{
     return std::make_shared<ClassicalObservable>(
         std::shared_ptr<const dVec>(m_state, &m_state->coord),
         std::shared_ptr<const dVec>(m_state, &m_state->prev_coord),
@@ -63,10 +72,10 @@ std::shared_ptr<Observable> ObservableInitializer::createClassicalObservable(con
     );
 }
 
-std::shared_ptr<Observable> ObservableInitializer::createBosonicObservable(const std::string& out_unit) const {
-
-    // Validate configuration
-    if (!m_config->bosonic) {
+std::shared_ptr<Observable> ObservableInitializer::createBosonicObservable(const std::string& out_unit) const
+{
+    if (!m_config->bosonic)
+    {
         throw std::runtime_error("Bosonic observables require bosonic simulation mode");
     }
 
@@ -77,7 +86,8 @@ std::shared_ptr<Observable> ObservableInitializer::createBosonicObservable(const
     );
 }
 
-std::shared_ptr<Observable> ObservableInitializer::createGSFObservable(const std::string& out_unit) const {
+std::shared_ptr<Observable> ObservableInitializer::createGSFObservable(const std::string& out_unit) const
+{
     return std::make_shared<GSFActionObservable>(
         std::shared_ptr<const dVec>(m_state, &m_state->coord),
         m_force_mgr,
@@ -89,43 +99,58 @@ std::shared_ptr<Observable> ObservableInitializer::createGSFObservable(const std
     );
 }
 
-std::vector<ObservableItem> ObservableInitializer::parseObservablesList() const {
+std::vector<ObservableItem> ObservableInitializer::parseObservablesList() const
+{
     std::vector<ObservableItem> items;
     items.reserve(m_config->observables_list.size());
 
-    for (const auto& [name, unit] : m_config->observables_list) {
-        items.emplace_back(ObservableItem{.name = name, .unit = unit });
+    for (const auto& [name, unit] : m_config->observables_list)
+    {
+        items.emplace_back(ObservableItem{.name = name, .unit = unit});
     }
 
     return items;
 }
 
-std::vector<std::shared_ptr<Observable>> ObservableInitializer::createObservables() const {
+std::vector<std::shared_ptr<Observable>> ObservableInitializer::createObservables() const
+{
     const auto items = parseObservablesList();
 
     std::vector<std::shared_ptr<Observable>> observables;
     observables.reserve(items.size());
 
-    for (const auto& item : items) {
+    for (const auto& item : items)
+    {
         // Skip disabled observables
-        if (!item.isEnabled()) {
+        if (!item.isEnabled())
+        {
             continue;
         }
 
-        // Direct method calls based on observable name
-        try {
-            if (item.name == "energy") {
+        // Direct method calls based on observable type
+        try
+        {
+            switch (getObservableType(item.name))
+            {
+            case ObservableType::ENERGY:
                 observables.push_back(createEnergyObservable(item.getEffectiveUnit()));
-            } else if (item.name == "classical") {
+                break;
+            case ObservableType::CLASSICAL:
                 observables.push_back(createClassicalObservable(item.getEffectiveUnit()));
-            } else if (item.name == "bosonic") {
+                break;
+            case ObservableType::BOSONIC:
                 observables.push_back(createBosonicObservable(item.getEffectiveUnit()));
-            } else if (item.name == "gsf") {
+                break;
+            case ObservableType::GSF:
                 observables.push_back(createGSFObservable(item.getEffectiveUnit()));
-            } else {
+                break;
+            case ObservableType::UNKNOWN:
+            default:
                 throw std::runtime_error("Unknown observable type: " + item.name);
             }
-        } catch (const std::exception& e) {
+        }
+        catch (const std::exception& e)
+        {
             throw std::runtime_error("Failed to create observable '" + item.name + "': " + e.what());
         }
     }

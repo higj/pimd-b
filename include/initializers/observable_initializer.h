@@ -18,21 +18,34 @@ class ForceManager;
 class Thermostat;
 struct SimulationConfig;
 
-struct ObservableItem {
+struct ObservableItem
+{
     std::string name;
     std::string unit;
 
-    [[nodiscard]] bool isEnabled() const {
+    [[nodiscard]] bool isEnabled() const
+    {
         return unit != "off";
     }
 
     // If the unit is "none", return an empty string, because no unit conversion will take place
-    [[nodiscard]] std::string getEffectiveUnit() const {
+    [[nodiscard]] std::string getEffectiveUnit() const
+    {
         return (unit != "none") ? unit : "";
     }
 };
 
-class ObservableInitializer {
+enum class ObservableType : std::uint8_t
+{
+    ENERGY,
+    CLASSICAL,
+    BOSONIC,
+    GSF,
+    UNKNOWN
+};
+
+class ObservableInitializer
+{
 public:
     ObservableInitializer(
         const std::shared_ptr<SimulationConfig>& config,
@@ -49,16 +62,18 @@ public:
     );
 
     // Main interface method
-    std::vector<std::shared_ptr<Observable>> createObservables() const;
+    [[nodiscard]] std::vector<std::shared_ptr<Observable>> createObservables() const;
 
 private:
-    std::vector<ObservableItem> parseObservablesList() const;
+    static ObservableType getObservableType(const std::string& name);
+
+    [[nodiscard]] std::vector<ObservableItem> parseObservablesList() const;
 
     // Observable creation methods
-    std::shared_ptr<Observable> createEnergyObservable(const std::string& out_unit) const;
-    std::shared_ptr<Observable> createClassicalObservable(const std::string& out_unit) const;
-    std::shared_ptr<Observable> createBosonicObservable(const std::string& out_unit) const;
-    std::shared_ptr<Observable> createGSFObservable(const std::string& out_unit) const;
+    [[nodiscard]] std::shared_ptr<Observable> createEnergyObservable(const std::string& out_unit) const;
+    [[nodiscard]] std::shared_ptr<Observable> createClassicalObservable(const std::string& out_unit) const;
+    [[nodiscard]] std::shared_ptr<Observable> createBosonicObservable(const std::string& out_unit) const;
+    [[nodiscard]] std::shared_ptr<Observable> createGSFObservable(const std::string& out_unit) const;
 
     std::shared_ptr<SimulationConfig> m_config;
     std::shared_ptr<SystemState> m_state;
