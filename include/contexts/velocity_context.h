@@ -7,6 +7,6 @@
  * Data associated with the velocity of the beads.
  */
 struct VelocityContext {
-    std::shared_ptr<const dVec> momenta;
+    std::shared_ptr<dVec> momenta;
     double mass;
 };

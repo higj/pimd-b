@@ -24,7 +24,8 @@ Simulation::Simulation(int rank, int nproc, const std::string& config_filename):
     const Params params(config_filename, rank);
     m_config = params.load();
 
-    if (!m_config) {
+    if (!m_config)
+    {
         throw std::runtime_error("Failed to load configuration");
     }
 
@@ -39,8 +40,8 @@ Simulation::Simulation(int rank, int nproc, const std::string& config_filename):
 
     // Initialize basic contexts
     const auto thermal_ctx = ThermalContext{
-    .beta = m_config->beta,
-    .thermo_beta = m_config->thermo_beta
+        .beta = m_config->beta,
+        .thermo_beta = m_config->thermo_beta
     };
 
     const auto spring_ctx = SpringContext{
@@ -60,13 +61,19 @@ Simulation::Simulation(int rank, int nproc, const std::string& config_filename):
         .this_bead = m_config->this_bead
     };
 
+    const auto velocity_ctx = VelocityContext{
+        .momenta = std::shared_ptr<dVec>(m_state, &m_state->momenta),
+        .mass = m_config->mass
+    };
+
     // Initialize other resources
     m_force_mgr = std::make_shared<ForceManager>(m_config);
+
     m_exchange_state = initializeExchangeState(
-        m_config->bosonic, 
-        thermal_ctx, 
-        spring_ctx, 
-        box_ctx, 
+        m_config->bosonic,
+        thermal_ctx,
+        spring_ctx,
+        box_ctx,
         bead_ctx,
         m_state
     );
@@ -78,35 +85,31 @@ Simulation::Simulation(int rank, int nproc, const std::string& config_filename):
     };
 
     m_propagator = initializePropagator(
-        m_config->propagator_type, 
-        m_config->mass, 
-        m_config->dt, 
-        spring_ctx, 
-        m_state, 
-        m_normal_modes, 
-        m_force_mgr, 
+        m_config->propagator_type,
+        m_config->mass,
+        m_config->dt,
+        spring_ctx,
+        m_state,
+        m_normal_modes,
+        m_force_mgr,
         m_exchange_state
     );
+
     m_thermostat = initializeThermostat(
         thermal_ctx,
-        nm_ctx, 
+        nm_ctx,
         m_config,
-        m_state, 
+        m_state,
         m_rng
     );
 
-    auto velocity_ctx = VelocityContext{
-        .momenta = std::shared_ptr<const dVec>(m_state, &m_state->momenta),
-        .mass = m_config->mass
-    };
-    
-    auto thermostat_ctx = ThermostatContext{
+    const auto thermostat_ctx = ThermostatContext{
         .thermostat = m_thermostat,
         .thermostat_type = m_config->thermostat_type
     };
 
     //m_observables = initializeObservables(m_config, m_state, m_exchange_state, m_force_mgr, m_thermostat);
-    const ObservableInitializer obs_init(
+    m_observables = ObservableInitializer(
         m_config,
         m_state,
         m_exchange_state,
@@ -118,9 +121,8 @@ Simulation::Simulation(int rank, int nproc, const std::string& config_filename):
         box_ctx,
         velocity_ctx,
         thermostat_ctx
-    );
+    ).createObservables();
 
-    m_observables = obs_init.createObservables();
     m_dumps = initializeDumps(m_config, m_state);
 }
 
@@ -142,7 +144,8 @@ std::shared_ptr<ExchangeState> Simulation::initializeExchangeState(
     {
         x_first_bead = std::shared_ptr<dVec>(state, &state->coord);
         x_last_bead = std::shared_ptr<dVec>(state, &state->prev_coord);
-    } else
+    }
+    else
     {
         x_first_bead = std::shared_ptr<dVec>(state, &state->next_coord);
         x_last_bead = std::shared_ptr<dVec>(state, &state->coord);
@@ -263,7 +266,8 @@ std::shared_ptr<Thermostat> Simulation::initializeThermostat(
 
     if (config->thermostat_type == "nose_hoover_np_dim")
     {
-        return std::make_shared<NoseHooverNpDimThermostat>(thermal_ctx, nm_ctx, state, nchains, config->dt, config->mass);
+        return std::make_shared<NoseHooverNpDimThermostat>(thermal_ctx, nm_ctx, state, nchains, config->dt,
+                                                           config->mass);
     }
 
     if (config->thermostat_type == "none")

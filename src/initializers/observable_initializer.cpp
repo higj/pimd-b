@@ -31,15 +31,6 @@ ObservableInitializer::ObservableInitializer(
 {
 }
 
-ObservableType ObservableInitializer::getObservableType(const std::string& name)
-{
-    if (name == "energy") return ObservableType::ENERGY;
-    if (name == "classical") return ObservableType::CLASSICAL;
-    if (name == "bosonic") return ObservableType::BOSONIC;
-    if (name == "gsf") return ObservableType::GSF;
-    return ObservableType::UNKNOWN;
-}
-
 std::shared_ptr<Observable> ObservableInitializer::createEnergyObservable(const std::string& out_unit) const
 {
     return std::make_shared<EnergyObservable>(
@@ -130,7 +121,7 @@ std::vector<std::shared_ptr<Observable>> ObservableInitializer::createObservable
         // Direct method calls based on observable type
         try
         {
-            switch (getObservableType(item.name))
+            switch (item.getType())
             {
             case ObservableType::ENERGY:
                 observables.push_back(createEnergyObservable(item.getEffectiveUnit()));

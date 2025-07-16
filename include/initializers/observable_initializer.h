@@ -18,6 +18,14 @@ class ForceManager;
 class Thermostat;
 struct SimulationConfig;
 
+enum class ObservableType : std::uint8_t {
+    ENERGY,
+    CLASSICAL,
+    BOSONIC,
+    GSF,
+    UNKNOWN
+};
+
 struct ObservableItem
 {
     std::string name;
@@ -33,15 +41,15 @@ struct ObservableItem
     {
         return (unit != "none") ? unit : "";
     }
-};
 
-enum class ObservableType : std::uint8_t
-{
-    ENERGY,
-    CLASSICAL,
-    BOSONIC,
-    GSF,
-    UNKNOWN
+    [[nodiscard]] ObservableType getType() const
+    {
+        if (name == "energy") return ObservableType::ENERGY;
+        if (name == "classical") return ObservableType::CLASSICAL;
+        if (name == "bosonic") return ObservableType::BOSONIC;
+        if (name == "gsf") return ObservableType::GSF;
+        return ObservableType::UNKNOWN;
+    }
 };
 
 class ObservableInitializer
@@ -65,8 +73,6 @@ public:
     [[nodiscard]] std::vector<std::shared_ptr<Observable>> createObservables() const;
 
 private:
-    static ObservableType getObservableType(const std::string& name);
-
     [[nodiscard]] std::vector<ObservableItem> parseObservablesList() const;
 
     // Observable creation methods
