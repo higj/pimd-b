@@ -2,6 +2,8 @@
 
 #include "distinguishable_classical_spring_energy_strategy.h"
 
+#include <memory>
+
 class BosonicExchangeBase;
 
 class BosonicClassicalSpringEnergyStrategy : public DistinguishableClassicalSpringEnergyStrategy {

@@ -3,6 +3,8 @@
 #include "distinguishable_primitive_kinetic_energy_strategy.h"
 #include "contexts/bead_context.h"
 
+#include <memory>
+
 class BosonicExchangeBase;
 
 class BosonicPrimitiveKineticEnergyStrategy : public DistinguishablePrimitiveKineticEnergyStrategy {

@@ -2,6 +2,8 @@
 
 #include "distinguishable_normal_modes_momenta_strategy.h"
 
+#include <memory>
+
 class BosonicExchangeBase;
 
 class BosonicNormalModesMomentaStrategy : public DistinguishableNormalModesMomentaStrategy {
