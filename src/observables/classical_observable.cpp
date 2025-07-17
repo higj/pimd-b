@@ -43,7 +43,7 @@ void ClassicalObservable::calculate() {
 void ClassicalObservable::calculateKineticEnergy() {
     double kinetic_energy = 0.0;
 
-    const auto& momenta = *m_vel_ctx.momenta;
+    const dVec& momenta = *m_vel_ctx.momenta;
 
     for (int ptcl_idx = 0; ptcl_idx < m_bead_ctx.natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
@@ -52,6 +52,7 @@ void ClassicalObservable::calculateKineticEnergy() {
     }
 
     kinetic_energy *= 0.5 / m_vel_ctx.mass;
+
     quantities["cl_kinetic"] = Units::convertToUser("energy", m_out_unit, kinetic_energy);
 
     // Temperature is calculated according to Tolman's equipartition theorem as the average kinetic 

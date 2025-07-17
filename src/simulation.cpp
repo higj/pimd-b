@@ -56,18 +56,18 @@ Simulation::Simulation(int rank, int nproc, const std::string& config_filename):
         .nbeads = m_config->nbeads,
         .natoms = m_config->natoms,
         .this_bead = m_config->this_bead
-    };
-
-    const auto velocity_ctx = VelocityContext{
-        .momenta = std::shared_ptr<dVec>(m_state, &m_state->momenta),
-        .mass = m_config->mass
-    };
+    };    
 
     m_rng = std::make_shared<RandomGenerators>(m_config->seed + rank);
     m_state = std::make_shared<SystemState>(rank, nproc, m_config->natoms, m_config->nbeads);
 
     initializePositions(m_config, box_ctx, m_state, m_rng);
     initializeMomenta(m_config, m_state, m_rng);
+
+    const auto velocity_ctx = VelocityContext{
+        .momenta = std::shared_ptr<dVec>(m_state, &m_state->momenta),
+        .mass = m_config->mass
+    };
 
     // Communicate the new coordinates to the neighboring processes
     m_state->updateNeighboringCoordinates();
