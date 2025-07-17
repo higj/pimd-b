@@ -3,6 +3,8 @@
 #include "distinguishable_spring_force_strategy.h"
 #include "contexts/bead_context.h"
 
+#include <memory>
+
 class BosonicExchangeBase;
 
 class BosonicSpringForceStrategy : public DistinguishableSpringForceStrategy {
