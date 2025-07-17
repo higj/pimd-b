@@ -166,7 +166,7 @@ std::shared_ptr<BosonicExchangeBase> Simulation::initializeExchange(
 
     if (bosonic && (bead_ctx.this_bead == 0 || bead_ctx.this_bead == bead_ctx.nbeads - 1)) {
 #if FACTORIAL_BOSONIC_ALGORITHM
-        bosonic_exchange = std::make_unique<FactorialBosonicExchange>(
+        return std::make_unique<FactorialBosonicExchange>(
             x_first_bead,
             x_last_bead,
             thermal_ctx,
