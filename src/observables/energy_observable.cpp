@@ -1,11 +1,11 @@
 #include "observables/energy_observable.h"
-#include "core/exchange_state.h"
-#include "core/force_manager.h"
 #include "bosonic_exchange/bosonic_exchange_base.h"
-#include "ring_polymer_utils.h"
+#include "core/force_manager.h"
+#include "core/statistics_manager.h"
 
 EnergyObservable::EnergyObservable(
-        const std::shared_ptr<ExchangeState>& exchange_state,
+        const std::shared_ptr<BosonicExchangeBase>& bosonic_exchange,
+        bool bosonic,
         const std::shared_ptr<const dVec>& coord,
         const std::shared_ptr<const dVec>& prev_coord,
         const std::shared_ptr<const ForceManager>& force_mgr,
@@ -16,7 +16,7 @@ EnergyObservable::EnergyObservable(
         int out_freq,
         const std::string& out_unit
     ) : Observable(out_freq, out_unit),
-    m_exchange_state(exchange_state),
+    m_prim_ke_strategy(StatisticsManager::createPrimitiveKineticEnergyStrategy(bosonic_exchange, bead_ctx, bosonic)),
     m_coord_this(coord),
     m_coord_prev(prev_coord),
     m_force_mgr(force_mgr),
@@ -50,29 +50,13 @@ void EnergyObservable::calculateKinetic()
 {
     // First, add the constant factor of d*N*P/(2*beta) to the kinetic energy (per bead)
     quantities["kinetic"] = 0.5 * NDIM * m_bead_ctx.natoms / m_thermal_ctx.beta;
-
-    // Then, subtract the spring energies. In the case of bosons, the exterior
-    // spring energy requires separate treatment.
-    if (m_bead_ctx.this_bead == 0 && m_exchange_state->is_bosonic)
-    {
-        quantities["kinetic"] += m_exchange_state->bosonic_exchange->primitiveEnergyEstimator();
-    }
-    else
-    {
-        /// TODO: Think about best way to pass minimum_image and box_size. Presumably, we need to pass Box object here?
-        double spring_energy = RingPolymerUtils::classicalSpringEnergy(
-            *m_coord_this,
-            *m_coord_prev,
-            m_spring_ctx.spring_constant,
-            m_box_ctx.pbc && MINIM, /// TODO: MINIM should become a parameter (mic_spring and mic_potential)
-            m_box_ctx.box_size
-        );
-#if IPI_CONVENTION
-        spring_energy /= m_bead_ctx.nbeads;
-#endif
-
-        quantities["kinetic"] -= spring_energy;
-    }
+    quantities["kinetic"] += m_prim_ke_strategy->calculateSpringContribution(
+        *m_coord_this, 
+        *m_coord_prev, 
+        m_spring_ctx, 
+        m_box_ctx, 
+        m_bead_ctx
+    );
 
     quantities["kinetic"] = Units::convertToUser("energy", m_out_unit, quantities["kinetic"]);
 }
@@ -111,12 +95,7 @@ void EnergyObservable::calculatePotential()
             for (int ptcl_two = ptcl_one + 1; ptcl_two < m_bead_ctx.natoms; ++ptcl_two)
             {
                 dVec diff = coord.getSeparation(ptcl_one, ptcl_two); // Vectorial distance
-
-                /// TODO: MINIM should become a parameter (mic_spring and mic_potential)
-                if (m_box_ctx.pbc && MINIM)
-                {
-                    applyMinimumImage(diff, m_box_ctx.box_size);
-                }
+                m_box_ctx.applyMinimumImageIfNeeded(diff);
 
                 if (const double distance = diff.norm(); distance < m_force_mgr->cutoff || m_force_mgr->cutoff < 0.0)
                 {

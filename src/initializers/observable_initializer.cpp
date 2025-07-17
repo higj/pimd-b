@@ -5,10 +5,12 @@
 #include <stdexcept>
 #include <memory>
 
+#include "bosonic_exchange/bosonic_exchange_base.h"
+
 ObservableInitializer::ObservableInitializer(
     const std::shared_ptr<SimulationConfig>& config,
     const std::shared_ptr<SystemState>& state,
-    const std::shared_ptr<ExchangeState>& exchange_state,
+    const std::shared_ptr<BosonicExchangeBase>& bosonic_exchange,
     const std::shared_ptr<ForceManager>& force_mgr,
     const std::shared_ptr<Thermostat>& thermostat,
     const BeadContext& bead_context,
@@ -19,7 +21,7 @@ ObservableInitializer::ObservableInitializer(
     const ThermostatContext& thermostat_context
 ) : m_config(config),
     m_state(state),
-    m_exchange_state(exchange_state),
+    m_bosonic_exchange(bosonic_exchange),
     m_force_mgr(force_mgr),
     m_thermostat(thermostat),
     m_bead_context(bead_context),
@@ -34,7 +36,8 @@ ObservableInitializer::ObservableInitializer(
 std::shared_ptr<Observable> ObservableInitializer::createEnergyObservable(const std::string& out_unit) const
 {
     return std::make_shared<EnergyObservable>(
-        m_exchange_state,
+        m_bosonic_exchange,
+        m_config->bosonic,
         std::shared_ptr<const dVec>(m_state, &m_state->coord),
         std::shared_ptr<const dVec>(m_state, &m_state->prev_coord),
         m_force_mgr,
@@ -52,7 +55,8 @@ std::shared_ptr<Observable> ObservableInitializer::createClassicalObservable(con
     return std::make_shared<ClassicalObservable>(
         std::shared_ptr<const dVec>(m_state, &m_state->coord),
         std::shared_ptr<const dVec>(m_state, &m_state->prev_coord),
-        m_exchange_state,
+        m_bosonic_exchange,
+        m_config->bosonic,
         m_velocity_context,
         m_thermostat_context,
         m_bead_context,
@@ -71,7 +75,9 @@ std::shared_ptr<Observable> ObservableInitializer::createBosonicObservable(const
     }
 
     return std::make_shared<BosonicObservable>(
-        m_exchange_state,
+        m_bosonic_exchange,
+        m_bead_context,
+        m_config->bosonic, /// TODO: Passing this flag seems unnecessary, due to the if check above. We know the simulation is bosonic here.
         m_config->sfreq,
         out_unit
     );

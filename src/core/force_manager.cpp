@@ -1,10 +1,15 @@
 #include <utility>
 
 #include "core/force_manager.h"
+#include "core/statistics_manager.h"
 #include "potentials.h"
-#include "bosonic_exchange/bosonic_exchange_base.h"
 
-ForceManager::ForceManager(const std::shared_ptr<const SimulationConfig>& config) : m_config(config)
+ForceManager::ForceManager(
+    const std::shared_ptr<const SimulationConfig>& config,
+    const std::shared_ptr<BosonicExchangeBase>& bosonic_exchange,
+    const BeadContext& bead_ctx
+) : m_config(config),
+    m_spring_force(StatisticsManager::createSpringForceStrategy(bosonic_exchange, bead_ctx, config->bosonic))
 {
     ext_potential = initializePotential(m_config->ext_pot_name, m_config->ext_pot_params);
     int_potential = initializePotential(m_config->int_pot_name, m_config->int_pot_params);
@@ -20,7 +25,7 @@ ForceManager::ForceManager(const std::shared_ptr<const SimulationConfig>& config
     }
 }
 
-void ForceManager::updatePhysicalForces(SystemState& state) const
+void ForceManager::updatePhysicalForces(SystemState& state, const BoxContext& box_ctx) const
 {
     // Calculate the external forces acting on the particles
     state.physical_forces = (-1.0) * ext_potential->gradV(state.coord);
@@ -35,12 +40,8 @@ void ForceManager::updatePhysicalForces(SystemState& state) const
             // Get the vector distance between the two particles.
             // Here "diff" contains just one vector of dimension NDIM.
             dVec diff = state.coord.getSeparation(ptcl_one, ptcl_two);
-
             /// TODO: MINIM should become a parameter (mic_spring and mic_potential)
-            if (m_config->pbc && MINIM)
-            {
-                applyMinimumImage(diff, m_config->box_size);
-            }
+            box_ctx.applyMinimumImageIfNeeded(diff);
 
             // If the distance between the particles exceeds the cutoff length
             // then we assume the interaction is negligible and do not bother
@@ -61,107 +62,13 @@ void ForceManager::updatePhysicalForces(SystemState& state) const
     }
 }
 
-void ForceManager::updateSpringForces(SystemState& state, const ExchangeState& exchange_state) const
-{
-    if (exchange_state.is_bosonic_bead)
-    {
-        // If the simulation is bosonic and the current bead is either 1 or P, we calculate
-        // the exterior spring forces in the appropriate bosonic class.
-        updateBosonicSpringForces(state, exchange_state);
-        return;
-    }
-
-    // If particles are distinguishable, or if the current bead is an interior bead,
-    // the force is calculated based on the standard expression for distinguishable particles.
-    updateDistinguishableSpringForces(state);
-}
-
-void ForceManager::updateForces(SystemState& state, const ExchangeState& exchange_state) const
+void ForceManager::updateForces(SystemState& state, const SpringContext& spring_ctx, const BoxContext& box_ctx) const
 {
     // First, update the spring forces based on the current state of the system.
-    updateSpringForces(state, exchange_state);
+    m_spring_force->updateSpringForces(state, spring_ctx, box_ctx);
 
     // Then, update the physical forces acting on the particles.
-    updatePhysicalForces(state);
-}
-
-void ForceManager::applyMinimumImageIfNeeded(double& diff) const
-{
-#if MINIM
-    if (m_config->pbc)
-    {
-        applyMinimumImage(diff, m_config->box_size);
-    }
-#endif
-}
-
-void ForceManager::addSpringForceContribution(SystemState& state, int ptcl_idx, int axis, double coord_diff) const
-{
-    applyMinimumImageIfNeeded(coord_diff);
-    state.spring_forces(ptcl_idx, axis) += m_config->spring_constant * coord_diff;
-}
-
-void ForceManager::updateDistinguishableSpringForces(SystemState& state) const
-{
-    for (int ptcl_idx = 0; ptcl_idx < m_config->natoms; ++ptcl_idx)
-    {
-        for (int axis = 0; axis < NDIM; ++axis)
-        {
-            double diff_prev = state.prev_coord(ptcl_idx, axis) - state.coord(ptcl_idx, axis);
-            double diff_next = state.next_coord(ptcl_idx, axis) - state.coord(ptcl_idx, axis);
-
-            applyMinimumImageIfNeeded(diff_prev);
-            applyMinimumImageIfNeeded(diff_next);
-
-            state.spring_forces(ptcl_idx, axis) = m_config->spring_constant * (diff_prev + diff_next);
-        }
-    }
-}
-
-void ForceManager::updateBosonicSpringForces(SystemState& state, const ExchangeState& exchange_state) const
-{
-    exchange_state.bosonic_exchange->prepare();
-    exchange_state.bosonic_exchange->exteriorSpringForce(state.spring_forces);
-
-    if (m_config->nbeads == 1)
-    {
-        // For bosonic simulations with a single imaginary time slice (P=1),
-        // no inter-slice springs exist - only permutation-related springs within the same slice.
-        // These should already have been handled by exteriorSpringForce, so we can exit early.
-        // In the distinguishable case, P=1 implies no springs at all, as only diagonal
-        // elements of the density matrix are relevant.
-        return;
-    }
-
-    // Bosonic exchange class only calculates the contribution due to the exterior spring.
-    // However, beads 1 and P are also affected by the interior spring (due to beads 2 and P-1, respectively).
-    if (m_config->this_bead == 0)
-    {
-        for (int ptcl_idx = 0; ptcl_idx < m_config->natoms; ++ptcl_idx)
-        {
-            for (int axis = 0; axis < NDIM; ++axis)
-            {
-                const double diff_next = state.next_coord(ptcl_idx, axis) - state.coord(ptcl_idx, axis);
-                addSpringForceContribution(state, ptcl_idx, axis, diff_next);
-                //applyMinimumImageIfNeeded(diff_next);
-                //state.spring_forces(ptcl_idx, axis) += m_config->spring_constant * diff_next;
-            }
-        }
-
-        return;
-    }
-
-    // The following is the spring force contribution acting on the last bead, due to the spring between P-1 and P
-    for (int ptcl_idx = 0; ptcl_idx < m_config->natoms; ++ptcl_idx)
-    {
-        for (int axis = 0; axis < NDIM; ++axis)
-        {
-            const double diff_prev = state.prev_coord(ptcl_idx, axis) - state.coord(ptcl_idx, axis);
-            addSpringForceContribution(state, ptcl_idx, axis, diff_prev);
-            //applyMinimumImageIfNeeded(diff_prev);
-            //state.spring_forces(ptcl_idx, axis) += m_config->spring_constant * diff_prev;
-        }
-    }
+    updatePhysicalForces(state, box_ctx);
 }
 
 std::unique_ptr<Potential> ForceManager::initializePotential(const std::string& potential_name,

@@ -6,11 +6,11 @@
 VelocityVerletPropagator::VelocityVerletPropagator(
     const std::shared_ptr<SystemState>& state,
     const std::shared_ptr<ForceManager>& force_mgr,
-    const std::shared_ptr<ExchangeState>& exchange_state,
+    const BoxContext& box_ctx,
     const SpringContext& spring_ctx,
     double mass,
     double dt
-) : Propagator(state, force_mgr, exchange_state, spring_ctx, mass, dt)
+) : Propagator(state, force_mgr, box_ctx, spring_ctx, mass, dt)
 {
 }
 
@@ -23,8 +23,7 @@ void VelocityVerletPropagator::step()
     coordsStep();
 
     // Third step: forces are updated using the new positions
-    /// TODO: Passing state and exchange_state every time we need to update forces is not ideal (delegate this to the force manager)?
-    m_force_mgr->updateForces(*m_state, *m_exchange_state);
+    m_force_mgr->updateForces(*m_state, m_spring_ctx, m_box_ctx);
 
     // Fourth step: momenta are propagated once more ("B" step)
     momentStep();

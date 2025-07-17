@@ -1,13 +1,13 @@
 #include "observables/classical_observable.h"
 #include "thermostats/thermostat.h"
-#include "core/exchange_state.h"
 #include "bosonic_exchange/bosonic_exchange_base.h"
-#include "ring_polymer_utils.h"
+#include "core/statistics_manager.h"
 
 ClassicalObservable::ClassicalObservable(
     const std::shared_ptr<const dVec>& coord,
     const std::shared_ptr<const dVec>& prev_coord,
-    const std::shared_ptr<ExchangeState>& exchange_state,
+    const std::shared_ptr<BosonicExchangeBase>& bosonic_exchange,
+    bool bosonic,
     const VelocityContext& vel_ctx,
     const ThermostatContext& thermostat_ctx,
     const BeadContext& bead_ctx,
@@ -18,7 +18,7 @@ ClassicalObservable::ClassicalObservable(
 ) : Observable(out_freq, out_unit),
     m_coord(coord),
     m_prev_coord(prev_coord),
-    m_exchange_state(exchange_state),
+    m_spring_energy_strategy(StatisticsManager::createClassicalSpringEnergyStrategy(bosonic_exchange, bead_ctx, bosonic)),
     m_vel_ctx(vel_ctx),
     m_thermostat_ctx(thermostat_ctx),
     m_bead_ctx(bead_ctx),
@@ -74,19 +74,12 @@ void ClassicalObservable::calculateKineticEnergy() {
 }
 
 void ClassicalObservable::calculateSpringEnergy() {
-    double spring_energy;
-
-    if (m_bead_ctx.this_bead == 0 && m_exchange_state->is_bosonic) {
-        spring_energy = m_exchange_state->bosonic_exchange->effectivePotential();
-    } else {
-        spring_energy = RingPolymerUtils::classicalSpringEnergy(
-            *m_coord,
-            *m_prev_coord,
-            m_spring_ctx.spring_constant,
-            m_box_ctx.pbc && MINIM, /// TODO: MINIM should become a parameter (mic_spring and mic_potential)
-            m_box_ctx.box_size
-        );
-    }
+    const double spring_energy = m_spring_energy_strategy->calculateSpringEnergy(
+        *m_coord, 
+        *m_prev_coord,
+        m_spring_ctx, 
+        m_box_ctx
+    );
 
     quantities["cl_spring"] = Units::convertToUser("energy", m_out_unit, spring_energy);
 }

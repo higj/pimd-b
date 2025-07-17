@@ -37,6 +37,7 @@ void printProgress(int this_step, int total_steps, int this_rank, int out_rank) 
     }
 }
 
+/*
 void applyMinimumImage(double& dx, double L) {
     dx -= L * floor(dx / L + 0.5);
 }
@@ -54,3 +55,4 @@ void applyMinimumImage(dVec& dx_arr, double L)
 void periodicWrap(double& x, double L) {
     x -= L * std::nearbyint(x / L);
 }
+*/

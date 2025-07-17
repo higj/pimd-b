@@ -3,8 +3,12 @@
 #include <fstream>
 
 XyzPositionInitializer::XyzPositionInitializer(
-    const std::string& filename, int first_idx, const std::shared_ptr<dVec>& coord, double box_size)
-    : PositionInitializer(coord, box_size), m_filename(filename), m_first_idx(first_idx) {
+    const std::string& filename,
+    int first_idx, 
+    const std::shared_ptr<dVec>& coord,
+    const BoxContext& box_ctx
+)
+    : PositionInitializer(coord, box_ctx), m_filename(filename), m_first_idx(first_idx) {
 }
 
 void XyzPositionInitializer::initialize() {

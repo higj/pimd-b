@@ -26,10 +26,8 @@ void BosonicExchangeBase::getExteriorBeadsSeparation(int first_idx, int last_idx
     for (int axis = 0; axis < NDIM; ++axis)
     {
         double dx = (*m_coord_first_bead)(first_idx, axis) - (*m_coord_last_bead)(last_idx, axis);
-#if MINIM
-        if (m_box_ctx.pbc)
-            applyMinimumImage(dx, m_box_ctx.box_size);
-#endif
+        m_box_ctx.applyMinimumImageIfNeeded(dx);
+
         diff[axis] = dx;
     }
 }

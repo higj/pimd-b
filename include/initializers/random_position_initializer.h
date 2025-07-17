@@ -12,7 +12,11 @@ class RandomGenerators;
  */
 class RandomPositionInitializer final : public PositionInitializer {
 public:
-    explicit RandomPositionInitializer(const std::shared_ptr<RandomGenerators>& rng, const std::shared_ptr<dVec>& coords, double box_size);
+    explicit RandomPositionInitializer(
+        const std::shared_ptr<RandomGenerators>& rng,
+        const std::shared_ptr<dVec>& coords, 
+        const BoxContext& box_ctx
+    );
     void initialize() override;
 private:
     std::shared_ptr<RandomGenerators> m_rng;

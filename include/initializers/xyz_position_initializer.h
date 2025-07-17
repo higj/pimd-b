@@ -6,7 +6,7 @@
 
 class XyzPositionInitializer final : public PositionInitializer {
 public:
-    XyzPositionInitializer(const std::string& filename, int first_idx, const std::shared_ptr<dVec>& coord, double box_size);
+    XyzPositionInitializer(const std::string& filename, int first_idx, const std::shared_ptr<dVec>& coord, const BoxContext& box_ctx);
 
     /**
      * Initializes positions from user-provided files.

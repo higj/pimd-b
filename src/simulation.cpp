@@ -18,6 +18,12 @@
 #include <array>
 #include <cassert>
 
+#if FACTORIAL_BOSONIC_ALGORITHM
+#include "bosonic_exchange/factorial_bosonic_exchange.h"
+#else
+#include "bosonic_exchange/quadratic_bosonic_exchange.h"
+#endif
+
 Simulation::Simulation(int rank, int nproc, const std::string& config_filename): m_step(0)
 {
     // Parse the simulation parameters from the configuration (input) file
@@ -28,15 +34,6 @@ Simulation::Simulation(int rank, int nproc, const std::string& config_filename):
     {
         throw std::runtime_error("Failed to load configuration");
     }
-
-    m_rng = std::make_shared<RandomGenerators>(m_config->seed + rank);
-    m_state = std::make_shared<SystemState>(rank, nproc, m_config->natoms, m_config->nbeads);
-
-    initializePositions(m_config, m_state, m_rng);
-    initializeMomenta(m_config, m_state, m_rng);
-
-    // Communicate the new coordinates to the neighboring processes
-    m_state->updateNeighboringCoordinates();
 
     // Initialize basic contexts
     const auto thermal_ctx = ThermalContext{
@@ -66,10 +63,16 @@ Simulation::Simulation(int rank, int nproc, const std::string& config_filename):
         .mass = m_config->mass
     };
 
-    // Initialize other resources
-    m_force_mgr = std::make_shared<ForceManager>(m_config);
+    m_rng = std::make_shared<RandomGenerators>(m_config->seed + rank);
+    m_state = std::make_shared<SystemState>(rank, nproc, m_config->natoms, m_config->nbeads);
 
-    m_exchange_state = initializeExchangeState(
+    initializePositions(m_config, box_ctx, m_state, m_rng);
+    initializeMomenta(m_config, m_state, m_rng);
+
+    // Communicate the new coordinates to the neighboring processes
+    m_state->updateNeighboringCoordinates();
+
+    m_bosonic_exchange = initializeExchange(
         m_config->bosonic,
         thermal_ctx,
         spring_ctx,
@@ -77,6 +80,13 @@ Simulation::Simulation(int rank, int nproc, const std::string& config_filename):
         bead_ctx,
         m_state
     );
+
+    // Initialize other resources
+    m_force_mgr = std::make_shared<ForceManager>(
+        m_config,
+        m_bosonic_exchange,
+        bead_ctx
+    );    
 
     m_normal_modes = initializeNormalModes(m_config, m_state);
     const auto nm_ctx = NormalModesContext{
@@ -89,10 +99,13 @@ Simulation::Simulation(int rank, int nproc, const std::string& config_filename):
         m_config->mass,
         m_config->dt,
         spring_ctx,
+        box_ctx,
+        bead_ctx,
+        m_config->bosonic,
         m_state,
         m_normal_modes,
         m_force_mgr,
-        m_exchange_state
+        m_bosonic_exchange
     );
 
     m_thermostat = initializeThermostat(
@@ -112,7 +125,7 @@ Simulation::Simulation(int rank, int nproc, const std::string& config_filename):
     m_observables = ObservableInitializer(
         m_config,
         m_state,
-        m_exchange_state,
+        m_bosonic_exchange,
         m_force_mgr,
         m_thermostat,
         bead_ctx,
@@ -128,7 +141,7 @@ Simulation::Simulation(int rank, int nproc, const std::string& config_filename):
 
 Simulation::~Simulation() = default;
 
-std::shared_ptr<ExchangeState> Simulation::initializeExchangeState(
+std::shared_ptr<BosonicExchangeBase> Simulation::initializeExchange(
     bool bosonic,
     const ThermalContext& thermal_ctx,
     const SpringContext& spring_ctx,
@@ -151,15 +164,30 @@ std::shared_ptr<ExchangeState> Simulation::initializeExchangeState(
         x_last_bead = std::shared_ptr<dVec>(state, &state->coord);
     }
 
-    return std::make_shared<ExchangeState>(
-        x_first_bead,
-        x_last_bead,
-        thermal_ctx,
-        spring_ctx,
-        box_ctx,
-        bead_ctx,
-        bosonic
-    );
+    if (bosonic && (bead_ctx.this_bead == 0 || bead_ctx.this_bead == bead_ctx.nbeads - 1)) {
+#if FACTORIAL_BOSONIC_ALGORITHM
+        bosonic_exchange = std::make_unique<FactorialBosonicExchange>(
+            x_first_bead,
+            x_last_bead,
+            thermal_ctx,
+            spring_ctx,
+            box_ctx,
+            bead_ctx
+        );
+#else
+        return std::make_shared<BosonicExchange>(
+            x_first_bead,
+            x_last_bead,
+            thermal_ctx,
+            spring_ctx,
+            box_ctx,
+            bead_ctx
+        );
+#endif
+    }
+
+    /// TODO: Not ideal. Fix this later
+    return { nullptr };
 }
 
 std::shared_ptr<NormalModes> Simulation::initializeNormalModes(
@@ -186,10 +214,13 @@ std::shared_ptr<Propagator> Simulation::initializePropagator(
     double mass,
     double dt,
     const SpringContext& spring_ctx,
+    const BoxContext& box_ctx,
+    const BeadContext& bead_ctx,
+    bool bosonic,
     const std::shared_ptr<SystemState>& state,
     const std::shared_ptr<NormalModes>& normal_modes,
     const std::shared_ptr<ForceManager>& force_mgr,
-    const std::shared_ptr<ExchangeState>& exchange_state)
+    const std::shared_ptr<BosonicExchangeBase>& bosonic_exchange)
 {
     // JH: propagator_type, mass and dt are passed as arguments instead of the entire config
     //     because I'm confident that they are necessary and sufficient (along with the other arguments)
@@ -200,7 +231,7 @@ std::shared_ptr<Propagator> Simulation::initializePropagator(
         return std::make_shared<VelocityVerletPropagator>(
             state,
             force_mgr,
-            exchange_state,
+            box_ctx,
             spring_ctx,
             mass,
             dt
@@ -212,10 +243,13 @@ std::shared_ptr<Propagator> Simulation::initializePropagator(
         return std::make_shared<NormalModesPropagator>(
             state,
             force_mgr,
-            exchange_state,
+            box_ctx,
             spring_ctx,
             mass,
             dt,
+            bosonic_exchange,
+            bead_ctx,
+            bosonic,
             normal_modes
         );
     }
@@ -516,6 +550,7 @@ std::vector<std::shared_ptr<Dump>> Simulation::initializeDumps(
 
 void Simulation::initializePositions(
     const std::shared_ptr<SimulationConfig>& config,
+    const BoxContext& box_ctx,
     const std::shared_ptr<SystemState>& state,
     const std::shared_ptr<RandomGenerators>& rng)
 {
@@ -526,14 +561,14 @@ void Simulation::initializePositions(
         initializer = std::make_unique<RandomPositionInitializer>(
             rng,
             std::shared_ptr<dVec>(state, &state->coord),
-            config->box_size
+            box_ctx
         );
     }
     else if (config->init_pos_type == "grid")
     {
         initializer = std::make_unique<GridPositionInitializer>(
             std::shared_ptr<dVec>(state, &state->coord),
-            config->box_size
+            box_ctx
         );
     }
     else if (config->init_pos_type == "xyz")
@@ -542,7 +577,7 @@ void Simulation::initializePositions(
             config->init_pos_filename,
             config->this_bead + config->init_pos_index_offset,
             std::shared_ptr<dVec>(state, &state->coord),
-            config->box_size
+            box_ctx
         );
     }
     else

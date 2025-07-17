@@ -14,7 +14,7 @@
 
 struct SimulationConfig;
 class SystemState;
-class ExchangeState;
+class BosonicExchangeBase;
 class RandomGenerators;
 class ForceManager;
 class Propagator;
@@ -50,7 +50,7 @@ private:
 
     std::shared_ptr<SimulationConfig> m_config;
     std::shared_ptr<SystemState> m_state;
-    std::shared_ptr<ExchangeState> m_exchange_state;
+    std::shared_ptr<BosonicExchangeBase> m_bosonic_exchange;
     std::shared_ptr<RandomGenerators> m_rng;
     std::shared_ptr<ForceManager> m_force_mgr;
     std::shared_ptr<NormalModes> m_normal_modes;
@@ -71,7 +71,7 @@ private:
       * @param state System state object containing information about the current state of the simulation.
       * @return A shared pointer to the initialized exchange state object.
      */
-    static std::shared_ptr<ExchangeState> initializeExchangeState(
+    static std::shared_ptr<BosonicExchangeBase> initializeExchange(
         bool bosonic,
         const ThermalContext& thermal_ctx,
         const SpringContext& spring_ctx,
@@ -99,10 +99,13 @@ private:
      * @param mass Mass of the particles in the system.
      * @param dt Time step for the simulation.
      * @param spring_ctx Spring context object containing information about the springs.
+     * @param box_ctx Box context object containing information about the simulation box.
+     * @param bead_ctx Bead context object containing information about the beads in the system.
+     * @param bosonic Boolean indicating whether the simulation is bosonic or not.
      * @param state System state object containing information about the current state of the simulation.
      * @param normal_modes Normal modes object containing information about the normal modes of the system.
      * @param force_mgr Force field manager object containing information about the forces acting on the system.
-     * @param exchange_state Exchange state object containing information about the bosonic exchange.
+     * @param bosonic_exchange Bosonic exchange object.
      * @return A shared pointer to the initialized propagator object.
     */
     static std::shared_ptr<Propagator> initializePropagator(
@@ -110,10 +113,13 @@ private:
         double mass,
         double dt,
         const SpringContext& spring_ctx,
+        const BoxContext& box_ctx,
+        const BeadContext& bead_ctx,
+        bool bosonic,
         const std::shared_ptr<SystemState>& state,
         const std::shared_ptr<NormalModes>& normal_modes,
         const std::shared_ptr<ForceManager>& force_mgr,
-        const std::shared_ptr<ExchangeState>& exchange_state
+        const std::shared_ptr<BosonicExchangeBase>& bosonic_exchange
     );
 
     /**
@@ -157,11 +163,13 @@ private:
      * Initializes the positions of the particles based on the input parameters.
      *
      * @param config Simulation configuration object.
+     * @param box_ctx Box context object containing information about the simulation box.
      * @param state System state object.
      * @param rng Random number generator object for generating random numbers.
      */
     static void initializePositions(
         const std::shared_ptr<SimulationConfig>& config,
+        const BoxContext& box_ctx,
         const std::shared_ptr<SystemState>& state,
         const std::shared_ptr<RandomGenerators>& rng
     );

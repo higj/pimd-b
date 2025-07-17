@@ -6,10 +6,11 @@
 #include "contexts/thermal_context.h"
 #include "contexts/spring_context.h"
 #include "contexts/box_context.h"
+#include "strategies/observables/primitive_kinetic_energy_strategy.h"
 
 #include <memory>
 
-class ExchangeState;
+class BosonicExchangeBase;
 class ForceManager;
 
 class EnergyObservable final : public Observable {
@@ -18,7 +19,8 @@ public:
      * @brief Energy observable class constructor.
      */
     EnergyObservable(
-        const std::shared_ptr<ExchangeState>& exchange_state,
+        const std::shared_ptr<BosonicExchangeBase>& bosonic_exchange,
+        bool bosonic,
         const std::shared_ptr<const dVec>& coord,
         const std::shared_ptr<const dVec>& prev_coord,
         const std::shared_ptr<const ForceManager>& force_mgr,
@@ -36,7 +38,7 @@ public:
     void calculate() override;
 
 private:
-    std::shared_ptr<ExchangeState> m_exchange_state;
+    std::unique_ptr<PrimitiveKineticEnergyStrategy> m_prim_ke_strategy;
     std::shared_ptr<const dVec> m_coord_this;
     std::shared_ptr<const dVec> m_coord_prev;
     std::shared_ptr<const ForceManager> m_force_mgr;

@@ -1,17 +1,23 @@
 #include "propagators/normal_modes/normal_modes_propagator.h"
 #include "core/force_manager.h"
+#include "core/statistics_manager.h"
 
 #include <numbers>
 
 NormalModesPropagator::NormalModesPropagator(
     const std::shared_ptr<SystemState>& state,
     const std::shared_ptr<ForceManager>& force_mgr,
-    const std::shared_ptr<ExchangeState>& exchange_state,
+    const BoxContext& box_ctx,
     const SpringContext& spring_ctx,
     double mass,
     double dt,
+    const std::shared_ptr<BosonicExchangeBase>& bosonic_exchange,
+    const BeadContext& bead_ctx,
+    bool bosonic,
     const std::shared_ptr<NormalModes>& normal_modes
-) : Propagator(state, force_mgr, exchange_state, spring_ctx, mass, dt), m_normal_modes(normal_modes)
+) : Propagator(state, force_mgr, box_ctx, spring_ctx, mass, dt),
+    m_normal_modes(normal_modes),
+    m_nm_momenta_strategy(StatisticsManager::createNormalModesMomentaStrategy(bosonic_exchange, bead_ctx, bosonic))
 {
     // Frequencies
     m_freq = 2 * spring_ctx.omega_p * sin(m_this_bead * std::numbers::pi / m_nbeads);
@@ -70,7 +76,7 @@ void NormalModesPropagator::step() {
     m_state->updateNeighboringCoordinates();
 
     // Third step: forces are updated using the new positions
-    m_force_mgr->updateForces(*m_state, *m_exchange_state);
+    m_force_mgr->updateForces(*m_state, m_spring_ctx, m_box_ctx);
     
     // Propagate momenta under external forces
     momentaExternalForces();
@@ -78,33 +84,5 @@ void NormalModesPropagator::step() {
 
 void NormalModesPropagator::momentaExternalForces() const
 {
-    if (!m_exchange_state->is_bosonic) {
-        for (int ptcl_idx = 0; ptcl_idx < m_natoms; ++ptcl_idx)
-            for (int axis = 0; axis < NDIM; ++axis)
-#if IPI_CONVENTION
-                m_state->momenta(ptcl_idx, axis) += 0.5 * m_dt * m_state->physical_forces(ptcl_idx, axis);
-#else
-                m_state->momenta(ptcl_idx, axis) += 0.5 * m_dt * m_state->physical_forces(ptcl_idx, axis) / m_nbeads;
-#endif
-    } else if (m_this_bead == 0 || m_this_bead == m_nbeads - 1) {
-        for (int ptcl_idx = 0; ptcl_idx < m_natoms; ++ptcl_idx) {
-            for (int axis = 0; axis < NDIM; ++axis) {
-                double inner_springs = -m_spring_ctx.spring_constant * (2 * m_state->coord(ptcl_idx, axis) - m_state->prev_coord(ptcl_idx, axis) - m_state->
-                    next_coord(ptcl_idx, axis));
-#if IPI_CONVENTION
-                m_state->momenta(ptcl_idx, axis) += 0.5 * m_dt * (m_state->physical_forces(ptcl_idx, axis) + m_state->spring_forces(ptcl_idx, axis) - inner_springs);
-#else
-                m_state->momenta(ptcl_idx, axis) += 0.5 * m_dt * (m_state->physical_forces(ptcl_idx, axis) / m_nbeads + m_state->spring_forces(ptcl_idx, axis) - inner_springs);
-#endif
-            }
-        }
-    } else {
-        for (int ptcl_idx = 0; ptcl_idx < m_natoms; ++ptcl_idx)
-            for (int axis = 0; axis < NDIM; ++axis)
-#if IPI_CONVENTION
-                m_state->momenta(ptcl_idx, axis) += 0.5 * m_dt * m_state->physical_forces(ptcl_idx, axis);
-#else
-                m_state->momenta(ptcl_idx, axis) += 0.5 * m_dt * m_state->physical_forces(ptcl_idx, axis) / m_nbeads;
-#endif
-    }
+    m_nm_momenta_strategy->momentaExternalForces(m_state, m_spring_ctx, m_dt);
 }

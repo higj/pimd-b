@@ -4,16 +4,16 @@
 #include <stdexcept>
 
 GridPositionInitializer::GridPositionInitializer(
-    const std::shared_ptr<dVec>& coord,
-    double box_size)
-    : PositionInitializer(coord, box_size) {
+    const std::shared_ptr<dVec>& coord, 
+    const BoxContext& box_ctx)
+    : PositionInitializer(coord, box_ctx) {
 }
 
 /**
  * Places particles in a uniform grid according to the specified box size.
  */
 void GridPositionInitializer::initialize() {
-    const double volume = std::pow(m_box_size, NDIM);
+    const double volume = std::pow(m_box_ctx.box_size, NDIM);
 
     // Get the linear size per particle, and the number of particles
     const double init_side = std::pow((1.0 * m_natoms / volume), -1.0 / (1.0 * NDIM));
@@ -24,13 +24,13 @@ void GridPositionInitializer::initialize() {
     dVec size_nn_grid;
 
     for (int i = 0; i < NDIM; i++) {
-        num_nn_grid(0, i) = static_cast<int>(std::ceil((m_box_size / init_side) - EPS));
+        num_nn_grid(0, i) = static_cast<int>(std::ceil((m_box_ctx.box_size / init_side) - EPS));
 
         // Make sure we have at least one grid box
         num_nn_grid(0, i) = std::max(num_nn_grid(0, i), 1);
 
         // Compute the actual size of the grid
-        size_nn_grid(0, i) = m_box_size / (1.0 * num_nn_grid(0, i));
+        size_nn_grid(0, i) = m_box_ctx.box_size / (1.0 * num_nn_grid(0, i));
 
         // Determine the total number of grid boxes
         tot_num_grid_boxes *= num_nn_grid(0, i);
@@ -54,8 +54,8 @@ void GridPositionInitializer::initialize() {
         }
 
         for (int axis = 0; axis < NDIM; ++axis) {
-            pos(0, axis) = (grid_index(0, axis) + 0.5) * size_nn_grid(0, axis) - 0.5 * m_box_size;
-            applyMinimumImage(pos(0, axis), m_box_size);
+            pos(0, axis) = (grid_index(0, axis) + 0.5) * size_nn_grid(0, axis) - 0.5 * m_box_ctx.box_size;
+            m_box_ctx.applyMinimumImageIfNeeded(pos(0, axis));
         }
 
         if (n >= m_natoms) {

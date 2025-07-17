@@ -1,10 +1,12 @@
 #pragma once
 
 #include "observables/observable.h"
+#include "contexts/bead_context.h"
+#include "strategies/observables/bosonic_probability_strategy.h"
 
 #include <memory>
 
-class ExchangeState;
+class BosonicExchangeBase;
 
 class BosonicObservable final : public Observable
 {
@@ -13,7 +15,9 @@ public:
      * @brief Bosonic observable class constructor.
      */
     BosonicObservable(
-        const std::shared_ptr<ExchangeState>& exchange_state,
+        const std::shared_ptr<BosonicExchangeBase>& bosonic_exchange,
+        const BeadContext& bead_ctx,
+        bool bosonic,
         int out_freq,
         const std::string& out_unit
     );
@@ -24,5 +28,5 @@ public:
     void calculate() override;
 
 private:
-    std::shared_ptr<ExchangeState> m_exchange_state;
+    std::unique_ptr<BosonicProbabilityStrategy> m_bosonic_prob_strategy;
 };

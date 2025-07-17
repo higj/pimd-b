@@ -1,22 +1,21 @@
 #include "observables/bosonic_observable.h"
-#include "core/exchange_state.h"
 #include "bosonic_exchange/bosonic_exchange_base.h"
+#include "core/statistics_manager.h"
 
 BosonicObservable::BosonicObservable(
-    const std::shared_ptr<ExchangeState>& exchange_state,
+    const std::shared_ptr<BosonicExchangeBase>& bosonic_exchange,
+    const BeadContext& bead_ctx,
+    bool bosonic,
     int out_freq,
     const std::string& out_unit
 ) : Observable(out_freq, out_unit),
-    m_exchange_state(exchange_state)
+    m_bosonic_prob_strategy(StatisticsManager::createBosonicProbabilityStrategy(bosonic_exchange, bead_ctx, bosonic))
 {
     initialize({"prob_dist", "prob_all"});
 }
 
 void BosonicObservable::calculate()
 {
-    if (m_exchange_state->is_first_bead)
-    {
-        quantities["prob_dist"] = m_exchange_state->bosonic_exchange->getDistinctProbability();
-        quantities["prob_all"] = m_exchange_state->bosonic_exchange->getLongestProbability();
-    }
+    quantities["prob_dist"] = m_bosonic_prob_strategy->getDistinctProbability();
+    quantities["prob_all"] = m_bosonic_prob_strategy->getLongestProbability();
 }

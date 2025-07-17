@@ -9,6 +9,6 @@
  */
 class GridPositionInitializer final : public PositionInitializer {
 public:
-    explicit GridPositionInitializer(const std::shared_ptr<dVec>& coords, double box_size);
+    explicit GridPositionInitializer(const std::shared_ptr<dVec>& coords, const BoxContext& box_ctx);
     void initialize() override;
 };

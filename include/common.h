@@ -3,7 +3,7 @@
 #include <vector>
 #include <format>
 #include <variant>
-#include <cmath>
+//#include <cmath>
 
 #include "units.h"
 
@@ -304,12 +304,14 @@ void printProgress(int this_step, int total_steps, int this_rank, int out_rank =
 // distances between particles (or any spatial vector differences).
 // This is done using Algorithm C4. It calculates the remainder of dx
 // on the interval [-L/2, L/2].
+/*
 void applyMinimumImage(double& dx, double L);
 
 void applyMinimumImage(dVec& dx_arr, double L);
 
 void periodicWrap(double& x, double L);
 //void periodicWrap(dVec& pos_arr, double L);
+*/
 
 template <typename T>
 std::string formattedReportLine(const std::string& property_name, const T& value) {

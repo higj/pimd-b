@@ -6,10 +6,11 @@
 #include "contexts/bead_context.h"
 #include "contexts/spring_context.h"
 #include "contexts/box_context.h"
+#include "strategies/observables/classical_spring_energy_strategy.h"
 
 #include <memory>
 
-class ExchangeState;
+class BosonicExchangeBase;
 class Thermostat;
 
 class ClassicalObservable final : public Observable {
@@ -20,7 +21,8 @@ public:
     ClassicalObservable(
         const std::shared_ptr<const dVec>& coord,
         const std::shared_ptr<const dVec>& prev_coord,
-        const std::shared_ptr<ExchangeState>& exchange_state,
+        const std::shared_ptr<BosonicExchangeBase>& bosonic_exchange,
+        bool bosonic,
         const VelocityContext& vel_ctx,
         const ThermostatContext& thermostat_ctx,
         const BeadContext& bead_ctx,
@@ -35,7 +37,7 @@ public:
 private:
     std::shared_ptr<const dVec> m_coord;
     std::shared_ptr<const dVec> m_prev_coord;
-    std::shared_ptr<ExchangeState> m_exchange_state;
+    std::unique_ptr<ClassicalSpringEnergyStrategy> m_spring_energy_strategy;
 
     VelocityContext m_vel_ctx;
     ThermostatContext m_thermostat_ctx;
