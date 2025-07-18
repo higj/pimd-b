@@ -2,11 +2,11 @@
 
 #include "observables/observable.h"
 #include "contexts/bead_context.h"
-#include "strategies/observables/bosonic_probability_strategy.h"
 
 #include <memory>
 
 class BosonicExchangeBase;
+class BosonicProbabilityStrategy;
 
 class BosonicObservable final : public Observable
 {
@@ -21,6 +21,8 @@ public:
         int out_freq,
         const std::string& out_unit
     );
+
+    ~BosonicObservable() override;
 
     /**
      * @brief Calculates quantities pertaining to bosonic exchange.

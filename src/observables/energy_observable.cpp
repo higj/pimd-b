@@ -2,6 +2,7 @@
 #include "bosonic_exchange/bosonic_exchange_base.h"
 #include "core/force_manager.h"
 #include "core/statistics_manager.h"
+#include "strategies/observables/primitive_kinetic_energy_strategy.h"
 
 EnergyObservable::EnergyObservable(
         const std::shared_ptr<BosonicExchangeBase>& bosonic_exchange,
@@ -39,6 +40,8 @@ EnergyObservable::EnergyObservable(
         }
     }
 }
+
+EnergyObservable::~EnergyObservable() = default;
 
 void EnergyObservable::calculate()
 {

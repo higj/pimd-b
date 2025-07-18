@@ -6,12 +6,12 @@
 #include "contexts/bead_context.h"
 #include "contexts/spring_context.h"
 #include "contexts/box_context.h"
-#include "strategies/observables/classical_spring_energy_strategy.h"
 
 #include <memory>
 
 class BosonicExchangeBase;
 class Thermostat;
+class ClassicalSpringEnergyStrategy;
 
 class ClassicalObservable final : public Observable {
 public:
@@ -31,6 +31,8 @@ public:
         int out_freq, 
         const std::string& out_unit
     );
+
+    ~ClassicalObservable() override;
 
     void calculate() override;
 

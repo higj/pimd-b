@@ -2,6 +2,7 @@
 #include "thermostats/thermostat.h"
 #include "bosonic_exchange/bosonic_exchange_base.h"
 #include "core/statistics_manager.h"
+#include "strategies/observables/classical_spring_energy_strategy.h"
 
 ClassicalObservable::ClassicalObservable(
     const std::shared_ptr<const dVec>& coord,
@@ -33,6 +34,8 @@ ClassicalObservable::ClassicalObservable(
     if (m_is_nose_hoover)
         initializeLabel("nh_energy");
 }
+
+ClassicalObservable::~ClassicalObservable() = default;
 
 void ClassicalObservable::calculate() {
     calculateKineticEnergy();

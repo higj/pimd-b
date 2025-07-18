@@ -1,6 +1,7 @@
 #include "observables/bosonic_observable.h"
 #include "bosonic_exchange/bosonic_exchange_base.h"
 #include "core/statistics_manager.h"
+#include "strategies/observables/bosonic_probability_strategy.h"
 
 BosonicObservable::BosonicObservable(
     const std::shared_ptr<BosonicExchangeBase>& bosonic_exchange,
@@ -13,6 +14,8 @@ BosonicObservable::BosonicObservable(
 {
     initialize({"prob_dist", "prob_all"});
 }
+
+BosonicObservable::~BosonicObservable() = default;
 
 void BosonicObservable::calculate()
 {

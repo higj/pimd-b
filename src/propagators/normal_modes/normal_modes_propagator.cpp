@@ -1,6 +1,7 @@
 #include "propagators/normal_modes/normal_modes_propagator.h"
 #include "core/force_manager.h"
 #include "core/statistics_manager.h"
+#include "strategies/propagators/normal_modes_momenta_strategy.h"
 
 #include <numbers>
 
@@ -17,7 +18,7 @@ NormalModesPropagator::NormalModesPropagator(
     const std::shared_ptr<NormalModes>& normal_modes
 ) : Propagator(state, force_mgr, box_ctx, spring_ctx, mass, dt),
     m_normal_modes(normal_modes),
-    m_nm_momenta_strategy(StatisticsManager::createNormalModesMomentaStrategy(bosonic_exchange, bead_ctx, bosonic))
+    m_momenta_strategy(StatisticsManager::createNormalModesMomentaStrategy(bosonic_exchange, bead_ctx, bosonic))
 {
     // Frequencies
     m_freq = 2 * spring_ctx.omega_p * sin(m_this_bead * std::numbers::pi / m_nbeads);
@@ -25,6 +26,8 @@ NormalModesPropagator::NormalModesPropagator(
     m_s = sin(m_freq * m_dt);
     m_omega = mass * m_freq;
 }
+
+NormalModesPropagator::~NormalModesPropagator() = default;
 
 void NormalModesPropagator::step() {
     // Propagate momenta under external forces
@@ -84,5 +87,5 @@ void NormalModesPropagator::step() {
 
 void NormalModesPropagator::momentaExternalForces() const
 {
-    m_nm_momenta_strategy->momentaExternalForces(m_state, m_spring_ctx, m_dt);
+    m_momenta_strategy->momentaExternalForces(m_state, m_spring_ctx, m_dt);
 }

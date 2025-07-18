@@ -6,12 +6,12 @@
 #include "contexts/thermal_context.h"
 #include "contexts/spring_context.h"
 #include "contexts/box_context.h"
-#include "strategies/observables/primitive_kinetic_energy_strategy.h"
 
 #include <memory>
 
 class BosonicExchangeBase;
 class ForceManager;
+class PrimitiveKineticEnergyStrategy;
 
 class EnergyObservable final : public Observable {
 public:
@@ -31,6 +31,8 @@ public:
         int out_freq, 
         const std::string& out_unit
     );
+
+    ~EnergyObservable() override;
 
     /**
      * @brief Calculates the kinetic and potential energies.

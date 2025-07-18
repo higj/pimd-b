@@ -3,6 +3,7 @@
 #include "core/force_manager.h"
 #include "core/statistics_manager.h"
 #include "potentials.h"
+#include "strategies/forces/spring_force_strategy.h"
 
 ForceManager::ForceManager(
     const std::shared_ptr<const SimulationConfig>& config,
@@ -24,6 +25,8 @@ ForceManager::ForceManager(
         cutoff = std::min(cutoff, 0.5 * m_config->box_size);
     }
 }
+
+ForceManager::~ForceManager() = default;
 
 void ForceManager::updatePhysicalForces(SystemState& state, const BoxContext& box_ctx) const
 {

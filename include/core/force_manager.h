@@ -5,10 +5,11 @@
 #include "simulation_config.h"
 #include "system_state.h"
 #include "potentials/potential.h"
-#include "strategies/forces/spring_force_strategy.h"
 
 class BosonicExchangeBase;
 struct BeadContext;
+struct BoxContext;
+struct SpringContext;
 class SpringForceStrategy;
 
 class ForceManager {
@@ -18,6 +19,8 @@ public:
         const std::shared_ptr<BosonicExchangeBase>& bosonic_exchange,
         const BeadContext& bead_ctx
     );
+
+    ~ForceManager();
 
     /**
      * Updates the physical forces acting on the particles. This includes both the forces
