@@ -12,6 +12,13 @@ struct BoxContext
     double box_size;
     bool pbc;
 
+    // To handle periodic boundary conditions, we employ the Class C storage
+    // concept [Z. Phys. Chem. 227 (2013) 345-352], allowing atoms to move
+    // outside the primary simulation box. That is, the coordinates are not folded
+    // into the simulation box. Instead, we account for the PBC when calculating the
+    // distances between particles (or any spatial vector differences).
+    // This is done using Algorithm C4. It calculates the remainder of dx
+    // on the interval [-L/2, L/2].
     void applyMinimumImage(double& diff) const
     {
 #if MINIM
@@ -41,4 +48,23 @@ struct BoxContext
             }
         }
     }
+    /*
+    void applyMinimumImage(double& dx, double L) {
+        dx -= L * floor(dx / L + 0.5);
+    }
+
+    void applyMinimumImage(dVec& dx_arr, double L)
+    {
+        for (int i = 0; i < dx_arr.len(); ++i) {
+            for (int axis = 0; axis < NDIM; ++axis) {
+                applyMinimumImage(dx_arr(i, axis), L);
+                //dx_arr(i, axis) -= L * floor(dx_arr(i, axis) / L + 0.5);
+            }
+        }
+    }
+
+    void periodicWrap(double& x, double L) {
+        x -= L * std::nearbyint(x / L);
+    }
+    */
 };

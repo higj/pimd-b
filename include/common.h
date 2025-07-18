@@ -11,10 +11,6 @@
 #define NDIM 1                       // Number of spatial dimensions
 #endif
 
-#ifndef PROGRESS
-#define PROGRESS false               // Display progress bar?
-#endif
-
 #ifndef MINIM
 #define MINIM true                  // Apply minimum image convention when PBC are used
 #endif
@@ -44,33 +40,16 @@
 // A small number (but not necessarily the smallest)
 constexpr auto EPS = 1.0E-7;
 
-/// TODO: BEGIN The following stuff is not really common to many files. Refactor!
-// Progress bar parameters
-constexpr int PBWIDTH = 30;
-constexpr std::string_view PBSTR = "||||||||||||||||||||||||||||||";
-
 inline const std::string LOGO = R"(
  __       __      __  
 |__)||\/||  \ __ |__) 
 |   ||  ||__/    |__)
 )";
 
-namespace ErrorMessage {
-    const std::string GENERAL_ERR = "Error";
-    const std::string OVERFLOW_ERR = "Overflow error";
-    const std::string INVALID_ARG_ERR = "Invalid argument error";
-}
-
 namespace Output {
     const std::string FOLDER_NAME = "output";
     const std::string MAIN_FILENAME = "simulation.out";
 }
-
-template <typename T, typename... VariantParams>
-void getVariant(const std::variant<VariantParams...>& v, T& value) {
-    value = std::get<T>(v);
-}
-/// TODO: END
 
 /**
  * A class to store an array of vectors of dimension "dim".
@@ -293,25 +272,6 @@ void printStatus(const std::string& status, int this_rank, int out_rank = 0);
 
 // Print an error message on "out_rank" (by default, the root rank is 0)
 void printError(const std::string& msg, int this_rank, const std::string& err_type = std::string(), int out_rank = 0);
-
-// Print a progress bar
-void printProgress(int this_step, int total_steps, int this_rank, int out_rank = 0);
-
-// To handle periodic boundary conditions, we employ the Class C storage
-// concept [Z. Phys. Chem. 227 (2013) 345-352], allowing atoms to move
-// outside the primary simulation box. That is, the coordinates are not folded
-// into the simulation box. Instead, we account for the PBC when calculating the
-// distances between particles (or any spatial vector differences).
-// This is done using Algorithm C4. It calculates the remainder of dx
-// on the interval [-L/2, L/2].
-/*
-void applyMinimumImage(double& dx, double L);
-
-void applyMinimumImage(dVec& dx_arr, double L);
-
-void periodicWrap(double& x, double L);
-//void periodicWrap(dVec& pos_arr, double L);
-*/
 
 template <typename T>
 std::string formattedReportLine(const std::string& property_name, const T& value) {

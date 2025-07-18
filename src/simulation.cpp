@@ -689,10 +689,6 @@ void Simulation::run()
             m_state->zeroMomentum();
         }
 
-#if PROGRESS
-        printProgress(step, steps, m_config->this_bead);
-#endif
-
         // If we have not reached the thermalization threshold, skip to the next step (thermalization stage)
         if (step < m_config->threshold)
         {

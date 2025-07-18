@@ -2,6 +2,7 @@
 
 #include "mpi.h"
 #include "simulation.h"
+#include "error_messages.h"
 
 namespace {
     void parseArguments(const int arg_num, char** arg_arr, std::string& conf_filename, bool& info_flag, const int rank) {
