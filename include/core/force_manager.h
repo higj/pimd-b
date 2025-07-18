@@ -50,7 +50,7 @@ public:
 
 private:
     std::shared_ptr<const SimulationConfig> m_config;
-    std::unique_ptr<SpringForceStrategy> m_spring_force;
+    std::unique_ptr<SpringForceStrategy> m_spring_force_strategy;
 
     /**
      * Initializes the potential based on the input parameters.

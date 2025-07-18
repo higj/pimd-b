@@ -10,7 +10,9 @@ ForceManager::ForceManager(
     const std::shared_ptr<BosonicExchangeBase>& bosonic_exchange,
     const BeadContext& bead_ctx
 ) : m_config(config),
-    m_spring_force(StatisticsManager::createSpringForceStrategy(bosonic_exchange, bead_ctx, config->bosonic))
+    m_spring_force_strategy(StatisticsManager::createSpringForceStrategy(
+        bosonic_exchange, bead_ctx, config->bosonic
+    ))
 {
     ext_potential = initializePotential(m_config->ext_pot_name, m_config->ext_pot_params);
     int_potential = initializePotential(m_config->int_pot_name, m_config->int_pot_params);
@@ -68,14 +70,14 @@ void ForceManager::updatePhysicalForces(SystemState& state, const BoxContext& bo
 void ForceManager::updateForces(SystemState& state, const SpringContext& spring_ctx, const BoxContext& box_ctx) const
 {
     // First, update the spring forces based on the current state of the system.
-    m_spring_force->updateSpringForces(state, spring_ctx, box_ctx);
+    m_spring_force_strategy->updateSpringForces(state, spring_ctx, box_ctx);
 
     // Then, update the physical forces acting on the particles.
     updatePhysicalForces(state, box_ctx);
 }
 
 std::unique_ptr<Potential> ForceManager::initializePotential(const std::string& potential_name,
-                                                                  const VariantMap& potential_options) const
+                                                             const VariantMap& potential_options) const
 {
     if (potential_name == "free")
     {
