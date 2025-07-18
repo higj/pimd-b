@@ -1,5 +1,6 @@
 #include "dumps/force_dump.h"
 #include "core/system_state.h"
+#include "output_paths.h"
 
 ForceDump::ForceDump(const std::shared_ptr<SystemState>& state, int this_bead, int out_freq, const std::string& out_unit) :
     Dump(this_bead, out_freq, out_unit), m_state(state)

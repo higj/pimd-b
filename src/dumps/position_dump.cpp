@@ -1,4 +1,5 @@
 #include "dumps/position_dump.h"
+#include "output_paths.h"
 
 PositionDump::PositionDump(const std::shared_ptr<const dVec>& coord, int this_bead, int out_freq,
                            const std::string& out_unit) :

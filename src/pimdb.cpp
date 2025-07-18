@@ -2,6 +2,7 @@
 
 #include "mpi.h"
 #include "simulation.h"
+#include "app_config.h"
 #include "error_messages.h"
 
 namespace {
@@ -48,7 +49,7 @@ int main(int argc, char** argv) {
 
         // If we got to this point, and no info has been requested then initiate the simulation
         if (!display_info) {
-            printMsg(LOGO, rank);
+            printMsg(AppConfig::LOGO, rank);
 
             Simulation sim(rank, size, config_filename);
             sim.run();

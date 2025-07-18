@@ -1,4 +1,5 @@
 #include "dumps/velocity_dump.h"
+#include "output_paths.h"
 
 VelocityDump::VelocityDump(const VelocityContext& dump_context, int this_bead, int out_freq, const std::string& out_unit) :
     Dump(this_bead, out_freq, out_unit), m_context(dump_context), m_natoms(dump_context.momenta->len())

@@ -3,6 +3,7 @@
 #include <cmath>
 
 #include "bosonic_exchange/quadratic_bosonic_exchange.h"
+#include "output_paths.h"
 
 BosonicExchange::BosonicExchange(
     const std::shared_ptr<const dVec>& coord_first_bead,

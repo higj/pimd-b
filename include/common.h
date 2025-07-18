@@ -40,17 +40,6 @@
 // A small number (but not necessarily the smallest)
 constexpr auto EPS = 1.0E-7;
 
-inline const std::string LOGO = R"(
- __       __      __  
-|__)||\/||  \ __ |__) 
-|   ||  ||__/    |__)
-)";
-
-namespace Output {
-    const std::string FOLDER_NAME = "output";
-    const std::string MAIN_FILENAME = "simulation.out";
-}
-
 /**
  * A class to store an array of vectors of dimension "dim".
  *
@@ -273,6 +262,7 @@ void printStatus(const std::string& status, int this_rank, int out_rank = 0);
 // Print an error message on "out_rank" (by default, the root rank is 0)
 void printError(const std::string& msg, int this_rank, const std::string& err_type = std::string(), int out_rank = 0);
 
+/// TODO: Refactor this to a separate report logic
 template <typename T>
 std::string formattedReportLine(const std::string& property_name, const T& value) {
     return std::format("{:<40}\t:\t{}\n", property_name, value);

@@ -10,6 +10,7 @@
 #include "initializers/observable_initializer.h"
 #include "thermostats.h"
 #include "observables_logger.h"
+#include "output_paths.h"
 
 #include <ranges>
 #include <fstream>
