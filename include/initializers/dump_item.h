@@ -2,6 +2,8 @@
 
 #include "initializable_item.h"
 
+#include <cstdint>
+
 enum class DumpType : std::uint8_t {
     POSITION,
     VELOCITY,

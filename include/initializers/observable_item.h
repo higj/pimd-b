@@ -2,6 +2,8 @@
 
 #include "initializable_item.h"
 
+#include <cstdint>
+
 enum class ObservableType : std::uint8_t {
     ENERGY,
     CLASSICAL,
