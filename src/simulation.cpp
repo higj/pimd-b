@@ -71,8 +71,7 @@ Simulation::Simulation(int rank, int nproc, const std::string& config_filename):
         .mass = m_config->mass
     };
 
-    // Communicate the new coordinates to the neighboring processes
-    m_state->updateNeighboringCoordinates();
+    //m_state->updateNeighboringCoordinates(); // This is already done in initializePositions
 
     m_bosonic_exchange = initializeExchange(
         m_config->bosonic,
@@ -590,6 +589,7 @@ void Simulation::initializePositions(
 
     initializer->initialize();
 
+    // Communicate the new coordinates to the neighboring processes
     state->updateNeighboringCoordinates();
 }
 
