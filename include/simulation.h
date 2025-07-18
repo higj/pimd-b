@@ -7,7 +7,6 @@
 #include "contexts/box_context.h"
 #include "contexts/normal_modes_context.h"
 #include "contexts/thermostat_context.h"
-#include "contexts/velocity_context.h"
 
 #include <string>
 #include <memory>
@@ -129,7 +128,6 @@ private:
      * @param nm_ctx Normal modes context object containing information about the normal modes of the system.
      * @param config Simulation configuration object containing information about the thermostat.
      * @param state System state object containing information about the current state of the simulation.
-     * @param normal_modes Normal modes object containing information about the normal modes of the system.
      * @param rng Random number generator object for generating random numbers.
      * @return A shared pointer to the initialized thermostat object.
     */
@@ -193,10 +191,10 @@ private:
      * @param config Simulation configuration object.
      * @return A vector of shared pointers to the initialized dump objects.
      */
-    static std::vector<std::shared_ptr<Dump>> initializeDumps(
+    /*static std::vector<std::shared_ptr<Dump>> initializeDumps(
         const std::shared_ptr<SimulationConfig>& config,
         const std::shared_ptr<SystemState>& state
-    );
+    );*/
 
     /**
      * @brief Prints a summary of the simulation parameters at the end of the simulation.

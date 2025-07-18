@@ -8,6 +8,7 @@
 #include "propagators.h"
 #include "dumps.h"
 #include "initializers/observable_initializer.h"
+#include "initializers/dump_initializer.h"
 #include "thermostats.h"
 #include "observables_logger.h"
 #include "output_paths.h"
@@ -18,6 +19,7 @@
 #include <chrono>
 #include <array>
 #include <cassert>
+
 
 #if FACTORIAL_BOSONIC_ALGORITHM
 #include "bosonic_exchange/factorial_bosonic_exchange.h"
@@ -122,7 +124,6 @@ Simulation::Simulation(int rank, int nproc, const std::string& config_filename):
         .thermostat_type = m_config->thermostat_type
     };
 
-    //m_observables = initializeObservables(m_config, m_state, m_exchange_state, m_force_mgr, m_thermostat);
     m_observables = ObservableInitializer(
         m_config,
         m_state,
@@ -137,7 +138,7 @@ Simulation::Simulation(int rank, int nproc, const std::string& config_filename):
         thermostat_ctx
     ).createObservables();
 
-    m_dumps = initializeDumps(m_config, m_state);
+    m_dumps = DumpInitializer(m_config, m_state, velocity_ctx).createDumps();
 }
 
 Simulation::~Simulation() = default;
@@ -470,6 +471,7 @@ std::vector<std::shared_ptr<Observable>> Simulation::initializeObservables(
 }
 */
 
+/*
 std::vector<std::shared_ptr<Dump>> Simulation::initializeDumps(
     const std::shared_ptr<SimulationConfig>& config,
     const std::shared_ptr<SystemState>& state)
@@ -548,6 +550,7 @@ std::vector<std::shared_ptr<Dump>> Simulation::initializeDumps(
 
     return dumps;
 }
+*/
 
 void Simulation::initializePositions(
     const std::shared_ptr<SimulationConfig>& config,
