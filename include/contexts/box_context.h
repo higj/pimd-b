@@ -12,14 +12,19 @@ struct BoxContext
     double box_size;
     bool pbc;
 
-    void applyMinimumImageIfNeeded(double& diff) const
+    void applyMinimumImage(double& diff) const
     {
 #if MINIM
+        diff -= box_size * floor(diff / box_size + 0.5);
+#endif
+    }
+
+    void applyMinimumImageIfNeeded(double& diff) const
+    {
         if (pbc)
         {
-            diff -= box_size * floor(diff / box_size + 0.5);
+            applyMinimumImage(diff);
         }
-#endif
     }
 
     void applyMinimumImageIfNeeded(dVec& dx_arr) const
@@ -28,6 +33,9 @@ struct BoxContext
         {
             for (int axis = 0; axis < NDIM; ++axis)
             {
+                /// TODO: In principle, one could iterate over the elements of the raw (1D) array,
+                ///       but we prefer to keep the nested loops for future generalization of the code
+                ///       to boxes with different side lengths.
                 applyMinimumImageIfNeeded(dx_arr(i, axis));
                 //dx_arr(i, axis) -= box_size * floor(dx_arr(i, axis) / box_size + 0.5);
             }
