@@ -1,5 +1,6 @@
 #pragma once
 
+#include "dump_item.h"
 #include "dumps.h"
 #include "contexts/box_context.h"
 #include "contexts/velocity_context.h"
@@ -10,37 +11,7 @@
 #include <string>
 
 class SystemState;
-class ForceManager;
 struct SimulationConfig;
-
-enum class DumpType : std::uint8_t {
-    POSITION,
-    VELOCITY,
-    FORCE,
-    UNKNOWN
-};
-
-struct DumpItem {
-    std::string name;
-    std::string unit;
-
-    [[nodiscard]] bool isEnabled() const {
-        return (unit != "off" && unit != "false");
-    }
-
-    [[nodiscard]] std::string getEffectiveUnit() const {
-        if (unit == "true" || unit == "on") return "atomic_unit";  // Default unit
-        if (unit == "none") return "";                             // No unit conversion
-        return unit;                                               // Use specified unit
-    }
-
-    [[nodiscard]] DumpType getType() const {
-        if (name == "positions") return DumpType::POSITION;
-        if (name == "velocities") return DumpType::VELOCITY;
-        if (name == "forces") return DumpType::FORCE;
-        return DumpType::UNKNOWN;
-    }
-};
 
 class DumpInitializer {
 public:

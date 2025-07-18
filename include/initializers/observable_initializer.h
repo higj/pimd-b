@@ -1,5 +1,6 @@
 #pragma once
 
+#include "observable_item.h"
 #include "observables.h"
 #include "contexts/bead_context.h"
 #include "contexts/thermal_context.h"
@@ -17,40 +18,6 @@ class SystemState;
 class ForceManager;
 class Thermostat;
 struct SimulationConfig;
-
-enum class ObservableType : std::uint8_t {
-    ENERGY,
-    CLASSICAL,
-    BOSONIC,
-    GSF,
-    UNKNOWN
-};
-
-struct ObservableItem
-{
-    std::string name;
-    std::string unit;
-
-    [[nodiscard]] bool isEnabled() const
-    {
-        return unit != "off";
-    }
-
-    // If the unit is "none", return an empty string, because no unit conversion will take place
-    [[nodiscard]] std::string getEffectiveUnit() const
-    {
-        return (unit != "none") ? unit : "";
-    }
-
-    [[nodiscard]] ObservableType getType() const
-    {
-        if (name == "energy") return ObservableType::ENERGY;
-        if (name == "classical") return ObservableType::CLASSICAL;
-        if (name == "bosonic") return ObservableType::BOSONIC;
-        if (name == "gsf") return ObservableType::GSF;
-        return ObservableType::UNKNOWN;
-    }
-};
 
 class ObservableInitializer
 {

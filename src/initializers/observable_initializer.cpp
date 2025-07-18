@@ -103,7 +103,8 @@ std::vector<ObservableItem> ObservableInitializer::parseObservablesList() const
 
     for (const auto& [name, unit] : m_config->observables_list)
     {
-        items.emplace_back(ObservableItem{.name = name, .unit = unit});
+        //items.emplace_back(ObservableItem{.name = name, .unit = unit});
+        items.emplace_back(name, unit);
     }
 
     return items;

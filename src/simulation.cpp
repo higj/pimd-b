@@ -6,6 +6,7 @@
 #include "momentum_initializers.h"
 #include "position_initializers.h"
 #include "propagators.h"
+#include "observables.h" ////////////
 #include "dumps.h"
 #include "initializers/observable_initializer.h"
 #include "initializers/dump_initializer.h"

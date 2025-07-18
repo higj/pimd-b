@@ -47,7 +47,8 @@ std::vector<DumpItem> DumpInitializer::parseDumpsList() const {
     items.reserve(m_config->dumps_list.size());
 
     for (const auto& [name, unit] : m_config->dumps_list) {
-        items.emplace_back(DumpItem{ .name = name, .unit = unit });
+        //items.emplace_back(DumpItem{ .name = name, .unit = unit });
+        items.emplace_back(name, unit);
     }
 
     return items;
