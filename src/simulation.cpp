@@ -728,12 +728,12 @@ void Simulation::run()
         }
 
         // If we have not reached the thermalization threshold, skip to the next step (thermalization stage)
-        if (step < m_config->threshold)
-        {
+        if (step < m_config->threshold) {
             // CR: If your function has a continue statement, it must be very short, and the flow very clear
             // CR: Can be solved by moving everything after this to a separate method
             // CR: or: calculateObservableIfAskedAtThisStep
             continue;
+        }
 
         // Calculate the observables (production stage)
         for (const auto& observable : m_observables)
