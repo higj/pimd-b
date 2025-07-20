@@ -34,10 +34,12 @@ Simulation::Simulation(int rank, int nproc, const std::string& config_filename):
 
     if (!m_config)
     {
+        // CR: Doesn't Params throw exceptions? What's the difference between that and returning null?
         throw std::runtime_error("Failed to load configuration");
     }
 
     // Initialize basic contexts
+    // CR: Make sure that they are all disjoint
     const auto thermal_ctx = ThermalContext{
         .beta = m_config->beta,
         .thermo_beta = m_config->thermo_beta
@@ -58,20 +60,23 @@ Simulation::Simulation(int rank, int nproc, const std::string& config_filename):
         .nbeads = m_config->nbeads,
         .natoms = m_config->natoms,
         .this_bead = m_config->this_bead
-    };    
+    };
 
+    // CR: What is meaning of the variable prefix m_?
     m_rng = std::make_shared<RandomGenerators>(m_config->seed + rank);
     m_state = std::make_shared<SystemState>(rank, nproc, m_config->natoms, m_config->nbeads);
 
     initializePositions(m_config, box_ctx, m_state, m_rng);
     initializeMomenta(m_config, m_state, m_rng);
 
+    // CR: Why is it initialized here?
     const auto velocity_ctx = VelocityContext{
         .momenta = std::shared_ptr<dVec>(m_state, &m_state->momenta),
         .mass = m_config->mass
     };
 
     //m_state->updateNeighboringCoordinates(); // This is already done in initializePositions
+    // CR: remove comment
 
     m_bosonic_exchange = initializeExchange(
         m_config->bosonic,
@@ -95,6 +100,9 @@ Simulation::Simulation(int rank, int nproc, const std::string& config_filename):
         .couple_to_nm = std::get<bool>(m_config->thermostat_params["nmthermostat"])
     };
 
+    // CR: It's OK imo to pass all of config to the local function (of the class Simulation) that initializes the propagator.
+    // CR: Would improve readability of this function.
+    // CR: The important bit is that Config & Simulation are not exposed to *other* classes.
     m_propagator = initializePropagator(
         m_config->propagator_type,
         m_config->mass,
@@ -122,6 +130,10 @@ Simulation::Simulation(int rank, int nproc, const std::string& config_filename):
         .thermostat_type = m_config->thermostat_type
     };
 
+    // CR: I'd write this->m_observables for emphasis
+    // CR: I think it's OK for these classes to accept config too, because they have
+    // CR: no other logic except bridging the gap between config and the simulation.
+    // CR: They don't continue to live after initialization
     m_observables = ObservableInitializer(
         m_config,
         m_state,
@@ -160,6 +172,10 @@ std::shared_ptr<BosonicExchangeBase> Simulation::initializeExchange(
     }
     else
     {
+        // CR: necessarily state->currentBead() == bead_ctx.nbeads - 1?
+        // CR: If not necessarily, the names are confusing
+        // CR: For instance, return null at the beginning of the function for the other case
+        // CR: (always do first the short paths of the function)
         x_first_bead = std::shared_ptr<dVec>(state, &state->next_coord);
         x_last_bead = std::shared_ptr<dVec>(state, &state->coord);
     }
@@ -187,6 +203,10 @@ std::shared_ptr<BosonicExchangeBase> Simulation::initializeExchange(
     }
 
     /// TODO: Not ideal. Fix this later
+    // CR: Can this entire logic be encapsulated in StatisticsManager, which becomes
+    // CR: a dynamic rather than static entity?
+    // CR: Ideally, the word "bosons" doesn't appear anywhere outside the statistics manager
+    // CR: It can be a singleton for ease of access, since its pervasive
     return { nullptr };
 }
 
@@ -312,6 +332,7 @@ std::shared_ptr<Thermostat> Simulation::initializeThermostat(
     return {nullptr};
 }
 
+// CR: remove comments (trust in the git :))
 /*
 std::vector<std::shared_ptr<Observable>> Simulation::initializeObservables(
     const std::shared_ptr<SimulationConfig>& config,
@@ -552,6 +573,8 @@ std::vector<std::shared_ptr<Dump>> Simulation::initializeDumps(
 
 void Simulation::initializePositions(
     const std::shared_ptr<SimulationConfig>& config,
+    // CR: Hmm. I like how the initializer depend on the "contexts" and not the entire config
+    // CR: But it's strange to pass here config *and* other things that are included in it
     const BoxContext& box_ctx,
     const std::shared_ptr<SystemState>& state,
     const std::shared_ptr<RandomGenerators>& rng)
@@ -590,6 +613,7 @@ void Simulation::initializePositions(
     initializer->initialize();
 
     // Communicate the new coordinates to the neighboring processes
+    // CR: Good comment
     state->updateNeighboringCoordinates();
 }
 
@@ -648,6 +672,8 @@ void Simulation::run()
     ObservablesLogger obs_logger(Output::MAIN_FILENAME, m_config->this_bead, m_observables);
 
     // Initialize the files for the dumps (e.g., xyz, dat)
+    // CR: extract method, initializeDumps()
+    // CR: Also, why aren't they initialized with everything else
     for (const auto& dump : m_dumps)
     {
         dump->initialize();
@@ -656,6 +682,9 @@ void Simulation::run()
     // Main loop performing molecular dynamics steps
     for (long step = 0; step <= m_config->steps; ++step)
     {
+        // CR: extract method - step()
+
+        // CR: Is it possible to separate the things that change each step to a different object?
         setStep(step);
 
         // Reset the observables at the beginning of each step
@@ -666,23 +695,29 @@ void Simulation::run()
         }
 
         // Dump the desired quantities (e.g., coordinates, forces, etc.) at the specified frequency
+        // CR: Is this comment helpful?
+        // CR: extract method dumpStepInfo() or the like
         for (const auto& dump : m_dumps)
         {
             dump->output(step);
         }
 
         // Perform a thermostat step
+        // CR: Is this comment helpful?
         m_thermostat->step();
 
         // If fixcom=true, the center of mass of the ring polymers is fixed during the simulation
+        // CR: Is this comment helpful? etc.
         if (m_config->fixcom)
         {
             m_state->zeroMomentum();
         }
 
+        // CR: is this comment useful?
         // Perform a time propagation step
         m_propagator->step();
 
+        // CR: is this comment useful?
         // Perform a thermostat step
         m_thermostat->step();
 
@@ -695,8 +730,10 @@ void Simulation::run()
         // If we have not reached the thermalization threshold, skip to the next step (thermalization stage)
         if (step < m_config->threshold)
         {
+            // CR: If your function has a continue statement, it must be very short, and the flow very clear
+            // CR: Can be solved by moving everything after this to a separate method
+            // CR: or: calculateObservableIfAskedAtThisStep
             continue;
-        }
 
         // Calculate the observables (production stage)
         for (const auto& observable : m_observables)
@@ -711,8 +748,10 @@ void Simulation::run()
         }
     }
 
+    // CR: What's the purpose of the barrier?
     MPI_Barrier(MPI_COMM_WORLD);
 
+    // CR: extact method
     const double sim_exec_time_end = MPI_Wtime();
     const double wall_time = sim_exec_time_end - sim_exec_time_start;
 
