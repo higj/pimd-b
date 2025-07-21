@@ -12,6 +12,7 @@
 #include <string>
 #include <memory>
 
+class ObservablesLogger;
 struct SimulationConfig;
 class SystemState;
 class BosonicExchangeBase;
@@ -35,18 +36,50 @@ public:
     [[nodiscard]] int getStep() const;
 
     /**
-     * Sets the current simulation step.
-     *
-     * @param step The step to set.
-     */
-    void setStep(int step);
-
-    /**
      * @brief Perform a molecular dynamics run using the OBABO scheme.
      */
     void run();
 private:
-    int m_step;
+    int m_step;  /// TODO: Not used now. Remove
+    bool m_is_thermalization_phase;
+    bool m_should_log_observables;
+
+    /**
+     * Sets the current simulation step.
+     *
+     * @param step The step to set.
+     */
+    void setStep(long step);
+
+    static double getWallTime();
+
+    /**
+     * @brief Reset the observables at the beginning of each step.
+     * TODO: Do we need this? What if we want accumulation? Does it account for frequency?
+     */
+    void resetObservables() const;
+
+    /**
+     * @brief Zero momentum after every thermostat step (if needed).
+     * TODO: Maybe should be part of the thermostat step?
+     */
+    void zeroMomentumIfRequired() const;
+
+    /**
+     * Dump the desired quantities (e.g., coordinates, forces, etc.) at the specified frequency.
+     * @param step The current simulation step.
+     */
+    void dumpStepInfo(long step) const;
+
+    void performMolecularDynamicsStep() const;
+
+    void calculateObservables() const;
+
+    void calculateAndLogObservables(long step, ObservablesLogger& obs_logger) const;
+
+    void finalizeSimulation(double start_time) const;
+
+    void executeStep(long step, ObservablesLogger& obs_logger) const;
 
     std::shared_ptr<SimulationConfig> m_config;
     std::shared_ptr<SystemState> m_state;

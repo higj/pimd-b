@@ -409,9 +409,11 @@ int Simulation::getStep() const
     return m_step;
 }
 
-void Simulation::setStep(const int step)
+void Simulation::setStep(long step)
 {
-    m_step = step;
+    //m_step = step; /// TODO: Not used now. Remove
+    m_is_thermalization_phase = (step < m_config->threshold);
+    m_should_log_observables = (step % m_config->sfreq == 0);
 }
 
 std::vector<std::shared_ptr<Dump>> Simulation::initializeDumps(const VelocityContext& vel_ctx) const
@@ -425,84 +427,95 @@ std::vector<std::shared_ptr<Dump>> Simulation::initializeDumps(const VelocityCon
     return dumps;
 }
 
+double Simulation::getWallTime()
+{
+    return MPI_Wtime();
+}
+
+void Simulation::zeroMomentumIfRequired() const
+{
+    if (m_config->fixcom) {
+        m_state->zeroMomentum();
+    }
+}
+
+void Simulation::resetObservables() const {
+    for (const auto& observable : m_observables) {
+        observable->resetValues();
+    }
+}
+
+void Simulation::dumpStepInfo(long step) const
+{
+    for (const auto& dump : m_dumps) {
+        dump->output(step);
+    }
+}
+
+void Simulation::performMolecularDynamicsStep() const {
+    m_thermostat->step();
+    zeroMomentumIfRequired();
+    m_propagator->step();
+    m_thermostat->step();
+    zeroMomentumIfRequired();
+}
+
+void Simulation::calculateObservables() const {
+    for (const auto& observable : m_observables) {
+        observable->calculate();
+    }
+}
+
+void Simulation::calculateAndLogObservables(long step, ObservablesLogger& obs_logger) const {
+    calculateObservables();
+
+    if (m_should_log_observables) {
+        obs_logger.log(step);
+    }
+}
+
+void Simulation::finalizeSimulation(double start_time) const {
+    const double wall_time = getWallTime() - start_time;
+
+    printStatus(
+        std::format(
+            "Simulation finished running successfully (Runtime = {:.3} sec)", 
+            wall_time
+        ),
+        m_config->this_bead
+    );
+
+    printReport(wall_time);
+}
+
+void Simulation::executeStep(long step, ObservablesLogger& obs_logger) const
+{
+    resetObservables();
+    dumpStepInfo(step);
+    performMolecularDynamicsStep();
+
+    if (!m_is_thermalization_phase) {
+        calculateAndLogObservables(step, obs_logger);
+    }
+}
+
 void Simulation::run()
 {
     printStatus("Running the simulation", m_config->this_bead);
 
-    const double sim_exec_time_start = MPI_Wtime();
+    const double start_time = getWallTime();
 
     // Initialize the output file for the observables
     ObservablesLogger obs_logger(Output::MAIN_FILENAME, m_config->this_bead, m_observables);
-
+    
     // Main loop performing molecular dynamics steps
     for (long step = 0; step <= m_config->steps; ++step)
     {
-        // CR: extract method - step()
-
-        // CR: Is it possible to separate the things that change each step to a different object?
         setStep(step);
-
-        // Reset the observables at the beginning of each step
-        /// TODO: Do we need this? What if we want accumulation? Does it account for frequency?
-        for (const auto& observable : m_observables)
-        {
-            observable->resetValues();
-        }
-
-        // Dump the desired quantities (e.g., coordinates, forces, etc.) at the specified frequency
-        // CR: Is this comment helpful?
-        // CR: extract method dumpStepInfo() or the like
-        for (const auto& dump : m_dumps)
-        {
-            dump->output(step);
-        }
-
-        m_thermostat->step();
-
-        if (m_config->fixcom)
-        {
-            m_state->zeroMomentum();
-        }
-
-        m_propagator->step();
-
-        m_thermostat->step();
-
-        // Zero momentum after every thermostat step (if needed)
-        if (m_config->fixcom)
-        {
-            m_state->zeroMomentum();
-        }
-
-        // If we have not reached the thermalization threshold, skip to the next step (thermalization stage)
-        if (step < m_config->threshold) {
-            // CR: If your function has a continue statement, it must be very short, and the flow very clear
-            // CR: Can be solved by moving everything after this to a separate method
-            // CR: or: calculateObservableIfAskedAtThisStep
-            continue;
-        }
-
-        // Calculate the observables (production stage)
-        for (const auto& observable : m_observables)
-        {
-            observable->calculate();
-        }
-
-        // Save the observables at the specified frequency
-        if (step % m_config->sfreq == 0)
-        {
-            obs_logger.log(step);
-        }
+        executeStep(step, obs_logger);
     }
 
-    // CR: extact method
-    const double sim_exec_time_end = MPI_Wtime();
-    const double wall_time = sim_exec_time_end - sim_exec_time_start;
-
-    printStatus(std::format("Simulation finished running successfully (Runtime = {:.3} sec)", wall_time),
-                m_config->this_bead);
-
-    printReport(wall_time);
+    finalizeSimulation(start_time);
 }
 
 void Simulation::printReport(double wall_time) const
