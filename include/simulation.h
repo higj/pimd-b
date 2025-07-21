@@ -7,6 +7,7 @@
 #include "contexts/box_context.h"
 #include "contexts/normal_modes_context.h"
 #include "contexts/thermostat_context.h"
+#include "contexts/velocity_context.h"
 
 #include <string>
 #include <memory>
@@ -58,6 +59,8 @@ private:
 
     std::vector<std::shared_ptr<Observable>> m_observables;
     std::vector<std::shared_ptr<Dump>> m_dumps;
+
+    std::vector<std::shared_ptr<Dump>> initializeDumps(const VelocityContext& vel_ctx) const;
 
      /**
       * Initializes the bosonic exchange machinery based on the input parameters.

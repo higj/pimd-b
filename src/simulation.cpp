@@ -32,14 +32,7 @@ Simulation::Simulation(int rank, int nproc, const std::string& config_filename):
     const Params params(config_filename, rank);
     m_config = params.load();
 
-    if (!m_config)
-    {
-        // CR: Doesn't Params throw exceptions? What's the difference between that and returning null?
-        throw std::runtime_error("Failed to load configuration");
-    }
-
     // Initialize basic contexts
-    // CR: Make sure that they are all disjoint
     const auto thermal_ctx = ThermalContext{
         .beta = m_config->beta,
         .thermo_beta = m_config->thermo_beta
@@ -63,6 +56,9 @@ Simulation::Simulation(int rank, int nproc, const std::string& config_filename):
     };
 
     // CR: What is meaning of the variable prefix m_?
+    // JH: Hungarian notation for member of a class.
+    //     Arguably better than prefixing with just an underscore, or using "this->"
+    //     to distinguish from local variables.
     m_rng = std::make_shared<RandomGenerators>(m_config->seed + rank);
     m_state = std::make_shared<SystemState>(rank, nproc, m_config->natoms, m_config->nbeads);
 
@@ -144,7 +140,7 @@ Simulation::Simulation(int rank, int nproc, const std::string& config_filename):
         thermostat_ctx
     ).createObservables();
 
-    m_dumps = DumpInitializer(m_config, m_state, velocity_ctx).createDumps();
+    m_dumps = initializeDumps(velocity_ctx);
 }
 
 Simulation::~Simulation() = default;
@@ -369,7 +365,6 @@ void Simulation::initializePositions(
     initializer->initialize();
 
     // Communicate the new coordinates to the neighboring processes
-    // CR: Good comment
     state->updateNeighboringCoordinates();
 }
 
@@ -416,24 +411,26 @@ void Simulation::setStep(const int step)
     m_step = step;
 }
 
+std::vector<std::shared_ptr<Dump>> Simulation::initializeDumps(const VelocityContext& vel_ctx) const
+{
+    auto dumps = DumpInitializer(m_config, m_state, vel_ctx).createDumps();
+
+    for (const auto& dump : dumps) {
+        dump->initialize();
+    }
+
+    return dumps;
+}
+
 void Simulation::run()
 {
     printStatus("Running the simulation", m_config->this_bead);
 
-    MPI_Barrier(MPI_COMM_WORLD);
     const double sim_exec_time_start = MPI_Wtime();
 
     std::filesystem::create_directory(Output::FOLDER_NAME);
     // Initialize the output file for the observables
     ObservablesLogger obs_logger(Output::MAIN_FILENAME, m_config->this_bead, m_observables);
-
-    // Initialize the files for the dumps (e.g., xyz, dat)
-    // CR: extract method, initializeDumps()
-    // CR: Also, why aren't they initialized with everything else
-    for (const auto& dump : m_dumps)
-    {
-        dump->initialize();
-    }
 
     // Main loop performing molecular dynamics steps
     for (long step = 0; step <= m_config->steps; ++step)
@@ -458,23 +455,15 @@ void Simulation::run()
             dump->output(step);
         }
 
-        // Perform a thermostat step
-        // CR: Is this comment helpful?
         m_thermostat->step();
 
-        // If fixcom=true, the center of mass of the ring polymers is fixed during the simulation
-        // CR: Is this comment helpful? etc.
         if (m_config->fixcom)
         {
             m_state->zeroMomentum();
         }
 
-        // CR: is this comment useful?
-        // Perform a time propagation step
         m_propagator->step();
 
-        // CR: is this comment useful?
-        // Perform a thermostat step
         m_thermostat->step();
 
         // Zero momentum after every thermostat step (if needed)
@@ -503,9 +492,6 @@ void Simulation::run()
             obs_logger.log(step);
         }
     }
-
-    // CR: What's the purpose of the barrier?
-    MPI_Barrier(MPI_COMM_WORLD);
 
     // CR: extact method
     const double sim_exec_time_end = MPI_Wtime();
