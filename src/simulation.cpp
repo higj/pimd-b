@@ -118,9 +118,12 @@ Simulation::Simulation(int rank, int nproc, const std::string& config_filename):
     };
 
     const auto velocity_ctx = VelocityContext{
-    .momenta = std::shared_ptr<dVec>(m_state, &m_state->momenta),
-    .mass = m_config->mass
+        .momenta = std::shared_ptr<dVec>(m_state, &m_state->momenta),
+        .mass = m_config->mass
     };
+
+    /// TODO: Should this also be done in dumps and observables init for safety?
+    std::filesystem::create_directory(Output::FOLDER_NAME);
 
     // CR: I'd write this->m_observables for emphasis
     // CR: I think it's OK for these classes to accept config too, because they have
@@ -428,7 +431,6 @@ void Simulation::run()
 
     const double sim_exec_time_start = MPI_Wtime();
 
-    std::filesystem::create_directory(Output::FOLDER_NAME);
     // Initialize the output file for the observables
     ObservablesLogger obs_logger(Output::MAIN_FILENAME, m_config->this_bead, m_observables);
 
