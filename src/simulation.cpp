@@ -69,15 +69,6 @@ Simulation::Simulation(int rank, int nproc, const std::string& config_filename):
     initializePositions(m_config, box_ctx, m_state, m_rng);
     initializeMomenta(m_config, m_state, m_rng);
 
-    // CR: Why is it initialized here?
-    const auto velocity_ctx = VelocityContext{
-        .momenta = std::shared_ptr<dVec>(m_state, &m_state->momenta),
-        .mass = m_config->mass
-    };
-
-    //m_state->updateNeighboringCoordinates(); // This is already done in initializePositions
-    // CR: remove comment
-
     m_bosonic_exchange = initializeExchange(
         m_config->bosonic,
         thermal_ctx,
@@ -130,6 +121,11 @@ Simulation::Simulation(int rank, int nproc, const std::string& config_filename):
         .thermostat_type = m_config->thermostat_type
     };
 
+    const auto velocity_ctx = VelocityContext{
+    .momenta = std::shared_ptr<dVec>(m_state, &m_state->momenta),
+    .mass = m_config->mass
+    };
+
     // CR: I'd write this->m_observables for emphasis
     // CR: I think it's OK for these classes to accept config too, because they have
     // CR: no other logic except bridging the gap between config and the simulation.
@@ -161,53 +157,52 @@ std::shared_ptr<BosonicExchangeBase> Simulation::initializeExchange(
     const BeadContext& bead_ctx,
     const std::shared_ptr<SystemState>& state)
 {
+    bool is_bosonic_bead = bosonic && (bead_ctx.this_bead == 0 || bead_ctx.this_bead == bead_ctx.nbeads - 1);
+
+    // If this is not a bosonic bead, we don't need to initialize the exchange
+    if (!is_bosonic_bead) {
+        // CR: Can this entire logic be encapsulated in StatisticsManager, which becomes
+        // CR: a dynamic rather than static entity?
+        // CR: Ideally, the word "bosons" doesn't appear anywhere outside the statistics manager
+        // CR: It can be a singleton for ease of access, since its pervasive
+        return { nullptr };  /// TODO: Not ideal. Fix this later
+    }
+
     std::shared_ptr<dVec> x_first_bead;
     std::shared_ptr<dVec> x_last_bead;
-    std::shared_ptr<dVec> x_neighbor_bead;
 
     if (state->currentBead() == 0)
     {
+        // At the first imaginary time slice, the last ("P") slice is the previous one
         x_first_bead = std::shared_ptr<dVec>(state, &state->coord);
         x_last_bead = std::shared_ptr<dVec>(state, &state->prev_coord);
     }
     else
     {
-        // CR: necessarily state->currentBead() == bead_ctx.nbeads - 1?
-        // CR: If not necessarily, the names are confusing
-        // CR: For instance, return null at the beginning of the function for the other case
-        // CR: (always do first the short paths of the function)
+        // At the last imaginary time slice ("P"), the first slice is the next one
         x_first_bead = std::shared_ptr<dVec>(state, &state->next_coord);
         x_last_bead = std::shared_ptr<dVec>(state, &state->coord);
     }
 
-    if (bosonic && (bead_ctx.this_bead == 0 || bead_ctx.this_bead == bead_ctx.nbeads - 1)) {
 #if FACTORIAL_BOSONIC_ALGORITHM
-        return std::make_unique<FactorialBosonicExchange>(
-            x_first_bead,
-            x_last_bead,
-            thermal_ctx,
-            spring_ctx,
-            box_ctx,
-            bead_ctx
-        );
+    return std::make_unique<FactorialBosonicExchange>(
+        x_first_bead,
+        x_last_bead,
+        thermal_ctx,
+        spring_ctx,
+        box_ctx,
+        bead_ctx
+    );
 #else
-        return std::make_shared<BosonicExchange>(
-            x_first_bead,
-            x_last_bead,
-            thermal_ctx,
-            spring_ctx,
-            box_ctx,
-            bead_ctx
-        );
+    return std::make_shared<BosonicExchange>(
+        x_first_bead,
+        x_last_bead,
+        thermal_ctx,
+        spring_ctx,
+        box_ctx,
+        bead_ctx
+    );
 #endif
-    }
-
-    /// TODO: Not ideal. Fix this later
-    // CR: Can this entire logic be encapsulated in StatisticsManager, which becomes
-    // CR: a dynamic rather than static entity?
-    // CR: Ideally, the word "bosons" doesn't appear anywhere outside the statistics manager
-    // CR: It can be a singleton for ease of access, since its pervasive
-    return { nullptr };
 }
 
 std::shared_ptr<NormalModes> Simulation::initializeNormalModes(
@@ -331,245 +326,6 @@ std::shared_ptr<Thermostat> Simulation::initializeThermostat(
 
     return {nullptr};
 }
-
-// CR: remove comments (trust in the git :))
-/*
-std::vector<std::shared_ptr<Observable>> Simulation::initializeObservables(
-    const std::shared_ptr<SimulationConfig>& config,
-    const std::shared_ptr<SystemState>& state,
-    const std::shared_ptr<ExchangeState>& exchange_state,
-    const std::shared_ptr<ForceManager>& force_mgr,
-    const std::shared_ptr<Thermostat>& thermostat)
-{
-    std::vector<std::shared_ptr<Observable>> observables;
-    observables.reserve(config->observables_list.size()); // Pre-allocate for efficiency
-
-    for (const auto& [obs_name, obs_unit] : config->observables_list)
-    {
-        // Skip disabled observables
-        if (obs_unit == "off")
-        {
-            continue;
-        }
-
-        // Determine the correct unit to use
-        std::string correct_unit = (obs_unit != "none") ? obs_unit : "";
-
-        // Use enum-based switch for better performance and readability
-        enum ObservableType : std::int8_t
-        {
-            ENERGY,
-            CLASSICAL,
-            BOSONIC,
-            GSF,
-            UNKNOWN
-        };
-
-        // CR: What is the role of the separation between observable types?
-        // JH: They represent different types of observable categories. For example, if
-        //      one requests "energy", it makes sense to calculate the different types of energies (primitive KE, virial KE, PE, etc.),
-        //      but not calculate other estimators (unless the user asks for it).
-        // CR: This logic is about interpreting the user's input regarding observables,
-        // CR: which doesn't belong to the class Simulation
-        // CR: First step is to extract methods for each case. So you have generate_energy_observables(),
-        // CR: generate_classical_observables(), etc.
-        // CR: Then the logic above for coinfig->observables_list should be encapsulated in the config class
-        // CR: or an ObservableConfig class
-
-        ObservableType type = UNKNOWN;
-        if (obs_name == "energy") type = ENERGY;
-        else if (obs_name == "classical") type = CLASSICAL;
-        else if (obs_name == "bosonic") type = BOSONIC;
-        else if (obs_name == "gsf") type = GSF;
-
-        switch (type)
-        {
-        case ENERGY:
-            observables.push_back(std::make_shared<EnergyObservable>(
-                exchange_state,
-                std::shared_ptr<const dVec>(state, &state->coord),
-                std::shared_ptr<const dVec>(state, &state->prev_coord),
-                force_mgr,
-                BeadContext{
-                    .nbeads = config->nbeads,
-                    .natoms = config->natoms,
-                    .this_bead = config->this_bead
-                },
-                ThermalContext{
-                    .beta = config->beta,
-                    .thermo_beta = config->thermo_beta
-                },
-                SpringContext{
-                    .omega_p = config->omega_p,
-                    .spring_constant = config->spring_constant,
-                    .beta_half_k = config->beta_half_k
-                },
-                BoxContext{
-                    .box_size = config->box_size,
-                    .pbc = config->pbc
-                },
-                config->sfreq, /// TODO: Generalize the save frequency option to dumps, observables, etc.
-                correct_unit
-            ));
-            break;
-
-        case CLASSICAL:
-            observables.push_back(std::make_shared<ClassicalObservable>(
-                std::shared_ptr<const dVec>(state, &state->coord),
-                std::shared_ptr<const dVec>(state, &state->prev_coord),
-                exchange_state,
-                VelocityContext{
-                    .momenta = std::shared_ptr<const dVec>(state, &state->momenta),
-                    .mass = config->mass
-                },
-                ThermostatContext{
-                    .thermostat = thermostat,
-                    .thermostat_type = config->thermostat_type
-                },
-                BeadContext{
-                    .nbeads = config->nbeads,
-                    .natoms = config->natoms,
-                    .this_bead = config->this_bead
-                },
-                SpringContext{
-                    .omega_p = config->omega_p,
-                    .spring_constant = config->spring_constant,
-                    .beta_half_k = config->beta_half_k
-                },
-                BoxContext{
-                    .box_size = config->box_size,
-                    .pbc = config->pbc
-                },
-                config->sfreq, /// TODO: Generalize the save frequency option to dumps, observables, etc.
-                correct_unit
-            ));
-            break;
-
-        case BOSONIC:
-            if (!config->bosonic)
-            {
-                throw std::runtime_error("Bosonic observables require bosonic simulation mode");
-            }
-            observables.push_back(std::make_shared<BosonicObservable>(
-                exchange_state,
-                config->sfreq, /// TODO: Generalize the save frequency option to dumps, observables, etc.
-                correct_unit
-            ));
-            break;
-
-        case GSF:
-            observables.push_back(std::make_shared<GSFActionObservable>(
-                std::shared_ptr<const dVec>(state, &state->coord),
-                force_mgr,
-                BeadContext{
-                    .nbeads = config->nbeads,
-                    .natoms = config->natoms,
-                    .this_bead = config->this_bead
-                },
-                ThermalContext{
-                    .beta = config->beta,
-                    .thermo_beta = config->thermo_beta
-                },
-                SpringContext{
-                    .omega_p = config->omega_p,
-                    .spring_constant = config->spring_constant,
-                    .beta_half_k = config->beta_half_k
-                },
-                config->sfreq, /// TODO: Generalize the save frequency option to dumps, observables, etc.
-                correct_unit
-            ));
-            break;
-
-        case UNKNOWN:
-        default:
-            throw std::runtime_error("Unknown observable type: " + obs_name);
-        }
-    }
-    
-    return observables;
-}
-*/
-
-/*
-std::vector<std::shared_ptr<Dump>> Simulation::initializeDumps(
-    const std::shared_ptr<SimulationConfig>& config,
-    const std::shared_ptr<SystemState>& state)
-{
-    std::vector<std::shared_ptr<Dump>> dumps;
-    dumps.reserve(config->dumps_list.size()); // Pre-allocate for efficiency
-
-    // CR: same thing here as for observables - this logic should be somewhere else
-
-    // Initialize the dump files based on the configuration
-    for (const auto& [dump_name, dump_unit] : config->dumps_list)
-    {
-        if (dump_unit == "off" || dump_unit == "false")
-        {
-            continue;
-        }
-
-        // Check if using default unit
-        const bool use_default_unit = (dump_unit == "none" || dump_unit == "true" || dump_unit == "on");
-
-        // Determine the correct unit to use
-        //std::string correct_unit = (dump_unit != "none" && dump_unit != "true" && dump_unit != "on") ? dump_unit : "atomic_unit";
-        std::string correct_unit = use_default_unit ? "atomic_unit" : dump_unit;
-
-        // Use enum-based switch for better performance and readability
-        enum DumpType : std::int8_t
-        {
-            POSITION,
-            VELOCITY,
-            FORCE,
-            UNKNOWN
-        };
-
-        DumpType type = UNKNOWN;
-        if (dump_name == "positions") type = POSITION;
-        else if (dump_name == "velocities") type = VELOCITY;
-        else if (dump_name == "forces") type = FORCE;
-
-        switch (type)
-        {
-        case POSITION:
-            dumps.push_back(std::make_shared<PositionDump>(
-                std::shared_ptr<dVec>(state, &state->coord),
-                config->this_bead,
-                config->sfreq, /// TODO: Generalize the save frequency option to dumps, observables, etc.
-                correct_unit
-            ));
-            break;
-
-        case VELOCITY:
-            dumps.push_back(std::make_shared<VelocityDump>(
-                VelocityContext{
-                    .momenta = std::shared_ptr<dVec>(state, &state->momenta),
-                    .mass = config->mass
-                },
-                config->this_bead,
-                config->sfreq, /// TODO: Generalize the save frequency option to dumps, observables, etc.
-                correct_unit
-            ));
-            break;
-
-        case FORCE:
-            dumps.push_back(std::make_shared<ForceDump>(
-                state,
-                config->this_bead,
-                config->sfreq, /// TODO: Generalize the save frequency option to dumps, observables, etc.
-                correct_unit
-            ));
-            break;
-
-        case UNKNOWN:
-        default:
-            throw std::runtime_error("Unknown dump type: " + dump_name);
-        }
-    }
-
-    return dumps;
-}
-*/
 
 void Simulation::initializePositions(
     const std::shared_ptr<SimulationConfig>& config,
