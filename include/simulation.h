@@ -201,28 +201,15 @@ private:
      * Initializes the positions of the particles based on the input parameters.
      *
      * @param config Simulation configuration object.
-     * @param box_ctx Box context object containing information about the simulation box.
-     * @param state System state object.
-     * @param rng Random number generator object for generating random numbers.
      */
-    void initializePositions(
-        const std::shared_ptr<SimulationConfig>& config,
-        const std::shared_ptr<SystemState>& state,
-        const std::shared_ptr<RandomGenerators>& rng
-    );
+    void initializePositions(const std::shared_ptr<SimulationConfig>& config);
 
     /**
      * Initializes the momenta of the particles based on the input parameters.
      *
      * @param config Simulation configuration object.
-     * @param state System state object.
-     * @param rng Random number generator object for generating random numbers.
      */
-    void initializeMomenta(
-        const std::shared_ptr<SimulationConfig>& config,
-        const std::shared_ptr<SystemState>& state,
-        const std::shared_ptr<RandomGenerators>& rng
-    );
+    void initializeMomenta(const std::shared_ptr<SimulationConfig>& config);
 
     /**
      * Initializes the dumps based on the input parameters.

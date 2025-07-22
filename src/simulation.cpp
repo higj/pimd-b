@@ -5,18 +5,15 @@
 #include "core/random_generators.h"
 #include "momentum_initializers.h"
 #include "position_initializers.h"
-#include "propagators.h"
 #include "initializers/observable_initializer.h"
 #include "initializers/dump_initializer.h"
+#include "propagators.h"
 #include "thermostats.h"
 #include "observables_logger.h"
 #include "output_paths.h"
 #include "simulation_report.h"
 
-#include <ranges>
-#include <fstream>
 #include <filesystem>
-#include <chrono>
 #include <array>
 #include <cassert>
 
@@ -65,8 +62,8 @@ Simulation::Simulation(int rank, int nproc, const std::string& config_filename)
     m_rng = std::make_shared<RandomGenerators>(config->seed + rank);
     m_state = std::make_shared<SystemState>(rank, nproc, config->natoms, config->nbeads, config->fixcom);
 
-    initializePositions(config, m_state, m_rng);
-    initializeMomenta(config, m_state, m_rng);
+    initializePositions(config);
+    initializeMomenta(config);
 
     m_bosonic_exchange = initializeExchange(config->bosonic, m_state);
 
@@ -134,7 +131,6 @@ Simulation::Simulation(int rank, int nproc, const std::string& config_filename)
     );
 
     m_dumps = initializeDumps(config, m_velocity_ctx);
-
     m_report = std::make_unique<SimulationReport>(*config, m_steps);
 }
 
@@ -295,25 +291,26 @@ std::shared_ptr<Thermostat> Simulation::initializeThermostat(
     return {nullptr};
 }
 
-void Simulation::initializePositions(
-    const std::shared_ptr<SimulationConfig>& config,
-    const std::shared_ptr<SystemState>& state,
-    const std::shared_ptr<RandomGenerators>& rng)
+void Simulation::initializePositions(const std::shared_ptr<SimulationConfig>& config)
 {
+    if (!m_state || !m_rng) {
+        throw std::runtime_error("State or RNG is not initialized before position initialization.");
+    }
+
     std::unique_ptr<PositionInitializer> initializer;
 
     if (config->init_pos_type == "random")
     {
         initializer = std::make_unique<RandomPositionInitializer>(
-            rng,
-            std::shared_ptr<dVec>(state, &state->coord),
+            m_rng,
+            std::shared_ptr<dVec>(m_state, &m_state->coord),
             m_box_ctx
         );
     }
     else if (config->init_pos_type == "grid")
     {
         initializer = std::make_unique<GridPositionInitializer>(
-            std::shared_ptr<dVec>(state, &state->coord),
+            std::shared_ptr<dVec>(m_state, &m_state->coord),
             m_box_ctx
         );
     }
@@ -322,7 +319,7 @@ void Simulation::initializePositions(
         initializer = std::make_unique<XyzPositionInitializer>(
             config->init_pos_filename,
             config->this_bead + config->init_pos_index_offset,
-            std::shared_ptr<dVec>(state, &state->coord),
+            std::shared_ptr<dVec>(m_state, &m_state->coord),
             m_box_ctx
         );
     }
@@ -334,21 +331,23 @@ void Simulation::initializePositions(
     initializer->initialize();
 
     // Communicate the new coordinates to the neighboring processes
-    state->updateNeighboringCoordinates();
+    m_state->updateNeighboringCoordinates();
 }
 
-void Simulation::initializeMomenta(
-    const std::shared_ptr<SimulationConfig>& config,
-    const std::shared_ptr<SystemState>& state,
-    const std::shared_ptr<RandomGenerators>& rng)
+void Simulation::initializeMomenta(const std::shared_ptr<SimulationConfig>& config)
 {
+    if (!m_state || !m_rng)
+    {
+        throw std::runtime_error("State or RNG is not initialized before momentum initialization.");
+    }
+
     std::unique_ptr<MomentumInitializer> initializer;
 
     if (config->init_vel_type == "random")
     {
         initializer = std::make_unique<MaxwellBoltzmannMomentumInitializer>(
-            rng,
-            state,
+            m_rng,
+            m_state,
             config->mass,
             config->thermo_beta
         );
@@ -358,7 +357,7 @@ void Simulation::initializeMomenta(
         initializer = std::make_unique<ManualMomentumInitializer>(
             config->init_vel_filename,
             config->init_vel_index_offset,
-            state,
+            m_state,
             config->mass
         );
     }
