@@ -71,7 +71,7 @@ Simulation::Simulation(int rank, int nproc, const std::string& config_filename)
     m_bosonic_exchange = initializeExchange(config->bosonic, m_state);
 
     // Initialize other resources
-    m_force_mgr = std::make_shared<ForceManager>(config, m_bosonic_exchange, m_bead_ctx);    
+    m_force_mgr = std::make_shared<ForceManager>(*config, m_bosonic_exchange, m_bead_ctx);    
 
     m_normal_modes = initializeNormalModes(config, m_state);
 

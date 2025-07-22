@@ -15,7 +15,7 @@ class SpringForceStrategy;
 class ForceManager {
 public:
     explicit ForceManager(
-        const std::shared_ptr<const SimulationConfig>& config,
+        const SimulationConfig& config,
         const std::shared_ptr<BosonicExchangeBase>& bosonic_exchange,
         const BeadContext& bead_ctx
     );
@@ -49,18 +49,19 @@ public:
     double cutoff = -1.0; // Interaction potential cutoff
 
 private:
-    std::shared_ptr<const SimulationConfig> m_config;
     std::unique_ptr<SpringForceStrategy> m_spring_force_strategy;
 
     /**
      * Initializes the potential based on the input parameters.
      *
+     * @param config Simulation configuration containing potential parameters.
      * @param potential_name Name of the potential.
      * @param potential_options Physical parameters of the potential.
      * @return Pointer to the initialized potential.
      */
-    [[nodiscard]] std::unique_ptr<Potential> initializePotential(
-        const std::string& potential_name, 
+    [[nodiscard]] static std::unique_ptr<Potential> initializePotential(
+        const SimulationConfig& config,
+        const std::string& potential_name,
         const VariantMap& potential_options
-    ) const;
+    );
 };

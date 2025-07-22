@@ -6,25 +6,24 @@
 #include "strategies/forces/spring_force_strategy.h"
 
 ForceManager::ForceManager(
-    const std::shared_ptr<const SimulationConfig>& config,
+    const SimulationConfig& config,
     const std::shared_ptr<BosonicExchangeBase>& bosonic_exchange,
     const BeadContext& bead_ctx
-) : m_config(config),
-    m_spring_force_strategy(StatisticsManager::createSpringForceStrategy(
-        bosonic_exchange, bead_ctx, config->bosonic
+) : m_spring_force_strategy(StatisticsManager::createSpringForceStrategy(
+        bosonic_exchange, bead_ctx, config.bosonic
     ))
 {
-    ext_potential = initializePotential(m_config->ext_pot_name, m_config->ext_pot_params);
-    int_potential = initializePotential(m_config->int_pot_name, m_config->int_pot_params);
+    ext_potential = initializePotential(config, config.ext_pot_name, config.ext_pot_params);
+    int_potential = initializePotential(config, config.int_pot_name, config.int_pot_params);
 
     // If the interaction potential is set to "free", then the cutoff distance is meaningless
-    cutoff = (m_config->int_pot_name == "free") ? 0.0 : std::get<double>(m_config->int_pot_params.at("cutoff"));
+    cutoff = (config.int_pot_name == "free") ? 0.0 : std::get<double>(config.int_pot_params.at("cutoff"));
 
     // For cubic cells with PBC, the cutoff distance must be no greater than L/2 for consistency with
     // the minimum image convention (see 1.6.3 in Allen & Tildesley).
-    if (m_config->pbc)
+    if (config.pbc)
     {
-        cutoff = std::min(cutoff, 0.5 * m_config->box_size);
+        cutoff = std::min(cutoff, 0.5 * config.box_size);
     }
 }
 
@@ -38,9 +37,11 @@ void ForceManager::updatePhysicalForces(SystemState& state, const BoxContext& bo
     if (cutoff == 0.0)
         return;
 
-    for (int ptcl_one = 0; ptcl_one < m_config->natoms; ++ptcl_one)
+    const int natoms = state.getNumAtoms();
+
+    for (int ptcl_one = 0; ptcl_one < natoms; ++ptcl_one)
     {
-        for (int ptcl_two = ptcl_one + 1; ptcl_two < m_config->natoms; ++ptcl_two)
+        for (int ptcl_two = ptcl_one + 1; ptcl_two < natoms; ++ptcl_two)
         {
             // Get the vector distance between the two particles.
             // Here "diff" contains just one vector of dimension NDIM.
@@ -76,8 +77,11 @@ void ForceManager::updateForces(SystemState& state, const SpringContext& spring_
     updatePhysicalForces(state, box_ctx);
 }
 
-std::unique_ptr<Potential> ForceManager::initializePotential(const std::string& potential_name,
-                                                             const VariantMap& potential_options) const
+std::unique_ptr<Potential> ForceManager::initializePotential(
+    const SimulationConfig& config,
+    const std::string& potential_name,
+    const VariantMap& potential_options
+)
 {
     if (potential_name == "free")
     {
@@ -87,14 +91,14 @@ std::unique_ptr<Potential> ForceManager::initializePotential(const std::string& 
     if (potential_name == "harmonic")
     {
         double omega = std::get<double>(potential_options.at("omega"));
-        return std::make_unique<HarmonicPotential>(m_config->mass, omega);
+        return std::make_unique<HarmonicPotential>(config.mass, omega);
     }
 
     if (potential_name == "double_well")
     {
         double strength = std::get<double>(potential_options.at("strength"));
         double loc = std::get<double>(potential_options.at("location"));
-        return std::make_unique<DoubleWellPotential>(m_config->mass, strength, loc);
+        return std::make_unique<DoubleWellPotential>(config.mass, strength, loc);
     }
 
     if (potential_name == "dipole")
@@ -107,7 +111,7 @@ std::unique_ptr<Potential> ForceManager::initializePotential(const std::string& 
     {
         double amplitude = std::get<double>(potential_options.at("amplitude"));
         double phase = std::get<double>(potential_options.at("phase"));
-        return std::make_unique<CosinePotential>(amplitude, m_config->box_size, phase);
+        return std::make_unique<CosinePotential>(amplitude, config.box_size, phase);
     }
 
     if (potential_name == "aziz")
