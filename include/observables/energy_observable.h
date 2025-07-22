@@ -9,7 +9,6 @@
 
 #include <memory>
 
-class BosonicExchangeBase;
 class ForceManager;
 class PrimitiveKineticEnergyStrategy;
 
@@ -19,8 +18,6 @@ public:
      * @brief Energy observable class constructor.
      */
     EnergyObservable(
-        const std::shared_ptr<BosonicExchangeBase>& bosonic_exchange,
-        bool bosonic,
         const std::shared_ptr<const dVec>& coord,
         const std::shared_ptr<const dVec>& prev_coord,
         const std::shared_ptr<const ForceManager>& force_mgr,

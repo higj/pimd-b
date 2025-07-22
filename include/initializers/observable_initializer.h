@@ -13,7 +13,6 @@
 #include <vector>
 #include <string>
 
-class BosonicExchangeBase;
 class SystemState;
 class ForceManager;
 class Thermostat;
@@ -25,7 +24,6 @@ public:
     ObservableInitializer(
         const std::shared_ptr<SimulationConfig>& config,
         const std::shared_ptr<SystemState>& state,
-        const std::shared_ptr<BosonicExchangeBase>& bosonic_exchange,
         const std::shared_ptr<ForceManager>& force_mgr,
         const std::shared_ptr<Thermostat>& thermostat,
         const BeadContext& bead_context,
@@ -50,7 +48,6 @@ private:
 
     std::shared_ptr<SimulationConfig> m_config;
     std::shared_ptr<SystemState> m_state;
-    std::shared_ptr<BosonicExchangeBase> m_bosonic_exchange;
     std::shared_ptr<ForceManager> m_force_mgr;
     std::shared_ptr<Thermostat> m_thermostat;
 

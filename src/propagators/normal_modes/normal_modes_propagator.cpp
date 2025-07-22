@@ -12,13 +12,10 @@ NormalModesPropagator::NormalModesPropagator(
     const SpringContext& spring_ctx,
     double mass,
     double dt,
-    const std::shared_ptr<BosonicExchangeBase>& bosonic_exchange,
-    const BeadContext& bead_ctx,
-    bool bosonic,
     const std::shared_ptr<NormalModes>& normal_modes
 ) : Propagator(state, force_mgr, box_ctx, spring_ctx, mass, dt),
     m_normal_modes(normal_modes),
-    m_momenta_strategy(StatisticsManager::createNormalModesMomentaStrategy(bosonic_exchange, bead_ctx, bosonic))
+    m_momenta_strategy(StatisticsManager::getInstance().createNormalModesMomentaStrategy())
 {
     // Frequencies
     m_freq = 2 * spring_ctx.omega_p * sin(m_this_bead * std::numbers::pi / m_nbeads);

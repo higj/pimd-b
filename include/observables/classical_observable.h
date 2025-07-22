@@ -21,8 +21,6 @@ public:
     ClassicalObservable(
         const std::shared_ptr<const dVec>& coord,
         const std::shared_ptr<const dVec>& prev_coord,
-        const std::shared_ptr<BosonicExchangeBase>& bosonic_exchange,
-        bool bosonic,
         const VelocityContext& vel_ctx,
         const ThermostatContext& thermostat_ctx,
         const BeadContext& bead_ctx,

@@ -1,46 +1,67 @@
 #pragma once
 
-#include <memory>
-
 #include "contexts/bead_context.h"
 
-class BosonicExchangeBase;
+#include <memory>
+
+class SpringForceStrategy;
 class PrimitiveKineticEnergyStrategy;
 class ClassicalSpringEnergyStrategy;
-class SpringForceStrategy;
 class BosonicProbabilityStrategy;
 class NormalModesMomentaStrategy;
 
-class StatisticsManager
-{
+class BosonicExchangeBase;
+class SystemState;
+
+struct ThermalContext;
+struct SpringContext;
+struct BoxContext;
+
+class StatisticsManager {
 public:
-    static std::unique_ptr<SpringForceStrategy> createSpringForceStrategy(
-        const std::shared_ptr<BosonicExchangeBase>& bosonic_exchange,
+    // Singleton access
+    static StatisticsManager& getInstance();
+
+    // Delete copy constructor and assignment operator
+    StatisticsManager(const StatisticsManager&) = delete;
+    StatisticsManager& operator=(const StatisticsManager&) = delete;
+
+    // Initialize the exchange for the current bead context
+    // This encapsulates all the bosonic logic that was in Simulation::initializeExchange
+    void initializeBosonic(
+        bool is_bosonic,
         const BeadContext& bead_ctx,
-        bool is_bosonic
+        const ThermalContext& thermal_ctx,
+        const SpringContext& spring_ctx,
+        const BoxContext& box_ctx,
+        const std::shared_ptr<SystemState>& state
     );
 
-    static std::unique_ptr<PrimitiveKineticEnergyStrategy> createPrimitiveKineticEnergyStrategy(
-        const std::shared_ptr<BosonicExchangeBase>& bosonic_exchange,
-        const BeadContext& bead_ctx,
-        bool is_bosonic
+    // Strategy factory methods - now instance methods that use internal state
+    std::unique_ptr<SpringForceStrategy> createSpringForceStrategy();
+    std::unique_ptr<PrimitiveKineticEnergyStrategy> createPrimitiveKineticEnergyStrategy();
+    std::unique_ptr<ClassicalSpringEnergyStrategy> createClassicalSpringEnergyStrategy();
+    std::unique_ptr<BosonicProbabilityStrategy> createBosonicProbabilityStrategy();
+    std::unique_ptr<NormalModesMomentaStrategy> createNormalModesMomentaStrategy();
+
+    // Query methods to check if bosonic statistics are active
+    [[nodiscard]] bool isBosonic() const { return m_is_bosonic; }
+    [[nodiscard]] bool isBosonicExchangeActive() const { return m_bosonic_exchange != nullptr; }
+
+private:
+    StatisticsManager() = default;
+    ~StatisticsManager() = default;
+
+    // Internal method to create the appropriate bosonic exchange object
+    std::shared_ptr<BosonicExchangeBase> createBosonicExchangeObject(
+        const ThermalContext& thermal_ctx,
+        const SpringContext& spring_ctx,
+        const BoxContext& box_ctx,
+        const std::shared_ptr<SystemState>& state
     );
 
-    static std::unique_ptr<ClassicalSpringEnergyStrategy> createClassicalSpringEnergyStrategy(
-        const std::shared_ptr<BosonicExchangeBase>& bosonic_exchange,
-        const BeadContext& bead_ctx,
-        bool is_bosonic
-    );
-
-    static std::unique_ptr<BosonicProbabilityStrategy> createBosonicProbabilityStrategy(
-        const std::shared_ptr<BosonicExchangeBase>& bosonic_exchange,
-        const BeadContext& bead_ctx,
-        bool is_bosonic
-    );
-
-    static std::unique_ptr<NormalModesMomentaStrategy> createNormalModesMomentaStrategy(
-        const std::shared_ptr<BosonicExchangeBase>& bosonic_exchange,
-        const BeadContext& bead_ctx,
-        bool is_bosonic
-    );
+    // Internal state
+    std::shared_ptr<BosonicExchangeBase> m_bosonic_exchange;
+    BeadContext m_bead_ctx;
+    bool m_is_bosonic = false;
 };

@@ -1,14 +1,11 @@
 #include "observables/classical_observable.h"
 #include "thermostats/thermostat.h"
-#include "bosonic_exchange/bosonic_exchange_base.h"
 #include "core/statistics_manager.h"
 #include "strategies/observables/classical_spring_energy_strategy.h"
 
 ClassicalObservable::ClassicalObservable(
     const std::shared_ptr<const dVec>& coord,
     const std::shared_ptr<const dVec>& prev_coord,
-    const std::shared_ptr<BosonicExchangeBase>& bosonic_exchange,
-    bool bosonic,
     const VelocityContext& vel_ctx,
     const ThermostatContext& thermostat_ctx,
     const BeadContext& bead_ctx,
@@ -19,7 +16,7 @@ ClassicalObservable::ClassicalObservable(
 ) : Observable(out_freq, out_unit),
     m_coord(coord),
     m_prev_coord(prev_coord),
-    m_spring_energy_strategy(StatisticsManager::createClassicalSpringEnergyStrategy(bosonic_exchange, bead_ctx, bosonic)),
+    m_spring_energy_strategy(StatisticsManager::getInstance().createClassicalSpringEnergyStrategy()),
     m_vel_ctx(vel_ctx),
     m_thermostat_ctx(thermostat_ctx),
     m_bead_ctx(bead_ctx),

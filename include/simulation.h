@@ -14,7 +14,6 @@
 
 struct SimulationConfig;
 class SystemState;
-class BosonicExchangeBase;
 class RandomGenerators;
 class ForceManager;
 class Propagator;
@@ -84,7 +83,6 @@ private:
 
     //std::shared_ptr<SimulationConfig> m_config;
     std::shared_ptr<SystemState> m_state;
-    std::shared_ptr<BosonicExchangeBase> m_bosonic_exchange;
     std::shared_ptr<RandomGenerators> m_rng;
     std::shared_ptr<ForceManager> m_force_mgr;
     std::shared_ptr<NormalModes> m_normal_modes;
@@ -112,20 +110,11 @@ private:
     ) const;
 
      /**
-      * Initializes the bosonic exchange machinery based on the input parameters.
+      * Initializes the quantum statistics for the simulation (bosonic or distinguishable).
       *
-      * @param bosonic Boolean indicating whether the simulation is bosonic or not.
-      * @param thermal_ctx Thermal context object containing information about the thermal properties of the system.
-      * @param spring_ctx Spring context object containing information about the springs in the system.
-      * @param box_ctx Box context object containing information about the simulation box.
-      * @param bead_ctx Bead context object containing information about the beads in the system.
-      * @param state System state object containing information about the current state of the simulation.
-      * @return A shared pointer to the initialized exchange state object.
+      * @param is_bosonic Boolean indicating whether the simulation is bosonic or not.
      */
-    std::shared_ptr<BosonicExchangeBase> initializeExchange(
-        bool bosonic,
-        const std::shared_ptr<SystemState>& state
-    );
+    void initializeQuantumStatistics(bool is_bosonic) const;
 
     /**
      * Initializes the normal modes based on the input parameters.
@@ -152,15 +141,13 @@ private:
      * @param state System state object containing information about the current state of the simulation.
      * @param normal_modes Normal modes object containing information about the normal modes of the system.
      * @param force_mgr Force field manager object containing information about the forces acting on the system.
-     * @param bosonic_exchange Bosonic exchange object.
      * @return A shared pointer to the initialized propagator object.
     */
     std::shared_ptr<Propagator> initializePropagator(
         const std::shared_ptr<SimulationConfig>& config,
         const std::shared_ptr<SystemState>& state,
         const std::shared_ptr<NormalModes>& normal_modes,
-        const std::shared_ptr<ForceManager>& force_mgr,
-        const std::shared_ptr<BosonicExchangeBase>& bosonic_exchange
+        const std::shared_ptr<ForceManager>& force_mgr
     );
 
     /**

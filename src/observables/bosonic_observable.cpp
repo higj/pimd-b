@@ -1,16 +1,9 @@
 #include "observables/bosonic_observable.h"
-#include "bosonic_exchange/bosonic_exchange_base.h"
 #include "core/statistics_manager.h"
 #include "strategies/observables/bosonic_probability_strategy.h"
 
-BosonicObservable::BosonicObservable(
-    const std::shared_ptr<BosonicExchangeBase>& bosonic_exchange,
-    const BeadContext& bead_ctx,
-    bool bosonic,
-    int out_freq,
-    const std::string& out_unit
-) : Observable(out_freq, out_unit),
-    m_bosonic_prob_strategy(StatisticsManager::createBosonicProbabilityStrategy(bosonic_exchange, bead_ctx, bosonic))
+BosonicObservable::BosonicObservable(int out_freq, const std::string& out_unit) : Observable(out_freq, out_unit),
+    m_bosonic_prob_strategy(StatisticsManager::getInstance().createBosonicProbabilityStrategy())
 {
     initialize({"prob_dist", "prob_all"});
 }

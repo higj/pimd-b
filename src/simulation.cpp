@@ -3,6 +3,7 @@
 #include "core/system_state.h"
 #include "core/force_manager.h"
 #include "core/random_generators.h"
+#include "core/statistics_manager.h"
 #include "momentum_initializers.h"
 #include "position_initializers.h"
 #include "initializers/observable_initializer.h"
@@ -17,17 +18,11 @@
 #include <array>
 #include <cassert>
 
-#if FACTORIAL_BOSONIC_ALGORITHM
-#include "bosonic_exchange/factorial_bosonic_exchange.h"
-#else
-#include "bosonic_exchange/quadratic_bosonic_exchange.h"
-#endif
-
 Simulation::Simulation(int rank, int nproc, const std::string& config_filename)
 {
     // Parse the simulation parameters from the configuration (input) file
     const Params params(config_filename, rank);
-    std::shared_ptr<SimulationConfig> config = params.load();
+    const std::shared_ptr<SimulationConfig> config = params.load();
 
     m_steps = config->steps;
     m_threshold = config->threshold;
@@ -65,10 +60,10 @@ Simulation::Simulation(int rank, int nproc, const std::string& config_filename)
     initializePositions(config);
     initializeMomenta(config);
 
-    m_bosonic_exchange = initializeExchange(config->bosonic, m_state);
+    initializeQuantumStatistics(config->bosonic);
 
     // Initialize other resources
-    m_force_mgr = std::make_shared<ForceManager>(*config, m_bosonic_exchange, m_bead_ctx);    
+    m_force_mgr = std::make_shared<ForceManager>(*config);    
 
     m_normal_modes = initializeNormalModes(config, m_state);
 
@@ -84,8 +79,7 @@ Simulation::Simulation(int rank, int nproc, const std::string& config_filename)
         config,
         m_state,
         m_normal_modes,
-        m_force_mgr,
-        m_bosonic_exchange
+        m_force_mgr
     );
 
     m_thermostat = initializeThermostat(
@@ -114,7 +108,6 @@ Simulation::Simulation(int rank, int nproc, const std::string& config_filename)
     m_observables = ObservableInitializer(
         config,
         m_state,
-        m_bosonic_exchange,
         m_force_mgr,
         m_thermostat,
         m_bead_ctx,
@@ -136,56 +129,21 @@ Simulation::Simulation(int rank, int nproc, const std::string& config_filename)
 
 Simulation::~Simulation() = default;
 
-std::shared_ptr<BosonicExchangeBase> Simulation::initializeExchange(
-    bool bosonic,
-    const std::shared_ptr<SystemState>& state)
+void Simulation::initializeQuantumStatistics(bool is_bosonic) const
 {
-    bool is_bosonic_bead = bosonic && (m_bead_ctx.this_bead == 0 || m_bead_ctx.this_bead == m_bead_ctx.nbeads - 1);
-
-    // If this is not a bosonic bead, we don't need to initialize the exchange
-    if (!is_bosonic_bead) {
-        // CR: Can this entire logic be encapsulated in StatisticsManager, which becomes
-        // CR: a dynamic rather than static entity?
-        // CR: Ideally, the word "bosons" doesn't appear anywhere outside the statistics manager
-        // CR: It can be a singleton for ease of access, since its pervasive
-        return { nullptr };  /// TODO: Not ideal. Fix this later
-    }
-
-    std::shared_ptr<dVec> x_first_bead;
-    std::shared_ptr<dVec> x_last_bead;
-
-    if (state->currentBead() == 0)
+    if (!m_state)
     {
-        // At the first imaginary time slice, the last ("P") slice is the previous one
-        x_first_bead = std::shared_ptr<dVec>(state, &state->coord);
-        x_last_bead = std::shared_ptr<dVec>(state, &state->prev_coord);
-    }
-    else
-    {
-        // At the last imaginary time slice ("P"), the first slice is the next one
-        x_first_bead = std::shared_ptr<dVec>(state, &state->next_coord);
-        x_last_bead = std::shared_ptr<dVec>(state, &state->coord);
+        throw std::runtime_error("System state is not initialized before quantum statistics initialization.");
     }
 
-#if FACTORIAL_BOSONIC_ALGORITHM
-    return std::make_unique<FactorialBosonicExchange>(
-        x_first_bead,
-        x_last_bead,
+    StatisticsManager::getInstance().initializeBosonic(
+        is_bosonic,
+        m_bead_ctx,
         m_thermal_ctx,
         m_spring_ctx,
         m_box_ctx,
-        m_bead_ctx
+        m_state
     );
-#else
-    return std::make_shared<BosonicExchange>(
-        x_first_bead,
-        x_last_bead,
-        m_thermal_ctx,
-        m_spring_ctx,
-        m_box_ctx,
-        m_bead_ctx
-    );
-#endif
 }
 
 std::shared_ptr<NormalModes> Simulation::initializeNormalModes(
@@ -211,8 +169,8 @@ std::shared_ptr<Propagator> Simulation::initializePropagator(
     const std::shared_ptr<SimulationConfig>& config,
     const std::shared_ptr<SystemState>& state,
     const std::shared_ptr<NormalModes>& normal_modes,
-    const std::shared_ptr<ForceManager>& force_mgr,
-    const std::shared_ptr<BosonicExchangeBase>& bosonic_exchange)
+    const std::shared_ptr<ForceManager>& force_mgr
+)
 {
     if (config->propagator_type == "cartesian")
     {
@@ -235,9 +193,6 @@ std::shared_ptr<Propagator> Simulation::initializePropagator(
             m_spring_ctx,
             config->mass,
             config->dt,
-            bosonic_exchange,
-            m_bead_ctx,
-            config->bosonic,
             normal_modes
         );
     }

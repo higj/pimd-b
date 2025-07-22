@@ -16,9 +16,6 @@ public:
         const SpringContext& spring_ctx,
         double mass,
         double dt,
-        const std::shared_ptr<BosonicExchangeBase>& bosonic_exchange,
-        const BeadContext& bead_ctx,
-        bool bosonic,
         const std::shared_ptr<NormalModes>& normal_modes
     );
 

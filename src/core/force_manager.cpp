@@ -5,13 +5,8 @@
 #include "potentials.h"
 #include "strategies/forces/spring_force_strategy.h"
 
-ForceManager::ForceManager(
-    const SimulationConfig& config,
-    const std::shared_ptr<BosonicExchangeBase>& bosonic_exchange,
-    const BeadContext& bead_ctx
-) : m_spring_force_strategy(StatisticsManager::createSpringForceStrategy(
-        bosonic_exchange, bead_ctx, config.bosonic
-    ))
+ForceManager::ForceManager(const SimulationConfig& config)
+    : m_spring_force_strategy(StatisticsManager::getInstance().createSpringForceStrategy())
 {
     ext_potential = initializePotential(config, config.ext_pot_name, config.ext_pot_params);
     int_potential = initializePotential(config, config.int_pot_name, config.int_pot_params);

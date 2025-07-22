@@ -1,12 +1,9 @@
 #include "observables/energy_observable.h"
-#include "bosonic_exchange/bosonic_exchange_base.h"
 #include "core/force_manager.h"
 #include "core/statistics_manager.h"
 #include "strategies/observables/primitive_kinetic_energy_strategy.h"
 
 EnergyObservable::EnergyObservable(
-        const std::shared_ptr<BosonicExchangeBase>& bosonic_exchange,
-        bool bosonic,
         const std::shared_ptr<const dVec>& coord,
         const std::shared_ptr<const dVec>& prev_coord,
         const std::shared_ptr<const ForceManager>& force_mgr,
@@ -17,7 +14,7 @@ EnergyObservable::EnergyObservable(
         int out_freq,
         const std::string& out_unit
     ) : Observable(out_freq, out_unit),
-    m_prim_ke_strategy(StatisticsManager::createPrimitiveKineticEnergyStrategy(bosonic_exchange, bead_ctx, bosonic)),
+    m_prim_ke_strategy(StatisticsManager::getInstance().createPrimitiveKineticEnergyStrategy()),
     m_coord_this(coord),
     m_coord_prev(prev_coord),
     m_force_mgr(force_mgr),

@@ -6,7 +6,6 @@
 #include "system_state.h"
 #include "potentials/potential.h"
 
-class BosonicExchangeBase;
 struct BeadContext;
 struct BoxContext;
 struct SpringContext;
@@ -14,11 +13,7 @@ class SpringForceStrategy;
 
 class ForceManager {
 public:
-    explicit ForceManager(
-        const SimulationConfig& config,
-        const std::shared_ptr<BosonicExchangeBase>& bosonic_exchange,
-        const BeadContext& bead_ctx
-    );
+    explicit ForceManager(const SimulationConfig& config);
 
     ~ForceManager();
 
