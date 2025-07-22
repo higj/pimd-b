@@ -41,7 +41,7 @@ void Params::loadSimulationParams(SimulationConfig& config) const {
     if (config.dt <= 0.0)
         throw std::invalid_argument(std::format("Invalid time-step ({} is not positive)", config.dt));
 
-    config.threshold = m_reader.GetReal(Sections::SIMULATION, "threshold", 0.0);
+    const double threshold = m_reader.GetReal(Sections::SIMULATION, "threshold", 0.0);
     if (config.threshold < 0)
         throw std::invalid_argument(std::format("Invalid threshold ({} is negative)", config.threshold));
 
@@ -49,7 +49,7 @@ void Params::loadSimulationParams(SimulationConfig& config) const {
     if (config.steps < 1)
         throw std::invalid_argument(std::format("Invalid number of steps ({}<1)", config.steps));
 
-    config.threshold *= config.steps;  // Threshold in terms of steps
+    config.threshold = static_cast<long>(threshold * config.steps);  // Threshold in terms of steps
 
     //config.sfreq = m_reader.GetLong(Sections::SIMULATION, "sfreq", 1000); /// @todo: Add support for scientific notation
     config.sfreq = static_cast<long>(std::stod(m_reader.Get(Sections::SIMULATION, "sfreq", "1e3")));

@@ -9,6 +9,7 @@ Thermostat::Thermostat(
 ) : m_thermal_ctx(thermal_ctx), m_nm_ctx(nm_ctx), m_state(state)
 {
     const auto& momenta_ptr = std::shared_ptr<dVec>(state, &state->momenta);
+
     // Choose coupling (Cartesian coords or normal modes of distinguishable ring polymers)
     if (nm_ctx.couple_to_nm)
     {

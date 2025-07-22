@@ -12,7 +12,6 @@
 #include <string>
 #include <memory>
 
-class ObservablesLogger;
 struct SimulationConfig;
 class SystemState;
 class BosonicExchangeBase;
@@ -23,6 +22,8 @@ class Thermostat;
 class NormalModes;
 class Observable;
 class Dump;
+class SimulationReport;
+class ObservablesLogger;
 
 class Simulation
 {
@@ -31,18 +32,13 @@ public:
     ~Simulation();
 
     /**
-     * @brief Gets the current simulation step.
-     */
-    [[nodiscard]] int getStep() const;
-
-    /**
      * @brief Perform a molecular dynamics run using the OBABO scheme.
      */
     void run();
 private:
-    int m_step;  /// TODO: Not used now. Remove
+    long m_steps;
+    long m_threshold;
     bool m_is_thermalization_phase;
-    bool m_should_log_observables;
 
     /**
      * Sets the current simulation step.
@@ -75,13 +71,18 @@ private:
 
     void calculateObservables() const;
 
-    void calculateAndLogObservables(long step, ObservablesLogger& obs_logger) const;
+    void calculateAndLogObservables(long step) const;
 
+    /**
+     * Calculates the elapsed simulation time and prints a report.
+     *
+     * @param start_time The time when the simulation started.
+     */
     void finalizeSimulation(double start_time) const;
 
-    void executeStep(long step, ObservablesLogger& obs_logger) const;
+    void executeStep(long step) const;
 
-    std::shared_ptr<SimulationConfig> m_config;
+    //std::shared_ptr<SimulationConfig> m_config;
     std::shared_ptr<SystemState> m_state;
     std::shared_ptr<BosonicExchangeBase> m_bosonic_exchange;
     std::shared_ptr<RandomGenerators> m_rng;
@@ -90,10 +91,25 @@ private:
     std::shared_ptr<Propagator> m_propagator;
     std::shared_ptr<Thermostat> m_thermostat;
 
+    ThermalContext m_thermal_ctx;
+    SpringContext m_spring_ctx;
+    BoxContext m_box_ctx;
+    BeadContext m_bead_ctx;
+    NormalModesContext m_nm_ctx;
+    ThermostatContext m_thermostat_ctx;
+    VelocityContext m_velocity_ctx;
+
     std::vector<std::shared_ptr<Observable>> m_observables;
     std::vector<std::shared_ptr<Dump>> m_dumps;
 
-    std::vector<std::shared_ptr<Dump>> initializeDumps(const VelocityContext& vel_ctx) const;
+    std::unique_ptr<ObservablesLogger> m_obs_logger;
+
+    std::unique_ptr<SimulationReport> m_report;
+
+    std::vector<std::shared_ptr<Dump>> initializeDumps(
+        const std::shared_ptr<SimulationConfig>& config,
+        const VelocityContext& vel_ctx
+    ) const;
 
      /**
       * Initializes the bosonic exchange machinery based on the input parameters.
@@ -106,12 +122,8 @@ private:
       * @param state System state object containing information about the current state of the simulation.
       * @return A shared pointer to the initialized exchange state object.
      */
-    static std::shared_ptr<BosonicExchangeBase> initializeExchange(
+    std::shared_ptr<BosonicExchangeBase> initializeExchange(
         bool bosonic,
-        const ThermalContext& thermal_ctx,
-        const SpringContext& spring_ctx,
-        const BoxContext& box_ctx,
-        const BeadContext& bead_ctx,
         const std::shared_ptr<SystemState>& state
     );
 
@@ -143,14 +155,8 @@ private:
      * @param bosonic_exchange Bosonic exchange object.
      * @return A shared pointer to the initialized propagator object.
     */
-    static std::shared_ptr<Propagator> initializePropagator(
-        const std::string& propagator_type,
-        double mass,
-        double dt,
-        const SpringContext& spring_ctx,
-        const BoxContext& box_ctx,
-        const BeadContext& bead_ctx,
-        bool bosonic,
+    std::shared_ptr<Propagator> initializePropagator(
+        const std::shared_ptr<SimulationConfig>& config,
         const std::shared_ptr<SystemState>& state,
         const std::shared_ptr<NormalModes>& normal_modes,
         const std::shared_ptr<ForceManager>& force_mgr,
@@ -167,9 +173,7 @@ private:
      * @param rng Random number generator object for generating random numbers.
      * @return A shared pointer to the initialized thermostat object.
     */
-    static std::shared_ptr<Thermostat> initializeThermostat(
-        const ThermalContext& thermal_ctx,
-        const NormalModesContext& nm_ctx,
+    std::shared_ptr<Thermostat> initializeThermostat(
         const std::shared_ptr<SimulationConfig>& config,
         const std::shared_ptr<SystemState>& state,
         const std::shared_ptr<RandomGenerators>& rng
@@ -201,9 +205,8 @@ private:
      * @param state System state object.
      * @param rng Random number generator object for generating random numbers.
      */
-    static void initializePositions(
+    void initializePositions(
         const std::shared_ptr<SimulationConfig>& config,
-        const BoxContext& box_ctx,
         const std::shared_ptr<SystemState>& state,
         const std::shared_ptr<RandomGenerators>& rng
     );
@@ -215,7 +218,7 @@ private:
      * @param state System state object.
      * @param rng Random number generator object for generating random numbers.
      */
-    static void initializeMomenta(
+    void initializeMomenta(
         const std::shared_ptr<SimulationConfig>& config,
         const std::shared_ptr<SystemState>& state,
         const std::shared_ptr<RandomGenerators>& rng
@@ -232,9 +235,5 @@ private:
         const std::shared_ptr<SystemState>& state
     );*/
 
-    /**
-     * @brief Prints a summary of the simulation parameters at the end of the simulation.
-     */
-    void printReport(double wall_time) const;
     ///void printDebug(const std::string& text, int target_bead = 0) const;
 };

@@ -11,6 +11,7 @@
 #include "thermostats.h"
 #include "observables_logger.h"
 #include "output_paths.h"
+#include "simulation_report.h"
 
 #include <ranges>
 #include <fstream>
@@ -19,85 +20,71 @@
 #include <array>
 #include <cassert>
 
-
 #if FACTORIAL_BOSONIC_ALGORITHM
 #include "bosonic_exchange/factorial_bosonic_exchange.h"
 #else
 #include "bosonic_exchange/quadratic_bosonic_exchange.h"
 #endif
 
-Simulation::Simulation(int rank, int nproc, const std::string& config_filename): m_step(0)
+Simulation::Simulation(int rank, int nproc, const std::string& config_filename)
 {
     // Parse the simulation parameters from the configuration (input) file
     const Params params(config_filename, rank);
-    m_config = params.load();
+    std::shared_ptr<SimulationConfig> config = params.load();
+
+    m_steps = config->steps;
+    m_threshold = config->threshold;
 
     // Initialize basic contexts
-    const auto thermal_ctx = ThermalContext{
-        .beta = m_config->beta,
-        .thermo_beta = m_config->thermo_beta
+    m_thermal_ctx = ThermalContext{
+        .beta = config->beta,
+        .thermo_beta = config->thermo_beta
     };
 
-    const auto spring_ctx = SpringContext{
-        .omega_p = m_config->omega_p,
-        .spring_constant = m_config->spring_constant,
-        .beta_half_k = m_config->beta_half_k
+    m_spring_ctx = SpringContext{
+        .omega_p = config->omega_p,
+        .spring_constant = config->spring_constant,
+        .beta_half_k = config->beta_half_k
     };
 
-    const auto box_ctx = BoxContext{
-        .box_size = m_config->box_size,
-        .pbc = m_config->pbc
+    m_box_ctx = BoxContext{
+        .box_size = config->box_size,
+        .pbc = config->pbc
     };
 
-    const auto bead_ctx = BeadContext{
-        .nbeads = m_config->nbeads,
-        .natoms = m_config->natoms,
-        .this_bead = m_config->this_bead
+    m_bead_ctx = BeadContext{
+        .nbeads = config->nbeads,
+        .natoms = config->natoms,
+        .this_bead = config->this_bead
     };
 
     // CR: What is meaning of the variable prefix m_?
     // JH: Hungarian notation for member of a class.
     //     Arguably better than prefixing with just an underscore, or using "this->"
     //     to distinguish from local variables.
-    m_rng = std::make_shared<RandomGenerators>(m_config->seed + rank);
-    m_state = std::make_shared<SystemState>(rank, nproc, m_config->natoms, m_config->nbeads);
+    m_rng = std::make_shared<RandomGenerators>(config->seed + rank);
+    m_state = std::make_shared<SystemState>(rank, nproc, config->natoms, config->nbeads, config->fixcom);
 
-    initializePositions(m_config, box_ctx, m_state, m_rng);
-    initializeMomenta(m_config, m_state, m_rng);
+    initializePositions(config, m_state, m_rng);
+    initializeMomenta(config, m_state, m_rng);
 
-    m_bosonic_exchange = initializeExchange(
-        m_config->bosonic,
-        thermal_ctx,
-        spring_ctx,
-        box_ctx,
-        bead_ctx,
-        m_state
-    );
+    m_bosonic_exchange = initializeExchange(config->bosonic, m_state);
 
     // Initialize other resources
-    m_force_mgr = std::make_shared<ForceManager>(
-        m_config,
-        m_bosonic_exchange,
-        bead_ctx
-    );    
+    m_force_mgr = std::make_shared<ForceManager>(config, m_bosonic_exchange, m_bead_ctx);    
 
-    m_normal_modes = initializeNormalModes(m_config, m_state);
-    const auto nm_ctx = NormalModesContext{
+    m_normal_modes = initializeNormalModes(config, m_state);
+
+    m_nm_ctx = NormalModesContext{
         .normal_modes = m_normal_modes,
-        .couple_to_nm = std::get<bool>(m_config->thermostat_params["nmthermostat"])
+        .couple_to_nm = std::get<bool>(config->thermostat_params["nmthermostat"])
     };
 
     // CR: It's OK imo to pass all of config to the local function (of the class Simulation) that initializes the propagator.
     // CR: Would improve readability of this function.
     // CR: The important bit is that Config & Simulation are not exposed to *other* classes.
     m_propagator = initializePropagator(
-        m_config->propagator_type,
-        m_config->mass,
-        m_config->dt,
-        spring_ctx,
-        box_ctx,
-        bead_ctx,
-        m_config->bosonic,
+        config,
         m_state,
         m_normal_modes,
         m_force_mgr,
@@ -105,21 +92,19 @@ Simulation::Simulation(int rank, int nproc, const std::string& config_filename):
     );
 
     m_thermostat = initializeThermostat(
-        thermal_ctx,
-        nm_ctx,
-        m_config,
+        config,
         m_state,
         m_rng
     );
 
-    const auto thermostat_ctx = ThermostatContext{
+    m_thermostat_ctx = ThermostatContext{
         .thermostat = m_thermostat,
-        .thermostat_type = m_config->thermostat_type
+        .thermostat_type = config->thermostat_type
     };
 
-    const auto velocity_ctx = VelocityContext{
+    m_velocity_ctx = VelocityContext{
         .momenta = std::shared_ptr<dVec>(m_state, &m_state->momenta),
-        .mass = m_config->mass
+        .mass = config->mass
     };
 
     /// TODO: Should this also be done in dumps and observables init for safety?
@@ -130,33 +115,36 @@ Simulation::Simulation(int rank, int nproc, const std::string& config_filename):
     // CR: no other logic except bridging the gap between config and the simulation.
     // CR: They don't continue to live after initialization
     m_observables = ObservableInitializer(
-        m_config,
+        config,
         m_state,
         m_bosonic_exchange,
         m_force_mgr,
         m_thermostat,
-        bead_ctx,
-        thermal_ctx,
-        spring_ctx,
-        box_ctx,
-        velocity_ctx,
-        thermostat_ctx
+        m_bead_ctx,
+        m_thermal_ctx,
+        m_spring_ctx,
+        m_box_ctx,
+        m_velocity_ctx,
+        m_thermostat_ctx
     ).createObservables();
 
-    m_dumps = initializeDumps(velocity_ctx);
+    // Initialize the output file for the observables
+    m_obs_logger = std::make_unique<ObservablesLogger>(
+        Output::MAIN_FILENAME, m_bead_ctx.this_bead, config->sfreq, m_observables
+    );
+
+    m_dumps = initializeDumps(config, m_velocity_ctx);
+
+    m_report = std::make_unique<SimulationReport>(*config, m_steps);
 }
 
 Simulation::~Simulation() = default;
 
 std::shared_ptr<BosonicExchangeBase> Simulation::initializeExchange(
     bool bosonic,
-    const ThermalContext& thermal_ctx,
-    const SpringContext& spring_ctx,
-    const BoxContext& box_ctx,
-    const BeadContext& bead_ctx,
     const std::shared_ptr<SystemState>& state)
 {
-    bool is_bosonic_bead = bosonic && (bead_ctx.this_bead == 0 || bead_ctx.this_bead == bead_ctx.nbeads - 1);
+    bool is_bosonic_bead = bosonic && (m_bead_ctx.this_bead == 0 || m_bead_ctx.this_bead == m_bead_ctx.nbeads - 1);
 
     // If this is not a bosonic bead, we don't need to initialize the exchange
     if (!is_bosonic_bead) {
@@ -187,19 +175,19 @@ std::shared_ptr<BosonicExchangeBase> Simulation::initializeExchange(
     return std::make_unique<FactorialBosonicExchange>(
         x_first_bead,
         x_last_bead,
-        thermal_ctx,
-        spring_ctx,
-        box_ctx,
-        bead_ctx
+        m_thermal_ctx,
+        m_spring_ctx,
+        m_box_ctx,
+        m_bead_ctx
     );
 #else
     return std::make_shared<BosonicExchange>(
         x_first_bead,
         x_last_bead,
-        thermal_ctx,
-        spring_ctx,
-        box_ctx,
-        bead_ctx
+        m_thermal_ctx,
+        m_spring_ctx,
+        m_box_ctx,
+        m_bead_ctx
     );
 #endif
 }
@@ -224,46 +212,36 @@ std::shared_ptr<NormalModes> Simulation::initializeNormalModes(
 }
 
 std::shared_ptr<Propagator> Simulation::initializePropagator(
-    const std::string& propagator_type,
-    double mass,
-    double dt,
-    const SpringContext& spring_ctx,
-    const BoxContext& box_ctx,
-    const BeadContext& bead_ctx,
-    bool bosonic,
+    const std::shared_ptr<SimulationConfig>& config,
     const std::shared_ptr<SystemState>& state,
     const std::shared_ptr<NormalModes>& normal_modes,
     const std::shared_ptr<ForceManager>& force_mgr,
     const std::shared_ptr<BosonicExchangeBase>& bosonic_exchange)
 {
-    // JH: propagator_type, mass and dt are passed as arguments instead of the entire config
-    //     because I'm confident that they are necessary and sufficient (along with the other arguments)
-    //     to initialize any current/future propagator. But perhaps passing the entire config is okay too?
-    //     (See the comment in initializeThermostat for a possible reason)
-    if (propagator_type == "cartesian")
+    if (config->propagator_type == "cartesian")
     {
         return std::make_shared<VelocityVerletPropagator>(
             state,
             force_mgr,
-            box_ctx,
-            spring_ctx,
-            mass,
-            dt
+            m_box_ctx,
+            m_spring_ctx,
+            config->mass,
+            config->dt
         );
     }
 
-    if (propagator_type == "normal_modes")
+    if (config->propagator_type == "normal_modes")
     {
         return std::make_shared<NormalModesPropagator>(
             state,
             force_mgr,
-            box_ctx,
-            spring_ctx,
-            mass,
-            dt,
+            m_box_ctx,
+            m_spring_ctx,
+            config->mass,
+            config->dt,
             bosonic_exchange,
-            bead_ctx,
-            bosonic,
+            m_bead_ctx,
+            config->bosonic,
             normal_modes
         );
     }
@@ -272,26 +250,17 @@ std::shared_ptr<Propagator> Simulation::initializePropagator(
 }
 
 std::shared_ptr<Thermostat> Simulation::initializeThermostat(
-    const ThermalContext& thermal_ctx,
-    const NormalModesContext& nm_ctx,
     const std::shared_ptr<SimulationConfig>& config,
     const std::shared_ptr<SystemState>& state,
     const std::shared_ptr<RandomGenerators>& rng)
 {
-    // JH: Here I hesitated a little bit to pass individual parameters instead of "config"
-    //     because it could be that a new thermostat implementation might need new parameters.
-    //     If I had followed the approach of "initializeExchangeState", I would have had to pass
-    //     parameters like, e.g., "nchains", which is too specific (it exposes the existence of
-    //     Nose-Hoover and its unique parameters). Also, passing all the individual parameters
-    //     of all the thermostats would greatly increase the number of arguments and possibly
-    //     hinder readability.
     if (config->thermostat_type == "langevin")
     {
         double gamma = std::get<double>(config->thermostat_params["gamma"]);
 
         return std::make_shared<LangevinThermostat>(
-            thermal_ctx,
-            nm_ctx,
+            m_thermal_ctx,
+            m_nm_ctx,
             state,
             rng,
             gamma,
@@ -304,23 +273,23 @@ std::shared_ptr<Thermostat> Simulation::initializeThermostat(
 
     if (config->thermostat_type == "nose_hoover")
     {
-        return std::make_shared<NoseHooverThermostat>(thermal_ctx, nm_ctx, state, nchains, config->dt, config->mass);
+        return std::make_shared<NoseHooverThermostat>(m_thermal_ctx, m_nm_ctx, state, nchains, config->dt, config->mass);
     }
 
     if (config->thermostat_type == "nose_hoover_np")
     {
-        return std::make_shared<NoseHooverNpThermostat>(thermal_ctx, nm_ctx, state, nchains, config->dt, config->mass);
+        return std::make_shared<NoseHooverNpThermostat>(m_thermal_ctx, m_nm_ctx, state, nchains, config->dt, config->mass);
     }
 
     if (config->thermostat_type == "nose_hoover_np_dim")
     {
-        return std::make_shared<NoseHooverNpDimThermostat>(thermal_ctx, nm_ctx, state, nchains, config->dt,
+        return std::make_shared<NoseHooverNpDimThermostat>(m_thermal_ctx, m_nm_ctx, state, nchains, config->dt,
                                                            config->mass);
     }
 
     if (config->thermostat_type == "none")
     {
-        return std::make_shared<Thermostat>(thermal_ctx, nm_ctx, state);
+        return std::make_shared<Thermostat>(m_thermal_ctx, m_nm_ctx, state);
     }
 
     return {nullptr};
@@ -328,9 +297,6 @@ std::shared_ptr<Thermostat> Simulation::initializeThermostat(
 
 void Simulation::initializePositions(
     const std::shared_ptr<SimulationConfig>& config,
-    // CR: Hmm. I like how the initializer depend on the "contexts" and not the entire config
-    // CR: But it's strange to pass here config *and* other things that are included in it
-    const BoxContext& box_ctx,
     const std::shared_ptr<SystemState>& state,
     const std::shared_ptr<RandomGenerators>& rng)
 {
@@ -341,14 +307,14 @@ void Simulation::initializePositions(
         initializer = std::make_unique<RandomPositionInitializer>(
             rng,
             std::shared_ptr<dVec>(state, &state->coord),
-            box_ctx
+            m_box_ctx
         );
     }
     else if (config->init_pos_type == "grid")
     {
         initializer = std::make_unique<GridPositionInitializer>(
             std::shared_ptr<dVec>(state, &state->coord),
-            box_ctx
+            m_box_ctx
         );
     }
     else if (config->init_pos_type == "xyz")
@@ -357,7 +323,7 @@ void Simulation::initializePositions(
             config->init_pos_filename,
             config->this_bead + config->init_pos_index_offset,
             std::shared_ptr<dVec>(state, &state->coord),
-            box_ctx
+            m_box_ctx
         );
     }
     else
@@ -404,21 +370,17 @@ void Simulation::initializeMomenta(
     initializer->initialize();
 }
 
-int Simulation::getStep() const
-{
-    return m_step;
-}
-
 void Simulation::setStep(long step)
 {
-    //m_step = step; /// TODO: Not used now. Remove
-    m_is_thermalization_phase = (step < m_config->threshold);
-    m_should_log_observables = (step % m_config->sfreq == 0);
+    m_is_thermalization_phase = (step < m_threshold);
 }
 
-std::vector<std::shared_ptr<Dump>> Simulation::initializeDumps(const VelocityContext& vel_ctx) const
+std::vector<std::shared_ptr<Dump>> Simulation::initializeDumps(
+    const std::shared_ptr<SimulationConfig>& config, 
+    const VelocityContext& vel_ctx
+) const
 {
-    auto dumps = DumpInitializer(m_config, m_state, vel_ctx).createDumps();
+    auto dumps = DumpInitializer(config, m_state, vel_ctx).createDumps();
 
     for (const auto& dump : dumps) {
         dump->initialize();
@@ -434,7 +396,7 @@ double Simulation::getWallTime()
 
 void Simulation::zeroMomentumIfRequired() const
 {
-    if (m_config->fixcom) {
+    if (m_state->isCenterOfMassFixed()) {
         m_state->zeroMomentum();
     }
 }
@@ -466,12 +428,9 @@ void Simulation::calculateObservables() const {
     }
 }
 
-void Simulation::calculateAndLogObservables(long step, ObservablesLogger& obs_logger) const {
+void Simulation::calculateAndLogObservables(long step) const {
     calculateObservables();
-
-    if (m_should_log_observables) {
-        obs_logger.log(step);
-    }
+    m_obs_logger->log(step);
 }
 
 void Simulation::finalizeSimulation(double start_time) const {
@@ -482,102 +441,34 @@ void Simulation::finalizeSimulation(double start_time) const {
             "Simulation finished running successfully (Runtime = {:.3} sec)", 
             wall_time
         ),
-        m_config->this_bead
+        m_bead_ctx.this_bead
     );
 
-    printReport(wall_time);
+    m_report->writeReport(wall_time);
 }
 
-void Simulation::executeStep(long step, ObservablesLogger& obs_logger) const
+void Simulation::executeStep(long step) const
 {
     resetObservables();
     dumpStepInfo(step);
     performMolecularDynamicsStep();
 
     if (!m_is_thermalization_phase) {
-        calculateAndLogObservables(step, obs_logger);
+        calculateAndLogObservables(step);
     }
 }
 
 void Simulation::run()
 {
-    printStatus("Running the simulation", m_config->this_bead);
-
+    printStatus("Running the simulation", m_bead_ctx.this_bead);
     const double start_time = getWallTime();
-
-    // Initialize the output file for the observables
-    ObservablesLogger obs_logger(Output::MAIN_FILENAME, m_config->this_bead, m_observables);
     
     // Main loop performing molecular dynamics steps
-    for (long step = 0; step <= m_config->steps; ++step)
+    for (long step = 0; step <= m_steps; ++step)
     {
         setStep(step);
-        executeStep(step, obs_logger);
+        executeStep(step);
     }
 
     finalizeSimulation(start_time);
-}
-
-void Simulation::printReport(double wall_time) const
-{
-    if (m_config->this_bead != 0)
-        return;
-
-    std::ofstream report_file;
-    report_file.open(std::format("{}/report.txt", Output::FOLDER_NAME), std::ios::out | std::ios::app);
-
-    report_file << "---------\nParameters\n---------\n";
-
-    if (m_config->bosonic)
-    {
-        report_file << formattedReportLine("Statistics", "Bosonic");
-        std::string bosonic_alg_name = "Feldman-Hirshberg";
-
-#if FACTORIAL_BOSONIC_ALGORITHM
-        bosonic_alg_name = "Naive";
-#endif
-
-        report_file << formattedReportLine("Bosonic algorithm", bosonic_alg_name);
-    }
-    else
-    {
-        report_file << formattedReportLine("Statistics", "Boltzmannonic");
-    }
-
-    report_file << formattedReportLine("Time propagation algorithm", m_config->propagator_type);
-    report_file << formattedReportLine("Periodic boundary conditions", m_config->pbc);
-    report_file << formattedReportLine("Dimension", NDIM);
-    report_file << formattedReportLine("Seed", m_config->seed);
-    report_file << formattedReportLine("Coordinate initialization method", m_config->init_pos_type);
-    report_file << formattedReportLine("Momentum initialization method", m_config->init_vel_type);
-    report_file << formattedReportLine("Number of atoms", m_config->natoms);
-    report_file << formattedReportLine("Number of beads", m_config->nbeads);
-
-    /// TODO: Limit the number of digits in the output
-    double out_temperature = Units::convertToUser("temperature", "kelvin", m_config->temperature);
-    report_file << formattedReportLine("Temperature", std::format("{} kelvin", out_temperature));
-
-    double out_sys_size = Units::convertToUser("length", "angstrom", m_config->box_size);
-    report_file << formattedReportLine("Linear size of the system", std::format("{} angstroms", out_sys_size));
-
-    double out_mass = Units::convertToUser("mass", "dalton", m_config->mass);
-    report_file << formattedReportLine("Mass", std::format("{} amu", out_mass));
-
-    report_file << formattedReportLine("Total number of MD steps", m_config->steps);
-    report_file << formattedReportLine("Interaction potential name", m_config->int_pot_name);
-    report_file << formattedReportLine("External potential name", m_config->ext_pot_name);
-
-    report_file << "---------\nFeatures\n---------\n";
-    report_file << formattedReportLine("Minimum image convention", MINIM);
-    report_file << formattedReportLine("Wrapping of coordinates", WRAP);
-    report_file << formattedReportLine("Using i-Pi convention", IPI_CONVENTION);
-
-    report_file << "---------\n";
-    report_file << formattedReportLine("Wall time", std::format("{:%T}",
-                                                                std::chrono::duration<double>(wall_time)
-                                       ));
-    report_file << formattedReportLine("Wall time per step (sec)",
-                                       std::format("{:.5e}", wall_time / m_config->steps));
-
-    report_file.close();
 }

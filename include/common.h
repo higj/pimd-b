@@ -261,9 +261,3 @@ void printStatus(const std::string& status, int this_rank, int out_rank = 0);
 
 // Print an error message on "out_rank" (by default, the root rank is 0)
 void printError(const std::string& msg, int this_rank, const std::string& err_type = std::string(), int out_rank = 0);
-
-/// TODO: Refactor this to a separate report logic
-template <typename T>
-std::string formattedReportLine(const std::string& property_name, const T& value) {
-    return std::format("{:<40}\t:\t{}\n", property_name, value);
-}

@@ -11,7 +11,7 @@ struct SimulationConfig {
     double thermo_beta; // Inverse temperature at which the simulation is actually performed ("thermostat beta")
     double dt;          // Timestep
     double box_size;    // Linear system size (TODO: Add support for Ly, Lz,...)
-    double threshold;   // Percentage of steps to throw away (thermalization)
+    long threshold;     // Thermalization up to this many steps
 
     double mass;
     double spring_constant;  // k=m*omega_p^2 (where omega_p depends on the convention)

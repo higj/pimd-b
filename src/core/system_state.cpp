@@ -1,7 +1,13 @@
 #include "core/system_state.h"
 #include "mpi.h"
 
-SystemState::SystemState(int rank, int nproc, int natoms, int nbeads) : m_rank(rank), m_nproc(nproc), m_natoms(natoms), m_nbeads(nbeads) {
+SystemState::SystemState(int rank, int nproc, int natoms, int nbeads, bool fixcom)
+  : m_rank(rank),
+    m_nproc(nproc),
+    m_natoms(natoms),
+    m_nbeads(nbeads),
+    m_fixcom(fixcom)
+{
     // Initialize the coordinate, momenta, and force arrays
     coord = dVec(natoms);
     prev_coord = dVec(natoms);

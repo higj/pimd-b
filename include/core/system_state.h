@@ -16,7 +16,7 @@ public:
      * @param natoms Number of atoms in the system
      * @param nbeads Number of beads in the system
      */
-    SystemState(int rank, int nproc, int natoms, int nbeads);
+    SystemState(int rank, int nproc, int natoms, int nbeads, bool fixcom);
     //SystemState(int rank, int nproc, int natoms, int nbeads, double box_size); @param box_size Linear system size (box size)
 
     /**
@@ -52,6 +52,11 @@ public:
      * @brief Get the linear size of the system (box size).
      */
     //[[nodiscard]] double getBoxSize() const { return m_box_size; }
+
+    /**
+     * @brief Check if the center of mass is supposed to be fixed.
+     */
+    [[nodiscard]] int isCenterOfMassFixed() const { return m_fixcom; }
 
     /**
      * Get the total force acting on a particle along a specific axis.
@@ -90,6 +95,7 @@ private:
     int m_nproc; // Number of processes ("size" of MPI_Comm_size)
     /// Useful to have the following constants duplicated here:
     int m_natoms, m_nbeads; // Number of atoms and beads
+    bool m_fixcom; // Fix the center of mass?
     //double m_box_size; // Box size (linear system size)
 
     /**
