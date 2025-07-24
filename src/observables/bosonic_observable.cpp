@@ -1,4 +1,5 @@
 #include "observables/bosonic_observable.h"
+#include "bosonic_exchange/bosonic_exchange_base.h"
 #include "core/statistics_manager.h"
 #include "strategies/observables/bosonic_probability_strategy.h"
 
