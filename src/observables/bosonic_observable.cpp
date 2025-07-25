@@ -1,5 +1,14 @@
 #include "observables/bosonic_observable.h"
-#include "bosonic_exchange/bosonic_exchange_base.h"
+/*
+// Unquoting the following seems to speed up the simulation in case of MSVC compilation
+namespace Units {
+    const std::unordered_map<std::string, std::unordered_map<std::string, double>> UnitMap = {
+        {"", {
+            {"", 0}
+        }}
+    };
+}
+*/
 #include "core/statistics_manager.h"
 #include "strategies/observables/bosonic_probability_strategy.h"
 
