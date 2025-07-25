@@ -8,10 +8,10 @@ BosonicClassicalSpringEnergyStrategy::BosonicClassicalSpringEnergyStrategy(
 }
 
 double BosonicClassicalSpringEnergyStrategy::calculateSpringEnergy(
-    const dVec& /* coord */,
-    const dVec& /* prev_coord */,
-    const SpringContext& /* spring_ctx */,
-    const BoxContext& /* box_ctx */
+    [[maybe_unused]] const dVec& coord,
+    [[maybe_unused]] const dVec& prev_coord,
+    [[maybe_unused]] const SpringContext& spring_ctx,
+    [[maybe_unused]] const BoxContext& box_ctx
 )
 {
     return m_bosonic_exchange->effectivePotential();
