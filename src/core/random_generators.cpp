@@ -1,7 +1,7 @@
 #include "core/random_generators.h"
 
 RandomGenerators::RandomGenerators(unsigned int seed)
-    : m_rng(seed), m_unit_dist(0.0, 1.0), m_mars_gen(seed) {
+    : m_rng(seed), m_mars_gen(seed), m_unit_dist(0.0, 1.0) {
 }
 
 double RandomGenerators::uniform() {

@@ -34,7 +34,7 @@ dVec CosinePotential::gradV(const dVec& x) {
     return tempr;
 }
 
-double CosinePotential::laplacianV(const dVec& x) {
+double CosinePotential::laplacianV(const dVec& /* x */) {
     // @todo Complete the Laplacian?
     return 0.0;
 }

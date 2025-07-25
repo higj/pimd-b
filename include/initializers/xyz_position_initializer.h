@@ -20,8 +20,8 @@ private:
     /**
      * Load positions from an .xyz file.
      *
-     * @param pos_filename Filename of the positions file.
+     * @param xyz_filename Filename of the positions file.
      * @param destination Destination vector to store the loaded momenta.
      */
-    void loadFromFile(const std::string& pos_filename, dVec& destination) const;
+    static void loadFromFile(const std::string& xyz_filename, dVec& destination);
 };

@@ -35,7 +35,7 @@ void FactorialBosonicExchange::prepare()
 
 int FactorialBosonicExchange::firstBeadNeighbor(int ptcl_idx) const
 {
-    return std::distance(m_labels.begin(), std::ranges::find(m_labels, ptcl_idx));
+    return static_cast<int>(std::distance(m_labels.begin(), std::ranges::find(m_labels, ptcl_idx)));
 }
 
 int FactorialBosonicExchange::lastBeadNeighbor(int ptcl_idx) const
@@ -54,8 +54,6 @@ double FactorialBosonicExchange::getMinExteriorSpringEnergy()
 
         for (int l = 0; l < m_bead_ctx.natoms; ++l)
         {
-            std::array<double, NDIM> sums = {};
-
             // First bead of some particle (depending on the permutation) minus last bead of the l-th particle
             diff2 += getExteriorSeparationSquared(l, lastBeadNeighbor(l));
         }

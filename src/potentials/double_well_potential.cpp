@@ -39,7 +39,7 @@ dVec DoubleWellPotential::gradV(const dVec& x) {
     return tempr;
 }
 
-double DoubleWellPotential::laplacianV(const dVec& x) {
+double DoubleWellPotential::laplacianV(const dVec& /* x */) {
     // @todo Complete the Laplacian?
     return 0.0;
 }

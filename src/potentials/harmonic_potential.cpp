@@ -22,6 +22,6 @@ dVec HarmonicPotential::gradV(const dVec& x) {
     return k * x;
 }
 
-double HarmonicPotential::laplacianV(const dVec& x) {
+double HarmonicPotential::laplacianV(const dVec& /* x */) {
     return k;
 }

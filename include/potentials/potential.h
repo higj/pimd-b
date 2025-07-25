@@ -10,7 +10,7 @@ public:
     virtual ~Potential() = default;
 
     // Potential
-    virtual double V(const dVec& x)
+    virtual double V(const dVec& /* x */)
     {
         return 0.0;
     }
@@ -22,7 +22,7 @@ public:
     }
 
     // Potential laplacian
-    virtual double laplacianV(const dVec& x)
+    virtual double laplacianV(const dVec& /* x */)
     {
         return 0.0;
     }

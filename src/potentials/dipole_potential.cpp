@@ -44,7 +44,7 @@ dVec DipolePotential::gradV(const dVec& x) {
     return tempr;
 }
 
-double DipolePotential::laplacianV(const dVec& x) {
+double DipolePotential::laplacianV(const dVec& /* x */) {
     // @todo Complete the Laplacian?
     return 0.0;
 }

@@ -62,7 +62,7 @@ void TransformationMatrixBuilder::buildNormalModesToCartesian(double* nm_to_cart
     }
 
     // Sine modes
-    for (int i = std::ceil(m_half_nbeads + 0.5); i < m_nbeads; ++i) {
+    for (int i = static_cast<int>(std::ceil(m_half_nbeads + 0.5)); i < m_nbeads; ++i) {
         nm_to_cart_mat_row[i] = -prefactor * sin(m_fundamental_frequency * i);
     }
 }

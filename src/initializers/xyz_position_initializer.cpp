@@ -17,11 +17,12 @@ void XyzPositionInitializer::initialize() {
     loadFromFile(std::vformat(m_filename, std::make_format_args(m_first_idx)), *m_coord);
 }
 
-void XyzPositionInitializer::loadFromFile(const std::string& pos_filename, dVec& destination) const {
-    std::ifstream input_file(m_filename);
+void XyzPositionInitializer::loadFromFile(const std::string& xyz_filename, dVec& destination)
+{
+    std::ifstream input_file(xyz_filename);
 
     if (!input_file.is_open())
-        throw std::runtime_error(std::format("Cannot open the xyz file named {}.", m_filename));
+        throw std::runtime_error(std::format("Cannot open the xyz file named {}.", xyz_filename));
 
     int numAtoms;
     input_file >> numAtoms;
@@ -29,7 +30,7 @@ void XyzPositionInitializer::loadFromFile(const std::string& pos_filename, dVec&
     if (destination.len() != numAtoms)
         throw std::runtime_error(
             std::format("The number of atoms in the xyz file ({}) does not match the requested number of atoms.",
-                m_filename)
+                xyz_filename)
         );
 
     // The command "inputFile >> numAtoms" read the number, but the newline character that follows that number was not consumed. 

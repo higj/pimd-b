@@ -130,8 +130,8 @@ void RanMars::get_state(double* state)
 void RanMars::set_state(double* state)
 {
     for (int i = 0; i < 98; ++i) u[i] = state[i];
-    i97 = state[98];
-    j97 = state[99];
+    i97 = static_cast<int>(state[98]);
+    j97 = static_cast<int>(state[99]);
     c = state[100];
     cd = state[101];
     cm = state[102];
