@@ -66,6 +66,10 @@ public:
     // not found or not a valid integer (decimal "1234", "-1234", or hex "0x4d2").
     INI_API long GetLong(const std::string& section, const std::string& name, long default_value) const;
 
+    // Get an unsigned integer (unsigned long) value from INI file, returning default_value if
+    // not found or not a valid unsigned integer (decimal "1234", or hex "0x4d2").
+    INI_API unsigned long GetUnsigned(const std::string& section, const std::string& name, unsigned long default_value) const;
+
     // Get an integer (int) value from INI file, returning default_value if
     // not found or not a valid integer (decimal "1234", "-1234", or hex "0x4d2").
     INI_API int GetInteger(const std::string& section, const std::string& name, int default_value) const;
@@ -86,6 +90,8 @@ public:
 
     // Return true if a value exists with the given section and field names.
     INI_API bool HasValue(const std::string& section, const std::string& name) const;
+
+    INI_API static void LowerString(std::string& str_to_lower);
 
 private:
     int _error;
