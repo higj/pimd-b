@@ -29,8 +29,49 @@ find_package(MPI REQUIRED)
 
 include_directories(${MPI_INCLUDE_PATH})
 
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release)
+endif()
+
 set(CMAKE_C_FLAGS "${CMAKE_FLAGS} ${MPI_FLAGS}")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MPI_CXX_FLAGS}")
+
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    message(STATUS "GCC detected, adding compile flags")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pedantic -Wall -Wextra")
+    set(CMAKE_CXX_FLAGS_DEBUG "-g")
+    set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+    
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    message(STATUS "Clang detected, adding compile flags")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pedantic -Wall -Wextra")
+    set(CMAKE_CXX_FLAGS_DEBUG "-g")
+    set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+    
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+    message(STATUS "Apple Clang detected, adding compile flags")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pedantic -Wall -Wextra")
+    set(CMAKE_CXX_FLAGS_DEBUG "-g")
+    set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+    
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    message(STATUS "MSVC detected, adding compile flags")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
+    set(CMAKE_CXX_FLAGS_DEBUG "/Zi /Od")
+    set(CMAKE_CXX_FLAGS_RELEASE "/O2")
+    
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
+    message(STATUS "Intel compiler detected, adding compile flags")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
+    set(CMAKE_CXX_FLAGS_DEBUG "-g")
+    set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+    
+else()
+    message(WARNING "Unknown compiler: ${CMAKE_CXX_COMPILER_ID}")
+    # Fallback: try generic flags that might work
+    set(CMAKE_CXX_FLAGS_DEBUG "-g")
+    set(CMAKE_CXX_FLAGS_RELEASE "-O2")
+endif()
+
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${MPI_EXE_LINKER_FLAGS}")
 
 target_link_libraries(pimdb ${MPI_C_LIBRARIES})
