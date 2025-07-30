@@ -14,7 +14,7 @@ public:
         const NormalModesContext& nm_ctx,
         const std::shared_ptr<SystemState>& state
     );
-    virtual ~Thermostat() = default;
+    virtual ~Thermostat();
 
     void step();
     virtual void momentaUpdate();

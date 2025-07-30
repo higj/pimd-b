@@ -6,17 +6,19 @@
 #include "core/statistics_manager.h"
 #include "momentum_initializers.h"
 #include "position_initializers.h"
+#include "initializers/thermostat_initializer.h"
 #include "initializers/observable_initializer.h"
 #include "initializers/dump_initializer.h"
 #include "propagators.h"
-#include "thermostats.h"
 #include "observables_logger.h"
 #include "output_paths.h"
 #include "simulation_report.h"
+#include "thermostats/thermostat.h"
 
 #include <filesystem>
 #include <array>
 #include <cassert>
+
 
 Simulation::Simulation(int rank, int nproc, const std::string& config_filename)
 {
@@ -82,11 +84,12 @@ Simulation::Simulation(int rank, int nproc, const std::string& config_filename)
         m_force_mgr
     );
 
-    m_thermostat = initializeThermostat(
+    /// TODO: Note that config is passed here to a function outside of the Simulation class. Is this okay?
+    m_thermostat = ThermostatInitializer(
         config,
-        m_state,
-        m_rng
-    );
+        m_thermal_ctx,
+        m_nm_ctx
+    ).createThermostat(m_state, m_rng);
 
     m_thermostat_ctx = ThermostatContext{
         .thermostat = m_thermostat,
@@ -146,6 +149,8 @@ void Simulation::initializeQuantumStatistics(bool is_bosonic) const
     );
 }
 
+/// TODO: Refactoring this into a separate class is probably an overkill (NM are either used or not,
+///       and there are not too many options here)
 std::shared_ptr<NormalModes> Simulation::initializeNormalModes(
     const std::shared_ptr<SimulationConfig>& config,
     const std::shared_ptr<SystemState>& state)
@@ -195,52 +200,6 @@ std::shared_ptr<Propagator> Simulation::initializePropagator(
             config->dt,
             normal_modes
         );
-    }
-
-    return {nullptr};
-}
-
-std::shared_ptr<Thermostat> Simulation::initializeThermostat(
-    const std::shared_ptr<SimulationConfig>& config,
-    const std::shared_ptr<SystemState>& state,
-    const std::shared_ptr<RandomGenerators>& rng)
-{
-    if (config->thermostat_type == "langevin")
-    {
-        double gamma = std::get<double>(config->thermostat_params["gamma"]);
-
-        return std::make_shared<LangevinThermostat>(
-            m_thermal_ctx,
-            m_nm_ctx,
-            state,
-            rng,
-            gamma,
-            config->dt,
-            config->mass
-        );
-    }
-
-    int nchains = std::get<int>(config->thermostat_params["nchains"]);
-
-    if (config->thermostat_type == "nose_hoover")
-    {
-        return std::make_shared<NoseHooverThermostat>(m_thermal_ctx, m_nm_ctx, state, nchains, config->dt, config->mass);
-    }
-
-    if (config->thermostat_type == "nose_hoover_np")
-    {
-        return std::make_shared<NoseHooverNpThermostat>(m_thermal_ctx, m_nm_ctx, state, nchains, config->dt, config->mass);
-    }
-
-    if (config->thermostat_type == "nose_hoover_np_dim")
-    {
-        return std::make_shared<NoseHooverNpDimThermostat>(m_thermal_ctx, m_nm_ctx, state, nchains, config->dt,
-                                                           config->mass);
-    }
-
-    if (config->thermostat_type == "none")
-    {
-        return std::make_shared<Thermostat>(m_thermal_ctx, m_nm_ctx, state);
     }
 
     return {nullptr};

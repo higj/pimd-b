@@ -27,6 +27,8 @@ Thermostat::Thermostat(
     }
 }
 
+Thermostat::~Thermostat() = default;
+
 // This is the step function of a general thermostat, called in the simulation's run loop
 void Thermostat::step()
 {

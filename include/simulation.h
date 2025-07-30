@@ -151,22 +151,6 @@ private:
     );
 
     /**
-     * Initializes the thermostat based on the input parameters.
-     *
-     * @param thermal_ctx Thermal context object containing information about the thermal properties of the system.
-     * @param nm_ctx Normal modes context object containing information about the normal modes of the system.
-     * @param config Simulation configuration object containing information about the thermostat.
-     * @param state System state object containing information about the current state of the simulation.
-     * @param rng Random number generator object for generating random numbers.
-     * @return A shared pointer to the initialized thermostat object.
-    */
-    std::shared_ptr<Thermostat> initializeThermostat(
-        const std::shared_ptr<SimulationConfig>& config,
-        const std::shared_ptr<SystemState>& state,
-        const std::shared_ptr<RandomGenerators>& rng
-    );
-
-    /**
      * Initializes the observables based on the input parameters.
      *
      * @param config Simulation configuration object.

@@ -22,7 +22,8 @@
 #include "strategies/propagators/bosonic_normal_modes_momenta_strategy.h"
 #include "strategies/propagators/distinguishable_normal_modes_momenta_strategy.h"
 
-StatisticsManager& StatisticsManager::getInstance() {
+StatisticsManager& StatisticsManager::getInstance()
+{
     static StatisticsManager instance;
     return instance;
 }
@@ -34,17 +35,20 @@ void StatisticsManager::initializeBosonic(
     const SpringContext& spring_ctx,
     const BoxContext& box_ctx,
     const std::shared_ptr<SystemState>& state
-) {
+)
+{
     m_is_bosonic = is_bosonic;
     m_bead_ctx = bead_ctx;
 
-    // Check if this bead needs bosonic exchange treatment
-    const bool needs_bosonic_exchange = is_bosonic &&
+    const bool is_bosonic_bead = is_bosonic &&
         (m_bead_ctx.this_bead == 0 || m_bead_ctx.this_bead == m_bead_ctx.nbeads - 1);
 
-    if (needs_bosonic_exchange) {
+    if (is_bosonic_bead)
+    {
         m_bosonic_exchange = createBosonicExchangeObject(thermal_ctx, spring_ctx, box_ctx, state);
-    } else {
+    }
+    else
+    {
         m_bosonic_exchange = nullptr;
     }
 }
@@ -54,15 +58,19 @@ std::shared_ptr<BosonicExchangeBase> StatisticsManager::createBosonicExchangeObj
     const SpringContext& spring_ctx,
     const BoxContext& box_ctx,
     const std::shared_ptr<SystemState>& state
-) {
+)
+{
     std::shared_ptr<dVec> x_first_bead;
     std::shared_ptr<dVec> x_last_bead;
 
-    if (state->currentBead() == 0) {
+    if (state->currentBead() == 0)
+    {
         // At the first imaginary time slice, the last ("P") slice is the previous one
         x_first_bead = std::shared_ptr<dVec>(state, &state->coord);
         x_last_bead = std::shared_ptr<dVec>(state, &state->prev_coord);
-    } else {
+    }
+    else
+    {
         // At the last imaginary time slice ("P"), the first slice is the next one
         x_first_bead = std::shared_ptr<dVec>(state, &state->next_coord);
         x_last_bead = std::shared_ptr<dVec>(state, &state->coord);
@@ -89,44 +97,55 @@ std::shared_ptr<BosonicExchangeBase> StatisticsManager::createBosonicExchangeObj
 #endif
 }
 
-std::unique_ptr<SpringForceStrategy> StatisticsManager::createSpringForceStrategy() {
-    if (m_is_bosonic) {
+std::unique_ptr<SpringForceStrategy> StatisticsManager::createSpringForceStrategy()
+{
+    if (m_is_bosonic)
+    {
         return std::make_unique<BosonicSpringForceStrategy>(m_bosonic_exchange, m_bead_ctx);
     }
 
     return std::make_unique<DistinguishableSpringForceStrategy>();
 }
 
-std::unique_ptr<PrimitiveKineticEnergyStrategy> StatisticsManager::createPrimitiveKineticEnergyStrategy() {
-    if (m_bead_ctx.this_bead == 0 && m_is_bosonic) {
+std::unique_ptr<PrimitiveKineticEnergyStrategy> StatisticsManager::createPrimitiveKineticEnergyStrategy()
+{
+    if (m_bead_ctx.this_bead == 0 && m_is_bosonic)
+    {
         return std::make_unique<BosonicPrimitiveKineticEnergyStrategy>(m_bosonic_exchange);
     }
 
     return std::make_unique<DistinguishablePrimitiveKineticEnergyStrategy>();
 }
 
-std::unique_ptr<ClassicalSpringEnergyStrategy> StatisticsManager::createClassicalSpringEnergyStrategy() {
-    if (m_bead_ctx.this_bead == 0 && m_is_bosonic) {
+std::unique_ptr<ClassicalSpringEnergyStrategy> StatisticsManager::createClassicalSpringEnergyStrategy()
+{
+    if (m_bead_ctx.this_bead == 0 && m_is_bosonic)
+    {
         return std::make_unique<BosonicClassicalSpringEnergyStrategy>(m_bosonic_exchange);
     }
 
     return std::make_unique<DistinguishableClassicalSpringEnergyStrategy>();
 }
 
-std::unique_ptr<BosonicProbabilityStrategy> StatisticsManager::createBosonicProbabilityStrategy() {
-    if (!m_is_bosonic) {
+std::unique_ptr<BosonicProbabilityStrategy> StatisticsManager::createBosonicProbabilityStrategy()
+{
+    if (!m_is_bosonic)
+    {
         throw std::runtime_error("BosonicProbabilityStrategy can only be used in bosonic simulations.");
     }
 
-    if (m_bead_ctx.this_bead == 0) {
+    if (m_bead_ctx.this_bead == 0)
+    {
         return std::make_unique<ExteriorBosonicProbabilityStrategy>(m_bosonic_exchange);
     }
 
     return std::make_unique<InteriorBosonicProbabilityStrategy>();
 }
 
-std::unique_ptr<NormalModesMomentaStrategy> StatisticsManager::createNormalModesMomentaStrategy() {
-    if (m_is_bosonic && (m_bead_ctx.this_bead == 0 || m_bead_ctx.this_bead == m_bead_ctx.nbeads - 1)) {
+std::unique_ptr<NormalModesMomentaStrategy> StatisticsManager::createNormalModesMomentaStrategy()
+{
+    if (m_is_bosonic && (m_bead_ctx.this_bead == 0 || m_bead_ctx.this_bead == m_bead_ctx.nbeads - 1))
+    {
         return std::make_unique<BosonicNormalModesMomentaStrategy>(m_bosonic_exchange);
     }
 
