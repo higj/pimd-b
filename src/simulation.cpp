@@ -30,7 +30,7 @@ Simulation::Simulation(int rank, int nproc, const std::shared_ptr<SimulationConf
       m_rng(std::make_shared<RandomGenerators>(config->seed + rank)),
       m_force_mgr(std::make_shared<ForceManager>(*config))
 {
-    initializeConfigDependentContexts(config);
+    initializeConfigurationDependentContexts(config);
     initializePositions(config);
     initializeMomenta(config);
     initializeQuantumStatistics(config->bosonic);
@@ -102,13 +102,13 @@ Simulation::Simulation(int rank, int nproc, const std::shared_ptr<SimulationConf
 
 Simulation::~Simulation() = default;
 
-void Simulation::initializeConfigDependentContexts(
+void Simulation::initializeConfigurationDependentContexts(
     const std::shared_ptr<SimulationConfig>& config
 )
 {
     m_thermal_ctx = ThermalContext{
-    .beta = config->beta,
-    .thermo_beta = config->thermo_beta
+        .beta = config->beta,
+        .thermo_beta = config->thermo_beta
     };
 
     m_spring_ctx = SpringContext{

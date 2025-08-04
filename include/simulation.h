@@ -43,7 +43,7 @@ private:
      *
      * @param config The simulation configuration object containing parameters like temperature, box size, etc.
      */
-    void initializeConfigDependentContexts(
+    void initializeConfigurationDependentContexts(
         const std::shared_ptr<SimulationConfig>& config
     );
 
