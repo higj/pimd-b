@@ -1,11 +1,11 @@
 #pragma once
 
-#include <memory>
-#include "common.h"
-#include "simulation_config.h"
 #include "system_state.h"
 #include "potentials/potential.h"
 
+#include <memory>
+
+struct SimulationConfig;
 struct BeadContext;
 struct BoxContext;
 struct SpringContext;

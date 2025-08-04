@@ -1,4 +1,5 @@
 #include "simulation.h"
+#include "core/simulation_config.h"
 #include "core/system_state.h"
 #include "core/force_manager.h"
 #include "core/random_generators.h"

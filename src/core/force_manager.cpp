@@ -1,6 +1,5 @@
-#include <utility>
-
 #include "core/force_manager.h"
+#include "core/simulation_config.h"
 #include "core/statistics_manager.h"
 #include "potentials.h"
 #include "strategies/forces/spring_force_strategy.h"
