@@ -4,6 +4,7 @@
 #include "simulation.h"
 #include "app_config.h"
 #include "error_messages.h"
+#include "params.h"
 
 namespace {
     void parseArguments(const int arg_num, char** arg_arr, std::string& conf_filename, bool& info_flag, const int rank) {
@@ -51,7 +52,9 @@ int main(int argc, char** argv) {
         if (!display_info) {
             printMsg(AppConfig::LOGO, rank);
 
-            Simulation sim(rank, size, config_filename);
+            // Parse the simulation parameters from the configuration (input) file and run the simulation
+            const auto config = Params(config_filename, rank).load();
+            Simulation sim(rank, size, config);
             sim.run();
         }
     } catch (const std::invalid_argument& ex) {

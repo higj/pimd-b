@@ -22,7 +22,8 @@ class ObservableInitializer
 {
 public:
     ObservableInitializer(
-        const std::shared_ptr<SimulationConfig>& config,
+        const long stride,
+        const StringMap& obs_list,
         const std::shared_ptr<SystemState>& state,
         const std::shared_ptr<ForceManager>& force_mgr,
         const std::shared_ptr<Thermostat>& thermostat,
@@ -46,7 +47,8 @@ private:
     [[nodiscard]] std::shared_ptr<Observable> createBosonicObservable(const std::string& out_unit) const;
     [[nodiscard]] std::shared_ptr<Observable> createGSFObservable(const std::string& out_unit) const;
 
-    std::shared_ptr<SimulationConfig> m_config;
+    long m_stride;
+    StringMap m_observables_list;
     std::shared_ptr<SystemState> m_state;
     std::shared_ptr<ForceManager> m_force_mgr;
     std::shared_ptr<Thermostat> m_thermostat;

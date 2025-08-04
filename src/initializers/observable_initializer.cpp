@@ -6,7 +6,8 @@
 #include <memory>
 
 ObservableInitializer::ObservableInitializer(
-    const std::shared_ptr<SimulationConfig>& config,
+    const long stride,
+    const StringMap& obs_list,
     const std::shared_ptr<SystemState>& state,
     const std::shared_ptr<ForceManager>& force_mgr,
     const std::shared_ptr<Thermostat>& thermostat,
@@ -16,7 +17,8 @@ ObservableInitializer::ObservableInitializer(
     const BoxContext& box_context,
     const VelocityContext& velocity_context,
     const ThermostatContext& thermostat_context
-) : m_config(config),
+) : m_stride(stride),
+    m_observables_list(std::move(obs_list)),
     m_state(state),
     m_force_mgr(force_mgr),
     m_thermostat(thermostat),
@@ -39,7 +41,7 @@ std::shared_ptr<Observable> ObservableInitializer::createEnergyObservable(const 
         m_thermal_context,
         m_spring_context,
         m_box_context,
-        m_config->sfreq,
+        m_stride,
         out_unit
     );
 }
@@ -54,20 +56,20 @@ std::shared_ptr<Observable> ObservableInitializer::createClassicalObservable(con
         m_bead_context,
         m_spring_context,
         m_box_context,
-        m_config->sfreq,
+        m_stride,
         out_unit
     );
 }
 
 std::shared_ptr<Observable> ObservableInitializer::createBosonicObservable(const std::string& out_unit) const
 {
-    if (!m_config->bosonic)
+    if (!m_state->isBosonic())
     {
         throw std::runtime_error("Bosonic observables require bosonic simulation mode");
     }
 
     return std::make_shared<BosonicObservable>(
-        m_config->sfreq,
+        m_stride,
         out_unit
     );
 }
@@ -80,7 +82,7 @@ std::shared_ptr<Observable> ObservableInitializer::createGSFObservable(const std
         m_bead_context,
         m_thermal_context,
         m_spring_context,
-        m_config->sfreq,
+        m_stride,
         out_unit
     );
 }
@@ -88,9 +90,9 @@ std::shared_ptr<Observable> ObservableInitializer::createGSFObservable(const std
 std::vector<ObservableItem> ObservableInitializer::parseObservablesList() const
 {
     std::vector<ObservableItem> items;
-    items.reserve(m_config->observables_list.size());
+    items.reserve(m_observables_list.size());
 
-    for (const auto& [name, unit] : m_config->observables_list)
+    for (const auto& [name, unit] : m_observables_list)
     {
         //items.emplace_back(ObservableItem{.name = name, .unit = unit});
         items.emplace_back(name, unit);

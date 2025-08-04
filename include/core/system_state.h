@@ -15,8 +15,10 @@ public:
      * @param nproc Number of processes ("size" of MPI_Comm_size)
      * @param natoms Number of atoms in the system
      * @param nbeads Number of beads in the system
+     * @param fixcom Fix the center of mass?
+     * @param bosonic Is the simulation bosonic?
      */
-    SystemState(int rank, int nproc, int natoms, int nbeads, bool fixcom);
+    SystemState(int rank, int nproc, int natoms, int nbeads, bool fixcom, bool bosonic);
     //SystemState(int rank, int nproc, int natoms, int nbeads, double box_size); @param box_size Linear system size (box size)
 
     /**
@@ -59,6 +61,11 @@ public:
     [[nodiscard]] int isCenterOfMassFixed() const { return m_fixcom; }
 
     /**
+     * @brief Check if the simulation is bosonic.
+     */
+    [[nodiscard]] bool isBosonic() const { return m_bosonic; }
+
+    /**
      * Get the total force acting on a particle along a specific axis.
      *
      * @param ptcl_idx Index of the particle.
@@ -96,6 +103,7 @@ private:
     /// Useful to have the following constants duplicated here:
     int m_natoms, m_nbeads; // Number of atoms and beads
     bool m_fixcom; // Fix the center of mass?
+    bool m_bosonic; // Is the simulation bosonic?
     //double m_box_size; // Box size (linear system size)
 
     /**

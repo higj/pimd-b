@@ -1,5 +1,4 @@
 #include "simulation.h"
-#include "params.h"
 #include "core/system_state.h"
 #include "core/force_manager.h"
 #include "core/random_generators.h"
@@ -19,54 +18,24 @@
 #include <array>
 #include <cassert>
 
-
-Simulation::Simulation(int rank, int nproc, const std::string& config_filename)
+// CR: What is meaning of the variable prefix m_?
+// JH: Hungarian notation for member of a class.
+//     Arguably better than prefixing with just an underscore, or using "this->"
+//     to distinguish from local variables.
+Simulation::Simulation(int rank, int nproc, const std::shared_ptr<SimulationConfig>& config)
+    : m_steps(config->steps),
+      m_threshold(config->threshold),
+      m_is_thermalization_phase(true),
+      m_state(std::make_shared<SystemState>(rank, nproc, config->natoms, config->nbeads, config->fixcom, config->bosonic)),
+      m_rng(std::make_shared<RandomGenerators>(config->seed + rank)),
+      m_force_mgr(std::make_shared<ForceManager>(*config))
 {
-    // Parse the simulation parameters from the configuration (input) file
-    const Params params(config_filename, rank);
-    const std::shared_ptr<SimulationConfig> config = params.load();
-
-    m_steps = config->steps;
-    m_threshold = config->threshold;
-
-    // Initialize basic contexts
-    m_thermal_ctx = ThermalContext{
-        .beta = config->beta,
-        .thermo_beta = config->thermo_beta
-    };
-
-    m_spring_ctx = SpringContext{
-        .omega_p = config->omega_p,
-        .spring_constant = config->spring_constant,
-        .beta_half_k = config->beta_half_k
-    };
-
-    m_box_ctx = BoxContext{
-        .box_size = config->box_size,
-        .pbc = config->pbc
-    };
-
-    m_bead_ctx = BeadContext{
-        .nbeads = config->nbeads,
-        .natoms = config->natoms,
-        .this_bead = config->this_bead
-    };
-
-    // CR: What is meaning of the variable prefix m_?
-    // JH: Hungarian notation for member of a class.
-    //     Arguably better than prefixing with just an underscore, or using "this->"
-    //     to distinguish from local variables.
-    m_rng = std::make_shared<RandomGenerators>(config->seed + rank);
-    m_state = std::make_shared<SystemState>(rank, nproc, config->natoms, config->nbeads, config->fixcom);
-
+    initializeConfigDependentContexts(config);
     initializePositions(config);
     initializeMomenta(config);
-
     initializeQuantumStatistics(config->bosonic);
 
     // Initialize other resources
-    m_force_mgr = std::make_shared<ForceManager>(*config);    
-
     m_normal_modes = initializeNormalModes(config, m_state);
 
     m_nm_ctx = NormalModesContext{
@@ -109,7 +78,8 @@ Simulation::Simulation(int rank, int nproc, const std::string& config_filename)
     // CR: no other logic except bridging the gap between config and the simulation.
     // CR: They don't continue to live after initialization
     m_observables = ObservableInitializer(
-        config,
+        config->sfreq,
+        config->observables_list,
         m_state,
         m_force_mgr,
         m_thermostat,
@@ -132,6 +102,33 @@ Simulation::Simulation(int rank, int nproc, const std::string& config_filename)
 
 Simulation::~Simulation() = default;
 
+void Simulation::initializeConfigDependentContexts(
+    const std::shared_ptr<SimulationConfig>& config
+)
+{
+    m_thermal_ctx = ThermalContext{
+    .beta = config->beta,
+    .thermo_beta = config->thermo_beta
+    };
+
+    m_spring_ctx = SpringContext{
+        .omega_p = config->omega_p,
+        .spring_constant = config->spring_constant,
+        .beta_half_k = config->beta_half_k
+    };
+
+    m_box_ctx = BoxContext{
+        .box_size = config->box_size,
+        .pbc = config->pbc
+    };
+
+    m_bead_ctx = BeadContext{
+        .nbeads = config->nbeads,
+        .natoms = config->natoms,
+        .this_bead = config->this_bead
+    };
+}
+
 void Simulation::initializeQuantumStatistics(bool is_bosonic) const
 {
     if (!m_state)
@@ -150,7 +147,8 @@ void Simulation::initializeQuantumStatistics(bool is_bosonic) const
 }
 
 /// TODO: Refactoring this into a separate class is probably an overkill (NM are either used or not,
-///       and there are not too many options here)
+///       and there are not too many options here). Perhaps create a separate namespace with a
+///       single function that will initialize the normal modes?
 std::shared_ptr<NormalModes> Simulation::initializeNormalModes(
     const std::shared_ptr<SimulationConfig>& config,
     const std::shared_ptr<SystemState>& state)
@@ -167,7 +165,8 @@ std::shared_ptr<NormalModes> Simulation::initializeNormalModes(
             config->this_bead
         );
     }
-    return {nullptr};
+
+    return {};
 }
 
 std::shared_ptr<Propagator> Simulation::initializePropagator(
@@ -202,7 +201,7 @@ std::shared_ptr<Propagator> Simulation::initializePropagator(
         );
     }
 
-    return {nullptr};
+    return {};
 }
 
 void Simulation::initializePositions(const std::shared_ptr<SimulationConfig>& config)

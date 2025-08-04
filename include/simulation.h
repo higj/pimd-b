@@ -1,15 +1,8 @@
 #pragma once
 
 #include "common.h"
-#include "contexts/thermal_context.h"
-#include "contexts/bead_context.h"
-#include "contexts/spring_context.h"
-#include "contexts/box_context.h"
-#include "contexts/normal_modes_context.h"
-#include "contexts/thermostat_context.h"
-#include "contexts/velocity_context.h"
+#include "contexts.h"
 
-#include <string>
 #include <memory>
 
 struct SimulationConfig;
@@ -27,7 +20,12 @@ class ObservablesLogger;
 class Simulation
 {
 public:
-    Simulation(int rank, int nproc, const std::string& config_filename);
+    Simulation(
+        int rank, 
+        int nproc, 
+        const std::shared_ptr<SimulationConfig>& config
+    );
+
     ~Simulation();
 
     /**
@@ -38,6 +36,16 @@ private:
     long m_steps;
     long m_threshold;
     bool m_is_thermalization_phase;
+
+    /**
+     * Initializes the basic contexts that depend only on the configuration parameters
+     * and not on the state of the simulation.
+     *
+     * @param config The simulation configuration object containing parameters like temperature, box size, etc.
+     */
+    void initializeConfigDependentContexts(
+        const std::shared_ptr<SimulationConfig>& config
+    );
 
     /**
      * Sets the current simulation step.
