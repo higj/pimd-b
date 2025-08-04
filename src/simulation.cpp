@@ -29,7 +29,7 @@ Simulation::Simulation(int rank, int nproc, const std::shared_ptr<SimulationConf
       m_state(std::make_shared<SystemState>(rank, nproc, config->natoms, config->nbeads, config->fixcom, config->bosonic)),
       m_rng(std::make_shared<RandomGenerators>(config->seed + rank))
 {
-    initializeConfigurationDependentContexts(config),
+    initializeConfigurationDependentContexts(config);
     initializePositions(config);
     initializeMomenta(config);
     initializeQuantumStatistics(config->bosonic);
