@@ -28,9 +28,8 @@ Simulation::Simulation(int rank, int nproc, const std::shared_ptr<SimulationConf
       m_is_thermalization_phase(true),
       m_state(std::make_shared<SystemState>(rank, nproc, config->natoms, config->nbeads, config->fixcom, config->bosonic)),
       m_rng(std::make_shared<RandomGenerators>(config->seed + rank))
-      //,m_force_mgr(std::make_shared<ForceManager>(*config))
 {
-    initializeConfigurationDependentContexts(config);
+    initializeConfigurationDependentContexts(config),
     initializePositions(config);
     initializeMomenta(config);
     initializeQuantumStatistics(config->bosonic);

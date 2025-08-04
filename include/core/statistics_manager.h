@@ -37,6 +37,8 @@ public:
         const std::shared_ptr<SystemState>& state
     );
 
+    void checkInitialized() const;
+
     // Strategy factory methods - now instance methods that use internal state
     std::unique_ptr<SpringForceStrategy> createSpringForceStrategy();
     std::unique_ptr<PrimitiveKineticEnergyStrategy> createPrimitiveKineticEnergyStrategy();
@@ -64,4 +66,5 @@ private:
     std::shared_ptr<BosonicExchangeBase> m_bosonic_exchange;
     BeadContext m_bead_ctx;
     bool m_is_bosonic = false;
+    bool m_initialized = false; // Flag to check if the manager has been initialized
 };

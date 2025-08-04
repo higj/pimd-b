@@ -37,6 +37,11 @@ void StatisticsManager::initializeBosonic(
     const std::shared_ptr<SystemState>& state
 )
 {
+    if (m_initialized)
+    {
+        throw std::runtime_error("StatisticsManager has already been initialized.");
+    }
+
     m_is_bosonic = is_bosonic;
     m_bead_ctx = bead_ctx;
 
@@ -50,6 +55,14 @@ void StatisticsManager::initializeBosonic(
     else
     {
         m_bosonic_exchange = nullptr;
+    }
+
+    m_initialized = true;
+}
+
+void StatisticsManager::checkInitialized() const {
+    if (!m_initialized) {
+        throw std::runtime_error("StatisticsManager not initialized!");
     }
 }
 
@@ -99,6 +112,8 @@ std::shared_ptr<BosonicExchangeBase> StatisticsManager::createBosonicExchangeObj
 
 std::unique_ptr<SpringForceStrategy> StatisticsManager::createSpringForceStrategy()
 {
+    checkInitialized();
+
     if (m_is_bosonic)
     {
         return std::make_unique<BosonicSpringForceStrategy>(m_bosonic_exchange, m_bead_ctx);
@@ -109,6 +124,8 @@ std::unique_ptr<SpringForceStrategy> StatisticsManager::createSpringForceStrateg
 
 std::unique_ptr<PrimitiveKineticEnergyStrategy> StatisticsManager::createPrimitiveKineticEnergyStrategy()
 {
+    checkInitialized();
+
     if (m_bead_ctx.this_bead == 0 && m_is_bosonic)
     {
         return std::make_unique<BosonicPrimitiveKineticEnergyStrategy>(m_bosonic_exchange);
@@ -119,6 +136,8 @@ std::unique_ptr<PrimitiveKineticEnergyStrategy> StatisticsManager::createPrimiti
 
 std::unique_ptr<ClassicalSpringEnergyStrategy> StatisticsManager::createClassicalSpringEnergyStrategy()
 {
+    checkInitialized();
+
     if (m_bead_ctx.this_bead == 0 && m_is_bosonic)
     {
         return std::make_unique<BosonicClassicalSpringEnergyStrategy>(m_bosonic_exchange);
@@ -129,6 +148,8 @@ std::unique_ptr<ClassicalSpringEnergyStrategy> StatisticsManager::createClassica
 
 std::unique_ptr<BosonicProbabilityStrategy> StatisticsManager::createBosonicProbabilityStrategy()
 {
+    checkInitialized();
+
     if (!m_is_bosonic)
     {
         throw std::runtime_error("BosonicProbabilityStrategy can only be used in bosonic simulations.");
@@ -144,6 +165,8 @@ std::unique_ptr<BosonicProbabilityStrategy> StatisticsManager::createBosonicProb
 
 std::unique_ptr<NormalModesMomentaStrategy> StatisticsManager::createNormalModesMomentaStrategy()
 {
+    checkInitialized();
+
     if (m_is_bosonic && (m_bead_ctx.this_bead == 0 || m_bead_ctx.this_bead == m_bead_ctx.nbeads - 1))
     {
         return std::make_unique<BosonicNormalModesMomentaStrategy>(m_bosonic_exchange);
