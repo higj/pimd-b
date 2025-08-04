@@ -27,8 +27,8 @@ Simulation::Simulation(int rank, int nproc, const std::shared_ptr<SimulationConf
       m_threshold(config->threshold),
       m_is_thermalization_phase(true),
       m_state(std::make_shared<SystemState>(rank, nproc, config->natoms, config->nbeads, config->fixcom, config->bosonic)),
-      m_rng(std::make_shared<RandomGenerators>(config->seed + rank)),
-      m_force_mgr(std::make_shared<ForceManager>(*config))
+      m_rng(std::make_shared<RandomGenerators>(config->seed + rank))
+      //,m_force_mgr(std::make_shared<ForceManager>(*config))
 {
     initializeConfigurationDependentContexts(config);
     initializePositions(config);
@@ -36,6 +36,7 @@ Simulation::Simulation(int rank, int nproc, const std::shared_ptr<SimulationConf
     initializeQuantumStatistics(config->bosonic);
 
     // Initialize other resources
+    m_force_mgr = std::make_shared<ForceManager>(*config);
     m_normal_modes = initializeNormalModes(config, m_state);
 
     m_nm_ctx = NormalModesContext{
