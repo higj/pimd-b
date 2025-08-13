@@ -1,8 +1,16 @@
 #include "observables.h"
-#include "simulation.h"
+#include "output_paths.h"
+
+#include <filesystem>
 
 Observable::Observable(int out_freq, const std::string& out_unit) : m_out_freq(out_freq), m_out_unit(out_unit)
 {
+    initializeFolder(Output::FOLDER_NAME);
+}
+
+void Observable::initializeFolder(const std::string& folder_name)
+{
+    std::filesystem::create_directory(folder_name);
 }
 
 void Observable::initializeLabel(const std::string& label)

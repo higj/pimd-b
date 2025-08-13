@@ -71,9 +71,6 @@ Simulation::Simulation(int rank, int nproc, const std::shared_ptr<SimulationConf
         .mass = config->mass
     };
 
-    /// TODO: Should this also be done in dumps and observables init for safety?
-    std::filesystem::create_directory(Output::FOLDER_NAME);
-
     // CR: I'd write this->m_observables for emphasis
     // CR: I think it's OK for these classes to accept config too, because they have
     // CR: no other logic except bridging the gap between config and the simulation.
@@ -83,7 +80,6 @@ Simulation::Simulation(int rank, int nproc, const std::shared_ptr<SimulationConf
         config->observables_list,
         m_state,
         m_force_mgr,
-        m_thermostat,
         m_bead_ctx,
         m_thermal_ctx,
         m_spring_ctx,

@@ -16,6 +16,14 @@ public:
     virtual ~Observable() = default;
 
     /**
+     * @brief Initializes the output folder for the observable.
+     *        By default, all observables are recorded to the same file
+     *        in the output folder. However, it might be useful to leave
+     *        the option to create different folders/files for different observables.
+     */
+    static void initializeFolder(const std::string& folder_name);
+
+    /**
      * Initializes observable with the given label.
      *
      * @param label Labels of the quantity to be calculated

@@ -26,7 +26,6 @@ public:
         const StringMap& obs_list,
         const std::shared_ptr<SystemState>& state,
         const std::shared_ptr<ForceManager>& force_mgr,
-        const std::shared_ptr<Thermostat>& thermostat,
         const BeadContext& bead_context,
         const ThermalContext& thermal_context,
         const SpringContext& spring_context,
@@ -51,7 +50,6 @@ private:
     StringMap m_observables_list;
     std::shared_ptr<SystemState> m_state;
     std::shared_ptr<ForceManager> m_force_mgr;
-    std::shared_ptr<Thermostat> m_thermostat;
 
     BeadContext m_bead_context;
     ThermalContext m_thermal_context;
