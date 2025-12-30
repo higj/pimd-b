@@ -20,6 +20,10 @@ std::shared_ptr<Thermostat> ThermostatInitializer::createThermostat(
     const std::shared_ptr<SystemState>& state,
     const std::shared_ptr<RandomGenerators>& rng
 ) const {
+    if (m_thermostat_type == "none") {
+        return std::make_shared<Thermostat>(m_thermal_ctx, m_nm_ctx, state);
+    }
+
     if (m_thermostat_type == "langevin") {
         double gamma = std::get<double>(m_thermostat_params.at("gamma"));
 
@@ -34,22 +38,21 @@ std::shared_ptr<Thermostat> ThermostatInitializer::createThermostat(
         );
     }
 
-    int nchains = std::get<int>(m_thermostat_params.at("nchains"));
+    // Before creating Nose-Hoover thermostats, check if is_nose_hoover is true (otherwise nchains may be undefined)
+    if (std::get<bool>(m_thermostat_params.at("is_nose_hoover"))) {
+        int nchains = std::get<int>(m_thermostat_params.at("nchains"));
 
-    if (m_thermostat_type == "nose_hoover") {
-        return std::make_shared<NoseHooverThermostat>(m_thermal_ctx, m_nm_ctx, state, nchains, m_dt, m_mass);
-    }
+        if (m_thermostat_type == "nose_hoover") {
+            return std::make_shared<NoseHooverThermostat>(m_thermal_ctx, m_nm_ctx, state, nchains, m_dt, m_mass);
+        }
 
-    if (m_thermostat_type == "nose_hoover_np") {
-        return std::make_shared<NoseHooverNpThermostat>(m_thermal_ctx, m_nm_ctx, state, nchains, m_dt, m_mass);
-    }
+        if (m_thermostat_type == "nose_hoover_np") {
+            return std::make_shared<NoseHooverNpThermostat>(m_thermal_ctx, m_nm_ctx, state, nchains, m_dt, m_mass);
+        }
 
-    if (m_thermostat_type == "nose_hoover_np_dim") {
-        return std::make_shared<NoseHooverNpDimThermostat>(m_thermal_ctx, m_nm_ctx, state, nchains, m_dt, m_mass);
-    }
-
-    if (m_thermostat_type == "none") {
-        return std::make_shared<Thermostat>(m_thermal_ctx, m_nm_ctx, state);
+        if (m_thermostat_type == "nose_hoover_np_dim") {
+            return std::make_shared<NoseHooverNpDimThermostat>(m_thermal_ctx, m_nm_ctx, state, nchains, m_dt, m_mass);
+        }
     }
 
     /// TODO: Raise an exception if the thermostat type is unknown?

@@ -38,6 +38,7 @@ struct SimulationConfig {
 
     // Initialization method name for positions and velocities
     std::string init_pos_type, init_vel_type;
+    std::string init_pos_unit, init_vel_unit;
     std::string init_pos_filename, init_vel_filename;
     int init_pos_index_offset, init_vel_index_offset;
 

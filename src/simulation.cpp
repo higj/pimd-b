@@ -41,6 +41,7 @@ Simulation::Simulation(int rank, int nproc, const std::shared_ptr<SimulationConf
 
     m_nm_ctx = NormalModesContext{
         .normal_modes = m_normal_modes,
+        // TODO: Here we assume that "nmthermostat" exists. Currently it does, but what if thermostat is "none"?
         .couple_to_nm = std::get<bool>(config->thermostat_params["nmthermostat"])
     };
 
@@ -229,6 +230,7 @@ void Simulation::initializePositions(const std::shared_ptr<SimulationConfig>& co
         initializer = std::make_unique<XyzPositionInitializer>(
             config->init_pos_filename,
             config->this_bead + config->init_pos_index_offset,
+            config->init_pos_unit,
             std::shared_ptr<dVec>(m_state, &m_state->coord),
             m_box_ctx
         );
@@ -267,6 +269,7 @@ void Simulation::initializeMomenta(const std::shared_ptr<SimulationConfig>& conf
         initializer = std::make_unique<ManualMomentumInitializer>(
             config->init_vel_filename,
             config->init_vel_index_offset,
+            config->init_vel_unit,
             m_state,
             config->mass
         );

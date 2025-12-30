@@ -5,8 +5,9 @@
 ManualMomentumInitializer::ManualMomentumInitializer(
     const std::string& filename,
     int first_idx,
+    const std::string& init_vel_unit,
     const std::shared_ptr<SystemState>& state,
-    double mass) : MomentumInitializer(state, mass), m_filename(filename), m_first_idx(first_idx)
+    double mass) : MomentumInitializer(state, mass), m_filename(filename), m_first_idx(first_idx), m_init_vel_unit(init_vel_unit)
 {
 }
 
@@ -16,10 +17,10 @@ void ManualMomentumInitializer::initialize()
     //const int arg = m_state->currentBead() + std::get<int>(sim_params.at("init_vel_first_index"));
     const int arg = m_state->currentBead() + m_first_idx;
 
-    loadFromFile(std::vformat(m_filename, std::make_format_args(arg)), m_state->momenta);
+    loadFromFile(std::vformat(m_filename, std::make_format_args(arg)), m_init_vel_unit, m_state->momenta);
 }
 
-void ManualMomentumInitializer::loadFromFile(const std::string& vel_filename, dVec& destination) const
+void ManualMomentumInitializer::loadFromFile(const std::string& vel_filename, const std::string& init_vel_unit, dVec& destination) const
 {
     std::ifstream input_file(vel_filename);
 
@@ -53,11 +54,14 @@ void ManualMomentumInitializer::loadFromFile(const std::string& vel_filename, dV
         for (int j = 0; j < NDIM; ++j) {
             input_file >> destination(i, j);
             // For LAMMPS velocity files
-            destination(i, j) = m_mass * Units::convertToInternal("velocity", "angstrom/ps", destination(i, j));
+            //destination(i, j) = m_mass * Units::convertToInternal("velocity", "angstrom/ps", destination(i, j));
+            destination(i, j) = m_mass * Units::convertToInternal("velocity", init_vel_unit, destination(i, j));
 
             // For i-Pi velocity files
             //destination(i, j) = mass * destination(i, j);
         }
+
+        input_file.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
     }
 
     input_file.close();

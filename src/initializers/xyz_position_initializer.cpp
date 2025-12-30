@@ -4,20 +4,21 @@
 
 XyzPositionInitializer::XyzPositionInitializer(
     const std::string& filename,
-    int first_idx, 
+    int first_idx,
+    const std::string& init_pos_unit,
     const std::shared_ptr<dVec>& coord,
     const BoxContext& box_ctx
 )
-    : PositionInitializer(coord, box_ctx), m_filename(filename), m_first_idx(first_idx) {
+    : PositionInitializer(coord, box_ctx), m_filename(filename), m_first_idx(first_idx), m_init_pos_unit(init_pos_unit) {
 }
 
 void XyzPositionInitializer::initialize() {
     //const int arg = m_state->currentBead() + m_first_idx;
     //loadFromFile(std::vformat(m_filename, std::make_format_args(arg)), m_coord);
-    loadFromFile(std::vformat(m_filename, std::make_format_args(m_first_idx)), *m_coord);
+    loadFromFile(std::vformat(m_filename, std::make_format_args(m_first_idx)), m_init_pos_unit, *m_coord);
 }
 
-void XyzPositionInitializer::loadFromFile(const std::string& xyz_filename, dVec& destination)
+void XyzPositionInitializer::loadFromFile(const std::string& xyz_filename, const std::string& init_pos_unit, dVec& destination)
 {
     std::ifstream input_file(xyz_filename);
 
@@ -57,8 +58,11 @@ void XyzPositionInitializer::loadFromFile(const std::string& xyz_filename, dVec&
         // TODO: Add a check that the number of dimensions in the .xyz file matches NDIM
         for (int j = 0; j < NDIM; ++j) {
             input_file >> destination(i, j);
-            destination(i, j) = Units::convertToInternal("length", "angstrom", destination(i, j));
+            //destination(i, j) = Units::convertToInternal("length", "angstrom", destination(i, j));
+            destination(i, j) = Units::convertToInternal("length", init_pos_unit, destination(i, j));
         }
+
+        input_file.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
     }
 
     input_file.close();

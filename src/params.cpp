@@ -17,6 +17,8 @@ std::shared_ptr<SimulationConfig> Params::load() const {
 
     config->this_bead = m_rank;
 
+    // TODO: Check for unknown headers. Warn the user if any are found.
+
     loadSimulationParams(*config);
     loadSystemParams(*config);
     loadPropagatorParams(*config);
@@ -157,6 +159,7 @@ void Params::loadThermostatParams(SimulationConfig& config) const {
 
     // Determine if this is a Nose-Hoover type thermostat
     const bool is_nose_hoover = config.thermostat_type.find("nose_hoover") != std::string::npos;
+    config.thermostat_params["is_nose_hoover"] = is_nose_hoover;
 
     // Handle nchains parameter (only for Nose-Hoover thermostats)
     if (m_reader.HasValue(Sections::SIMULATION, "nchains") && !is_nose_hoover) {
@@ -179,9 +182,10 @@ void Params::loadThermostatParams(SimulationConfig& config) const {
     }
 
     // Only set nmthermostat if we're using a thermostat
-    if (config.thermostat_type != "none") {
-        config.thermostat_params["nmthermostat"] = nmthermostat;
-    }
+    /// TODO: Fix this later (currently nmthermostat is always set, even for "none" thermostat)
+    //if (config.thermostat_type != "none") {
+    config.thermostat_params["nmthermostat"] = nmthermostat;
+    //}
 
     // Handle gamma parameter (only relevant for Langevin thermostat)
     if (config.thermostat_type == "langevin") {
@@ -243,12 +247,18 @@ void Params::loadCoordInitParams(SimulationConfig& config) const {
                     init_pos_specification)
             );
         }
+
+        // If the initialization method is "xyz" but the user didn't provide a unit,
+        // we throw an error instead of using a default (don't be smarter than the user)
+        if (!m_reader.HasValue(Sections::SIMULATION, "initial_position_unit")) {
+            throw std::invalid_argument("Coordinate initialization method is 'xyz' but the units have not been specified (use 'initial_position_unit')");
+        }
+        // TODO: Check correctness of the unit (perhaps create a universal function for this, and do this in other places as well)
+        config.init_pos_unit = m_reader.Get(Sections::SIMULATION, "initial_position_unit", "angstrom");
+        config.init_pos_filename = init_pos_specification;
     }
 
     config.init_pos_type = init_pos_type;
-
-    if (init_pos_type == "xyz")
-        config.init_pos_filename = init_pos_specification;
 }
 
 /**
@@ -296,6 +306,14 @@ void Params::loadMomentaInitParams(SimulationConfig& config) const {
                     init_vel_specification)
             );
         }
+
+        // If the initialization method is "manual" but the user didn't provide a unit,
+        // we throw an error instead of using a default (don't be smarter than the user)
+        if (!m_reader.HasValue(Sections::SIMULATION, "initial_velocity_unit")) {
+            throw std::invalid_argument("Velocity initialization method is 'manual' but the units have not been specified (use 'initial_velocity_unit')");
+        }
+        // TODO: Check correctness of the unit (perhaps create a universal function for this, and do this in other places as well)
+        config.init_vel_unit = m_reader.Get(Sections::SIMULATION, "initial_velocity_unit", "angstrom/ps");
     }
 
     /// TODO: Local init_vel_type isn't really necessary
