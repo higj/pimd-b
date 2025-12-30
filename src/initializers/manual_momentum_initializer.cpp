@@ -53,14 +53,11 @@ void ManualMomentumInitializer::loadFromFile(const std::string& vel_filename, co
         // TODO: Add a check that the number of dimensions in the .xyz file matches NDIM
         for (int j = 0; j < NDIM; ++j) {
             input_file >> destination(i, j);
-            // For LAMMPS velocity files
-            //destination(i, j) = m_mass * Units::convertToInternal("velocity", "angstrom/ps", destination(i, j));
+            // Note: LAMMPS velocity files use "angstrom/ps", i-PI velocity files use "atomic_units"
             destination(i, j) = m_mass * Units::convertToInternal("velocity", init_vel_unit, destination(i, j));
-
-            // For i-Pi velocity files
-            //destination(i, j) = mass * destination(i, j);
         }
 
+        // Skip the rest of the line (remaining velocities if NDIM < 3)
         input_file.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
     }
 

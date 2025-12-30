@@ -58,10 +58,10 @@ void XyzPositionInitializer::loadFromFile(const std::string& xyz_filename, const
         // TODO: Add a check that the number of dimensions in the .xyz file matches NDIM
         for (int j = 0; j < NDIM; ++j) {
             input_file >> destination(i, j);
-            //destination(i, j) = Units::convertToInternal("length", "angstrom", destination(i, j));
             destination(i, j) = Units::convertToInternal("length", init_pos_unit, destination(i, j));
         }
 
+        // Skip the rest of the line (remaining coordinates if NDIM < 3)
         input_file.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
     }
 
