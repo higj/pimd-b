@@ -105,9 +105,12 @@ void EnergyObservable::calculatePotential()
                     potential += int_pot_val;
                     int_pot += int_pot_val;
 
+                    /// TODO: Separate virial from potential calculation, and use physical_forces instead
+                    ///       of re-calculating the external and interaction forces separately
                     for (int axis = 0; axis < NDIM; ++axis)
                     {
                         virial -= coord(ptcl_one, axis) * force_on_one(0, axis);
+                        virial += coord(ptcl_two, axis) * force_on_one(0, axis);
                     }
                 }
             }

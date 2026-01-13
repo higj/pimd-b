@@ -60,7 +60,7 @@ seed = 12345
 initial_position = random
 propagator = cartesian
 thermostat = langevin
-nmthermostat = true
+nmthermostat = false
 
 [system]
 temperature = 1.0 kelvin
