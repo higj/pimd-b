@@ -21,7 +21,8 @@ public:
         if (unit == "true" || unit == "on") return "atomic_unit";  // Default unit
         if (unit == "none") return "";                             // No unit conversion
         return unit;                                               // Use specified unit
-    };
+    }
+
     [[nodiscard]] virtual ItemType getType() const = 0;
 };
 

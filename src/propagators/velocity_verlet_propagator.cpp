@@ -50,6 +50,9 @@ void VelocityVerletPropagator::coordsStep() const
         }
     }
 
+    // Apply periodic boundary conditions after coordinate update
+    m_box_ctx.applyMinimumImageIfNeeded(m_state->coord);
+
     // Remember to update the neighboring coordinates after every coordinate propagation
     m_state->updateNeighboringCoordinates();
 }

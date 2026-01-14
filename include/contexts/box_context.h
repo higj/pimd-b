@@ -36,18 +36,25 @@ struct BoxContext
 
     void applyMinimumImageIfNeeded(dVec& dx_arr) const
     {
-        for (int i = 0; i < dx_arr.len(); ++i)
+        if (pbc)
         {
-            for (int axis = 0; axis < NDIM; ++axis)
+            for (int i = 0; i < dx_arr.len(); ++i)
             {
-                /// TODO: In principle, one could iterate over the elements of the raw (1D) array,
-                ///       but we prefer to keep the nested loops for future generalization of the code
-                ///       to boxes with different side lengths.
-                applyMinimumImageIfNeeded(dx_arr(i, axis));
-                //dx_arr(i, axis) -= box_size * floor(dx_arr(i, axis) / box_size + 0.5);
+                for (int axis = 0; axis < NDIM; ++axis)
+                {
+                    /// TODO: In principle, one could iterate over the elements of the raw (1D) array,
+                    ///       but we prefer to keep the nested loops for future generalization of the code
+                    ///       to boxes with different side lengths.
+
+                    applyMinimumImage(dx_arr(i, axis));
+
+                    //applyMinimumImageIfNeeded(dx_arr(i, axis));
+                    //dx_arr(i, axis) -= box_size * floor(dx_arr(i, axis) / box_size + 0.5);
+                }
             }
         }
     }
+
     /*
     void applyMinimumImage(double& dx, double L) {
         dx -= L * floor(dx / L + 0.5);
