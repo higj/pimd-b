@@ -3,7 +3,11 @@
 
 #include <filesystem>
 
-Observable::Observable(int out_freq, const std::string& out_unit) : m_out_freq(out_freq), m_out_unit(out_unit)
+Observable::Observable(
+    const std::string& name, 
+    int out_freq, 
+    const std::string& out_unit
+) : m_name(name), m_out_freq(out_freq), m_out_unit(out_unit)
 {
     initializeFolder(Output::FOLDER_NAME);
 }

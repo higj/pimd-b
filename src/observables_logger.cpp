@@ -78,6 +78,13 @@ void ObservablesLogger::writeObservables() {
             // Sum the results from all processes (beads)
             MPI_Allreduce(&local_quantity_value, &quantity_value, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
+            // The simulation should be interrupted if an observable produced an invalid value
+            if (!std::isfinite(quantity_value)) {
+                throw std::overflow_error(
+                    std::format("Invalid value of observable {}", observable->name())
+                );
+            }
+
             if (m_this_bead == 0) {
                 m_file << std::format(" {:^16.8e}", quantity_value);
             }

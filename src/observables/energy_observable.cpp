@@ -13,7 +13,7 @@ EnergyObservable::EnergyObservable(
         const BoxContext& box_ctx,
         int out_freq,
         const std::string& out_unit
-    ) : Observable(out_freq, out_unit),
+    ) : Observable("energy", out_freq, out_unit),
     m_prim_ke_strategy(StatisticsManager::getInstance().createPrimitiveKineticEnergyStrategy()),
     m_coord_this(coord),
     m_coord_prev(prev_coord),

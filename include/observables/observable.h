@@ -10,7 +10,7 @@ public:
     /**
      * @brief Generic observable class constructor
      */
-    explicit Observable(int out_freq, const std::string& out_unit);
+    explicit Observable(const std::string& name, int out_freq, const std::string& out_unit);
 
     virtual void calculate() = 0;
     virtual ~Observable() = default;
@@ -43,9 +43,16 @@ public:
      */
     void resetValues();
 
+    /**
+     * @brief Get the name of the observable.
+     * @return String representing the name of the observable.
+     */
+    [[nodiscard]] std::string name() const { return m_name; }
+
     tsl::ordered_map<std::string, double> quantities;
 
 protected:
+    std::string m_name;      // Observable name
     int m_out_freq;          // Frequency at which the observable is recorded
     std::string m_out_unit;  // Units of the output quantities
 };

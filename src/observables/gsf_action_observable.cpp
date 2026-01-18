@@ -9,7 +9,7 @@ GSFActionObservable::GSFActionObservable(
     const SpringContext& spring_ctx,
     int out_freq,
     const std::string& out_unit
-) : Observable(out_freq, out_unit),
+) : Observable("gsf", out_freq, out_unit),
     m_coord(coord),
     m_force_mgr(force_mgr),
     m_bead_ctx(bead_ctx),

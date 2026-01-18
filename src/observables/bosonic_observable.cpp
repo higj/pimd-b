@@ -12,7 +12,7 @@ namespace Units {
 #include "core/statistics_manager.h"
 #include "strategies/observables/bosonic_probability_strategy.h"
 
-BosonicObservable::BosonicObservable(int out_freq, const std::string& out_unit) : Observable(out_freq, out_unit),
+BosonicObservable::BosonicObservable(int out_freq, const std::string& out_unit) : Observable("bosonic", out_freq, out_unit),
     m_bosonic_prob_strategy(StatisticsManager::getInstance().createBosonicProbabilityStrategy())
 {
     initialize({"prob_dist", "prob_all"});
