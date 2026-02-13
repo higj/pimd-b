@@ -37,6 +37,8 @@ Simulation::Simulation(int rank, int nproc, const std::shared_ptr<SimulationConf
 
     // Initialize other resources
     m_force_mgr = std::make_shared<ForceManager>(*config);
+    initializeForces(m_state, m_force_mgr, m_spring_ctx, m_box_ctx);
+
     m_normal_modes = initializeNormalModes(config, m_state);
 
     m_nm_ctx = NormalModesContext{
@@ -282,6 +284,25 @@ void Simulation::initializeMomenta(const std::shared_ptr<SimulationConfig>& conf
     initializer->initialize();
 }
 
+void Simulation::initializeForces(
+    const std::shared_ptr<SystemState>& state,
+    const std::shared_ptr<ForceManager>& force_mgr,
+    const SpringContext& spring_ctx,
+    const BoxContext& box_ctx
+)
+{
+    /*
+    if (!m_force_mgr)
+    {
+        throw std::runtime_error("Force manager must be initialized before force initialization.");
+    }
+
+    m_force_mgr->updateForces(*m_state, m_spring_ctx, m_box_ctx);
+    */
+
+    force_mgr->updateForces(*state, spring_ctx, box_ctx);
+}
+
 void Simulation::setStep(long step)
 {
     m_is_thermalization_phase = (step < m_threshold);
@@ -361,13 +382,13 @@ void Simulation::finalizeSimulation(double start_time) const {
 
 void Simulation::executeStep(long step) const
 {
-    resetObservables();
-    dumpStepInfo(step);
-    performMolecularDynamicsStep();
-
     if (!m_is_thermalization_phase) {
+        dumpStepInfo(step);
         calculateAndLogObservables(step);
+        resetObservables();
     }
+
+    performMolecularDynamicsStep();
 }
 
 void Simulation::run()

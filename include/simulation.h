@@ -190,6 +190,21 @@ private:
      */
     void initializeMomenta(const std::shared_ptr<SimulationConfig>& config);
 
+    /*
+     * Initializes the forces acting on the particles based on the input parameters.
+     *
+     * @param state System state object containing information about the current state of the simulation.
+     * @param force_mgr Force field manager object containing information about the forces acting on the system.
+     * @param spring_ctx Spring context object containing information about the springs.
+     * @param box_ctx Box context object containing information about the simulation box.
+     */
+    void initializeForces(
+        const std::shared_ptr<SystemState>& state,
+        const std::shared_ptr<ForceManager>& force_mgr, 
+        const SpringContext& spring_ctx, 
+        const BoxContext& box_ctx
+    );
+
     /**
      * Initializes the dumps based on the input parameters.
      *
