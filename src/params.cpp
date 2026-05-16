@@ -101,7 +101,8 @@ void Params::loadPropagatorParams(SimulationConfig& config) const {
     // Implemented time propagators:
     //  "cartesian": regular velocity Verlet algorithm, propagating the plain Cartesian coordinates
     //  "normal_modes": a velocity Verlet algorithm that propagates the normal modes
-    const StringsList allowed_propagators = { "cartesian", "normal_modes" };
+    using namespace std::string_view_literals;
+    constexpr auto allowed_propagators = std::array{ "cartesian"sv, "normal_modes"sv };
     config.propagator_type = m_reader.GetString(Sections::SIMULATION, "propagator", "cartesian");
     // TODO: Slight danger that config.bosonic might not be properly defined at this point
     if (config.bosonic && config.propagator_type == "normal_modes")
@@ -118,12 +119,13 @@ void Params::loadPropagatorParams(SimulationConfig& config) const {
  */
 void Params::loadThermostatParams(SimulationConfig& config) const {
     // Setup allowed thermostats with documentation
-    const StringsList allowed_thermostats = {
-        "langevin",            // A Langevin thermostat coupled to the Cartesian coordinates
-        "nose_hoover",         // A single Nose-Hoover chain coupled to the whole system
-        "nose_hoover_np",      // A unique Nose-Hoover chain coupled to each particle
-        "nose_hoover_np_dim",  // A unique Nose-Hoover chain coupled to each Cartesian coordinate of each particle
-        "none"                 // No thermostat (NVE simulation)
+    using namespace std::string_view_literals;
+    constexpr auto allowed_thermostats = std::array{
+        "langevin"sv,            // A Langevin thermostat coupled to the Cartesian coordinates
+        "nose_hoover"sv,         // A single Nose-Hoover chain coupled to the whole system
+        "nose_hoover_np"sv,      // A unique Nose-Hoover chain coupled to each particle
+        "nose_hoover_np_dim"sv,  // A unique Nose-Hoover chain coupled to each Cartesian coordinate of each particle
+        "none"sv                 // No thermostat (NVE simulation)
     };
 
     // Read and validate thermostat type first (this drives other validations)
@@ -223,7 +225,8 @@ void Params::loadCoordInitParams(SimulationConfig& config) const {
         throw std::invalid_argument("Invalid coordinate initialization method");
     }
 
-    const StringsList allowed_coord_init_methods = { "random", "xyz", "grid" }; /// TODO: Use cell instead of grid?
+    using namespace std::string_view_literals;
+    constexpr auto allowed_coord_init_methods = std::array{ "random"sv, "xyz"sv, "grid"sv }; /// TODO: Use cell instead of grid?
 
     if (!StringUtils::labelInArray(init_pos_type, allowed_coord_init_methods))
         throw std::invalid_argument(std::format("The specified coordinate initialization method ({}) is not supported!",
@@ -281,7 +284,8 @@ void Params::loadMomentaInitParams(SimulationConfig& config) const {
         throw std::invalid_argument("Invalid velocity initialization method");
     }
 
-    const StringsList allowed_vel_init_methods = { "random", "manual" };
+    using namespace std::string_view_literals;
+    constexpr auto allowed_vel_init_methods = std::array{ "random"sv, "manual"sv };
 
     if (!StringUtils::labelInArray(init_vel_type, allowed_vel_init_methods))
         throw std::invalid_argument(std::format("The specified velocity initialization method ({}) is not supported!",
@@ -326,7 +330,8 @@ void Params::loadMomentaInitParams(SimulationConfig& config) const {
  * @param config Config object to load parameters into.
  */
 void Params::loadExternalPotentialParams(SimulationConfig& config) const {
-    const StringsList allowed_ext_potential_names = {"free", "harmonic", "double_well", "cosine"};
+    using namespace std::string_view_literals;
+    constexpr auto allowed_ext_potential_names = std::array{"free"sv, "harmonic"sv, "double_well"sv, "cosine"sv};
 
     config.ext_pot_name = m_reader.GetString(Sections::EXT_POTENTIAL, "name", "free");
     if (!StringUtils::labelInArray(config.ext_pot_name, allowed_ext_potential_names))
@@ -356,7 +361,8 @@ void Params::loadExternalPotentialParams(SimulationConfig& config) const {
  * @param config Config object to load parameters into.
  */
 void Params::loadInteractionPotentialParams(SimulationConfig& config) const {
-    const StringsList allowed_int_potential_names = { "aziz", "free", "harmonic", "dipole" };
+    using namespace std::string_view_literals;
+    constexpr auto allowed_int_potential_names = std::array{ "aziz"sv, "free"sv, "harmonic"sv, "dipole"sv };
 
     config.int_pot_name = m_reader.GetString(Sections::INT_POTENTIAL, "name", "free");
 
