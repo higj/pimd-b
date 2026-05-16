@@ -96,10 +96,10 @@ void EnergyObservable::calculatePotential()
         {
             for (int ptcl_two = ptcl_one + 1; ptcl_two < m_bead_ctx.natoms; ++ptcl_two)
             {
-                dVec diff = coord.getSeparation(ptcl_one, ptcl_two); // Vectorial distance
+                SingleVec diff = coord.getSeparationArray(ptcl_one, ptcl_two);
                 m_box_ctx.applyMinimumImageIfNeeded(diff);
 
-                if (const double distance = diff.norm(); distance < m_force_mgr->cutoff || m_force_mgr->cutoff < 0.0)
+                if (const double distance = norm(diff); distance < m_force_mgr->cutoff || m_force_mgr->cutoff < 0.0)
                 {
                     double int_pot_val = m_force_mgr->int_potential->V(diff);
                     potential += int_pot_val;

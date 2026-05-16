@@ -38,8 +38,7 @@ void ForceManager::updatePhysicalForces(SystemState& state, const BoxContext& bo
         for (int ptcl_two = ptcl_one + 1; ptcl_two < natoms; ++ptcl_two)
         {
             // Get the vector distance between the two particles.
-            // Here "diff" contains just one vector of dimension NDIM.
-            dVec diff = state.coord.getSeparation(ptcl_one, ptcl_two);
+            SingleVec diff = state.coord.getSeparationArray(ptcl_one, ptcl_two);
             /// TODO: MINIM should become a parameter (mic_spring and mic_potential)
             box_ctx.applyMinimumImageIfNeeded(diff);
 
@@ -48,14 +47,14 @@ void ForceManager::updatePhysicalForces(SystemState& state, const BoxContext& bo
             // calculating the force.
             // We use the convention that when cutoff < 0 then the interaction is
             // calculated for all distances.
-            if (const double distance = diff.norm(); distance < cutoff || cutoff < 0.0)
+            if (const double distance = norm(diff); distance < cutoff || cutoff < 0.0)
             {
-                dVec force_on_one = (-1.0) * int_potential->gradV(diff);
+                SingleVec grad_on_one = int_potential->gradV(diff);
 
                 for (int axis = 0; axis < NDIM; ++axis)
                 {
-                    state.physical_forces(ptcl_one, axis) += force_on_one(0, axis);
-                    state.physical_forces(ptcl_two, axis) -= force_on_one(0, axis);
+                    state.physical_forces(ptcl_one, axis) -= grad_on_one[axis];
+                    state.physical_forces(ptcl_two, axis) += grad_on_one[axis];
                 }
             }
         }

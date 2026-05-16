@@ -35,12 +35,18 @@ void GSFActionObservable::calculate()
             for (int ptcl_two = ptcl_one + 1; ptcl_two < m_bead_ctx.natoms; ++ptcl_two)
             {
                 /// TODO: ADD MINIM IMAGE!!
-                dVec diff = coord.getSeparation(ptcl_one, ptcl_two); // Vectorial distance
+                SingleVec diff = coord.getSeparationArray(ptcl_one, ptcl_two);
 
-                if (const double distance = diff.norm(); distance < m_force_mgr->cutoff || m_force_mgr->cutoff < 0.0)
+                if (const double distance = norm(diff); distance < m_force_mgr->cutoff || m_force_mgr->cutoff < 0.0)
                 {
                     total_potential += m_force_mgr->int_potential->V(diff);
-                    gradients = gradients + m_force_mgr->int_potential->gradV(diff);
+                    
+                    SingleVec int_grad = m_force_mgr->int_potential->gradV(diff);
+                    for (int axis = 0; axis < NDIM; ++axis)
+                    {
+                        gradients(ptcl_one, axis) += int_grad[axis];
+                        gradients(ptcl_two, axis) -= int_grad[axis];
+                    }
                 }
             }
         }

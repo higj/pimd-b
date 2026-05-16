@@ -34,6 +34,17 @@ struct BoxContext
         }
     }
 
+    void applyMinimumImageIfNeeded(SingleVec& dx_arr) const
+    {
+        if (pbc)
+        {
+            for (int axis = 0; axis < NDIM; ++axis)
+            {
+                applyMinimumImage(dx_arr[axis]);
+            }
+        }
+    }
+
     void applyMinimumImageIfNeeded(dVec& dx_arr) const
     {
         if (pbc)

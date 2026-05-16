@@ -10,13 +10,13 @@ public:
     ~AzizPotential() override = default;
 
     // Potential
-    double V(const dVec& x) override;
+    double V(const SingleVec& x) override;
 
     // Potential gradient
-    dVec gradV(const dVec& x) override;
+    SingleVec gradV(const SingleVec& x) override;
 
     // Potential laplacian
-    double laplacianV(const dVec& x) override;
+    double laplacianV(const SingleVec& x) override;
 
     [[nodiscard]] bool isFree() const override { return false; }
 

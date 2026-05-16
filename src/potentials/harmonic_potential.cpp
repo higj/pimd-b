@@ -4,24 +4,22 @@ HarmonicPotential::HarmonicPotential(double mass, double omega) : mass(mass), om
     k = mass * omega * omega;
 }
 
-double HarmonicPotential::V(const dVec& x) {
+double HarmonicPotential::V(const SingleVec& x) {
     double potential = 0.0;
-
-    for (int ptcl_idx = 0; ptcl_idx < x.len(); ++ptcl_idx) {
-        for (int axis = 0; axis < NDIM; ++axis) {
-            potential += x(ptcl_idx, axis) * x(ptcl_idx, axis);
-        }
+    for (int axis = 0; axis < NDIM; ++axis) {
+        potential += x[axis] * x[axis];
     }
-
-    potential *= 0.5 * k;
-
-    return potential;
+    return 0.5 * k * potential;
 }
 
-dVec HarmonicPotential::gradV(const dVec& x) {
-    return k * x;
+SingleVec HarmonicPotential::gradV(const SingleVec& x) {
+    SingleVec grad{};
+    for (int axis = 0; axis < NDIM; ++axis) {
+        grad[axis] = k * x[axis];
+    }
+    return grad;
 }
 
-double HarmonicPotential::laplacianV(const dVec& /* x */) {
-    return k;
+double HarmonicPotential::laplacianV(const SingleVec& /* x */) {
+    return k * NDIM;
 }

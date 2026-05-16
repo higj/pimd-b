@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <array>
 #include <format>
 #include <variant>
 #include <cmath>
@@ -225,6 +226,22 @@ public:
     }
 
     /**
+     * Calculate the difference between two vectors in the array (v_i-v_j).
+     * Returns a lightweight std::array to avoid heap allocations in inner loops.
+     *
+     * @param i First vector index.
+     * @param j Second vector index.
+     * @return std::array containing the difference between the two vectors.
+     */
+    std::array<T, dim> getSeparationArray(int i, int j) const {
+        std::array<T, dim> sep{};
+        for (int axis = 0; axis < dim; ++axis) {
+            sep[axis] = (*this)(i, axis) - (*this)(j, axis);
+        }
+        return sep;
+    }
+
+    /**
      * Reset all values in the vector array to zero (or default value of type T).
      */
     void reset() {
@@ -244,6 +261,16 @@ VectorArray<T, dim> operator*(const T& lhs_scalar, VectorArray<T, dim> rhs_vec) 
 
 // Define an array of vectors of doubles of dimension NDIM
 using dVec = VectorArray<double, NDIM>;
+
+// Define a lightweight array for single-particle / pairwise vectors of dimension NDIM
+using SingleVec = std::array<double, NDIM>;
+
+// Helper function to calculate the norm of an SingleVec
+inline double norm(const SingleVec& v) {
+    double sum = 0.0;
+    for (double val : v) sum += val * val;
+    return std::sqrt(sum);
+}
 
 // Define an array of vectors of integers of dimension NDIM
 using iVec = VectorArray<int, NDIM>;
