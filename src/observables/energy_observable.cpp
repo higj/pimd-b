@@ -6,6 +6,7 @@
 EnergyObservable::EnergyObservable(
         const std::shared_ptr<const dVec>& coord,
         const std::shared_ptr<const dVec>& prev_coord,
+        const std::shared_ptr<const dVec>& physical_forces,
         const std::shared_ptr<const ForceManager>& force_mgr,
         const BeadContext& bead_ctx,
         const ThermalContext& thermal_ctx,
@@ -17,6 +18,7 @@ EnergyObservable::EnergyObservable(
     m_prim_ke_strategy(StatisticsManager::getInstance().createPrimitiveKineticEnergyStrategy()),
     m_coord_this(coord),
     m_coord_prev(prev_coord),
+    m_physical_forces(physical_forces),
     m_force_mgr(force_mgr),
     m_bead_ctx(bead_ctx),
     m_thermal_ctx(thermal_ctx),
@@ -69,16 +71,10 @@ void EnergyObservable::calculatePotential()
     double ext_pot = 0.0; // Potential energy due to external field
 
     const auto& coord = *m_coord_this;
+    const auto& physical_forces = *m_physical_forces;
 
-    if (!m_is_ext_free)
+    if (!m_is_ext_free || !m_is_int_free)
     {
-        ext_pot = m_force_mgr->ext_potential->V(coord);
-        potential += ext_pot;
-
-        /// TODO: We already have physical_forces in ForceManager, so we can use it instead of calculating it again?
-        dVec physical_forces(m_bead_ctx.natoms);
-        physical_forces = (-1.0) * m_force_mgr->ext_potential->gradV(coord);
-
         for (int ptcl_idx = 0; ptcl_idx < m_bead_ctx.natoms; ++ptcl_idx)
         {
             for (int axis = 0; axis < NDIM; ++axis)
@@ -86,6 +82,12 @@ void EnergyObservable::calculatePotential()
                 virial -= coord(ptcl_idx, axis) * physical_forces(ptcl_idx, axis);
             }
         }
+    }
+
+    if (!m_is_ext_free)
+    {
+        ext_pot = m_force_mgr->ext_potential->V(coord);
+        potential += ext_pot;
     }
 
     if (m_force_mgr->cutoff != 0.0)
@@ -99,19 +101,9 @@ void EnergyObservable::calculatePotential()
 
                 if (const double distance = diff.norm(); distance < m_force_mgr->cutoff || m_force_mgr->cutoff < 0.0)
                 {
-                    dVec force_on_one = (-1.0) * m_force_mgr->int_potential->gradV(diff);
-
                     double int_pot_val = m_force_mgr->int_potential->V(diff);
                     potential += int_pot_val;
                     int_pot += int_pot_val;
-
-                    /// TODO: Separate virial from potential calculation, and use physical_forces instead
-                    ///       of re-calculating the external and interaction forces separately
-                    for (int axis = 0; axis < NDIM; ++axis)
-                    {
-                        virial -= coord(ptcl_one, axis) * force_on_one(0, axis);
-                        virial += coord(ptcl_two, axis) * force_on_one(0, axis);
-                    }
                 }
             }
         }

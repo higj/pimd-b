@@ -34,6 +34,7 @@ std::shared_ptr<Observable> ObservableInitializer::createEnergyObservable(const 
     return std::make_shared<EnergyObservable>(
         std::shared_ptr<const dVec>(m_state, &m_state->coord),
         std::shared_ptr<const dVec>(m_state, &m_state->prev_coord),
+        std::shared_ptr<const dVec>(m_state, &m_state->physical_forces),
         m_force_mgr,
         m_bead_context,
         m_thermal_context,

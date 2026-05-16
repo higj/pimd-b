@@ -20,6 +20,7 @@ public:
     EnergyObservable(
         const std::shared_ptr<const dVec>& coord,
         const std::shared_ptr<const dVec>& prev_coord,
+        const std::shared_ptr<const dVec>& physical_forces,
         const std::shared_ptr<const ForceManager>& force_mgr,
         const BeadContext& bead_ctx,
         const ThermalContext& thermal_ctx,
@@ -40,6 +41,7 @@ private:
     std::unique_ptr<PrimitiveKineticEnergyStrategy> m_prim_ke_strategy;
     std::shared_ptr<const dVec> m_coord_this;
     std::shared_ptr<const dVec> m_coord_prev;
+    std::shared_ptr<const dVec> m_physical_forces;
     std::shared_ptr<const ForceManager> m_force_mgr;
 
     BeadContext m_bead_ctx;
