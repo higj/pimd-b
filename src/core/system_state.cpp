@@ -68,8 +68,7 @@ void SystemState::updatePreviousCoordinates(dVec& prev) {
         MPI_STATUS_IGNORE
     );
 
-    // Ensure all processes have completed the neighbor communication
-    MPI_Barrier(MPI_COMM_WORLD);
+    // MPI_Sendrecv is blocking and synchronous, so no barrier is needed here.
 }
 
 void SystemState::updateNextCoordinates(dVec& next) {
@@ -90,8 +89,7 @@ void SystemState::updateNextCoordinates(dVec& next) {
         MPI_STATUS_IGNORE
     );
 
-    // Ensure all processes have completed the neighbor communication
-    MPI_Barrier(MPI_COMM_WORLD);
+    // MPI_Sendrecv is blocking and synchronous, so no barrier is needed here.
 }
 
 void SystemState::updateNeighboringCoordinates() {
