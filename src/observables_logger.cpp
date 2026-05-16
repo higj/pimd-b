@@ -53,12 +53,14 @@ ObservablesLogger::~ObservablesLogger()
 // Log observables data to the file
 void ObservablesLogger::log(long step)
 {
-    if (step % m_frequency == 0)
-    {
+    /// TODO: Better do this check in Simulation::calculateAndLogObservables, before calculating observables 
+    ///       (if we won't write them, why bother calculating?)
+    //if (step % m_frequency == 0)
+    //{
         writeTimeStep(step);
         writeObservables();
         if (m_this_bead == 0) m_file << '\n';
-    }
+    //}
 }
 
 void ObservablesLogger::writeTimeStep(long step) {

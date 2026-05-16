@@ -16,6 +16,8 @@ public:
     );
     ~ObservablesLogger();
 
+    bool isLoggingStep(long step) const { return step % m_frequency == 0; }
+
     void log(long step);
 
 private:

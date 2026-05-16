@@ -362,8 +362,11 @@ void Simulation::calculateObservables() const {
 }
 
 void Simulation::calculateAndLogObservables(long step) const {
-    calculateObservables();
-    m_obs_logger->log(step);
+    if (m_obs_logger->isLoggingStep(step)) {
+        calculateObservables();
+        m_obs_logger->log(step);
+        resetObservables();
+    }
 }
 
 void Simulation::finalizeSimulation(double start_time) const {
@@ -385,7 +388,6 @@ void Simulation::executeStep(long step) const
     if (!m_is_thermalization_phase) {
         dumpStepInfo(step);
         calculateAndLogObservables(step);
-        resetObservables();
     }
 
     performMolecularDynamicsStep();
