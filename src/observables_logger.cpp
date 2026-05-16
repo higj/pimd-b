@@ -70,15 +70,25 @@ void ObservablesLogger::writeTimeStep(long step) {
 }
 
 void ObservablesLogger::writeObservables() {
+    std::vector<double> local_values;
     for (const auto& observable : m_observables) {
         // The inner loop is necessary because some observable classes can calculate
         // more than one observable (e.g., "energy" calculates both the kinetic and potential energies).
         for (const double& val : observable->quantities | std::views::values) {
-            double quantity_value = 0.0;
-            double local_quantity_value = val;
+            local_values.push_back(val);
+        }
+    }
 
-            // Sum the results from all processes (beads)
-            MPI_Allreduce(&local_quantity_value, &quantity_value, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    if (local_values.empty()) return;
+
+    std::vector<double> global_values(local_values.size(), 0.0);
+    // Sum the results from all processes (beads)
+    MPI_Allreduce(local_values.data(), global_values.data(), static_cast<int>(local_values.size()), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+    int idx = 0;
+    for (const auto& observable : m_observables) {
+        for (size_t i = 0; i < observable->quantities.size(); ++i) {
+            double quantity_value = global_values[idx++];
 
             // The simulation should be interrupted if an observable produced an invalid value
             if (!std::isfinite(quantity_value)) {
