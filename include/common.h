@@ -54,13 +54,17 @@ public:
 
     /**
      * Retrieve the flattened (absolute) index of the "axis" component of the ith vector.
+     * Uses a Structure of Arrays (SoA) memory layout (e.g., [X0, X1... Y0, Y1...]) 
+     * instead of an Array of Structures (AoS) layout ([X0, Y0, Z0, X1, Y1, Z1...]).
+     * This layout allows the compiler to easily auto-vectorize loops (SIMD) 
+     * when computing pairwise forces over coordinates.
      *
      * @param i Vector index.
      * @param axis Axis index.
      * @return Index of the element in the underlying one-dimensional array.
      */
     [[nodiscard]] int index(int i, int axis) const {
-        return i * dim + axis;
+        return axis * m_rows + i;
     }
 
     /**
