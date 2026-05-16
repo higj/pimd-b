@@ -10,12 +10,12 @@ SystemState::SystemState(int rank, int nproc, int natoms, int nbeads, bool fixco
     m_bosonic(bosonic)
 {
     // Initialize the coordinate, momenta, and force arrays
-    coord = dVec(natoms);
-    prev_coord = dVec(natoms);
-    next_coord = dVec(natoms);
-    momenta = dVec(natoms);
-    spring_forces = dVec(natoms);
-    physical_forces = dVec(natoms);
+    coord = VecArray(natoms);
+    prev_coord = VecArray(natoms);
+    next_coord = VecArray(natoms);
+    momenta = VecArray(natoms);
+    spring_forces = VecArray(natoms);
+    physical_forces = VecArray(natoms);
 }
 
 void SystemState::zeroMomentum() {

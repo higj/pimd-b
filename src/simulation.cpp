@@ -365,7 +365,9 @@ void Simulation::calculateAndLogObservables(long step) const {
     if (m_obs_logger->isLoggingStep(step)) {
         calculateObservables();
         m_obs_logger->log(step);
-        resetObservables();
+        // Resetting the observables is unnecessary since we don't accumulate them across multiple steps.
+        // Should one change this, the resetting method can be placed here.
+        // resetObservables(); 
     }
 }
 
