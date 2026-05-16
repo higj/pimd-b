@@ -25,5 +25,5 @@ private:
      * @param init_vel_unit Unit of the velocities in the file.
      * @param destination Destination vector to store the loaded momenta.
      */
-    void loadFromFile(const std::string& vel_filename, const std::string& init_vel_unit, dVec& destination) const;
+    void loadFromFile(const std::string& vel_filename, const std::string& init_vel_unit, VecArray& destination) const;
 };

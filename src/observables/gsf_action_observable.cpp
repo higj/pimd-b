@@ -2,7 +2,7 @@
 #include "core/force_manager.h"
 
 GSFActionObservable::GSFActionObservable(
-    const std::shared_ptr<const dVec>& coord,
+    const std::shared_ptr<const VecArray>& coord,
     const std::shared_ptr<const ForceManager>& force_mgr,
     const BeadContext& bead_ctx,
     const ThermalContext& thermal_ctx,
@@ -25,7 +25,7 @@ void GSFActionObservable::calculate()
     const auto& coord = *m_coord;
     double total_potential = m_force_mgr->ext_potential->V(coord);
 
-    dVec gradients(m_bead_ctx.natoms);
+    VecArray gradients(m_bead_ctx.natoms);
     gradients = m_force_mgr->ext_potential->gradV(coord);
 
     if (m_force_mgr->cutoff != 0.0)

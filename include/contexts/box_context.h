@@ -45,7 +45,7 @@ struct BoxContext
         }
     }
 
-    void applyMinimumImageIfNeeded(dVec& dx_arr) const
+    void applyMinimumImageIfNeeded(VecArray& dx_arr) const
     {
         if (pbc)
         {
@@ -71,7 +71,7 @@ struct BoxContext
         dx -= L * floor(dx / L + 0.5);
     }
 
-    void applyMinimumImage(dVec& dx_arr, double L)
+    void applyMinimumImage(VecArray& dx_arr, double L)
     {
         for (int i = 0; i < dx_arr.len(); ++i) {
             for (int axis = 0; axis < NDIM; ++axis) {

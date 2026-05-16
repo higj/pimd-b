@@ -5,5 +5,5 @@
 
 namespace RingPolymerUtils
 {
-    double classicalSpringEnergy(const dVec& coord, const dVec& prev_coord, double spring_constant, const BoxContext& box_ctx);
+    double classicalSpringEnergy(const VecArray& coord, const VecArray& prev_coord, double spring_constant, const BoxContext& box_ctx);
 }

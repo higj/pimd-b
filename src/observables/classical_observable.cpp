@@ -4,8 +4,8 @@
 #include "strategies/observables/classical_spring_energy_strategy.h"
 
 ClassicalObservable::ClassicalObservable(
-    const std::shared_ptr<const dVec>& coord,
-    const std::shared_ptr<const dVec>& prev_coord,
+    const std::shared_ptr<const VecArray>& coord,
+    const std::shared_ptr<const VecArray>& prev_coord,
     const VelocityContext& vel_ctx,
     const ThermostatContext& thermostat_ctx,
     const BeadContext& bead_ctx,
@@ -43,7 +43,7 @@ void ClassicalObservable::calculate() {
 void ClassicalObservable::calculateKineticEnergy() {
     double kinetic_energy = 0.0;
 
-    const dVec& momenta = *m_vel_ctx.momenta;
+    const VecArray& momenta = *m_vel_ctx.momenta;
 
     for (int ptcl_idx = 0; ptcl_idx < m_bead_ctx.natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {

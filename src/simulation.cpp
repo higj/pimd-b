@@ -70,7 +70,7 @@ Simulation::Simulation(int rank, int nproc, const std::shared_ptr<SimulationConf
     };
 
     m_velocity_ctx = VelocityContext{
-        .momenta = std::shared_ptr<dVec>(m_state, &m_state->momenta),
+        .momenta = std::shared_ptr<VecArray>(m_state, &m_state->momenta),
         .mass = config->mass
     };
 
@@ -158,8 +158,8 @@ std::shared_ptr<NormalModes> Simulation::initializeNormalModes(
         config->propagator_type == "normal_modes" || couple_to_nm)
     {
         return std::make_shared<NormalModes>(
-            std::shared_ptr<dVec>(state, &state->coord),
-            std::shared_ptr<dVec>(state, &state->momenta),
+            std::shared_ptr<VecArray>(state, &state->coord),
+            std::shared_ptr<VecArray>(state, &state->momenta),
             config->natoms,
             config->nbeads,
             config->this_bead
@@ -216,14 +216,14 @@ void Simulation::initializePositions(const std::shared_ptr<SimulationConfig>& co
     {
         initializer = std::make_unique<RandomPositionInitializer>(
             m_rng,
-            std::shared_ptr<dVec>(m_state, &m_state->coord),
+            std::shared_ptr<VecArray>(m_state, &m_state->coord),
             m_box_ctx
         );
     }
     else if (config->init_pos_type == "grid")
     {
         initializer = std::make_unique<GridPositionInitializer>(
-            std::shared_ptr<dVec>(m_state, &m_state->coord),
+            std::shared_ptr<VecArray>(m_state, &m_state->coord),
             m_box_ctx
         );
     }
@@ -233,7 +233,7 @@ void Simulation::initializePositions(const std::shared_ptr<SimulationConfig>& co
             config->init_pos_filename,
             config->this_bead + config->init_pos_index_offset,
             config->init_pos_unit,
-            std::shared_ptr<dVec>(m_state, &m_state->coord),
+            std::shared_ptr<VecArray>(m_state, &m_state->coord),
             m_box_ctx
         );
     }

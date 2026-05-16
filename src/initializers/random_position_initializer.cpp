@@ -3,7 +3,7 @@
 
 RandomPositionInitializer::RandomPositionInitializer(
     const std::shared_ptr<RandomGenerators>& rng, 
-    const std::shared_ptr<dVec>& coord, 
+    const std::shared_ptr<VecArray>& coord, 
     const BoxContext& box_ctx)
     : PositionInitializer(coord, box_ctx), m_rng(rng) {
 }

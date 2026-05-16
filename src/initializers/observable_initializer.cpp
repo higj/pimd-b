@@ -32,9 +32,9 @@ ObservableInitializer::ObservableInitializer(
 std::shared_ptr<Observable> ObservableInitializer::createEnergyObservable(const std::string& out_unit) const
 {
     return std::make_shared<EnergyObservable>(
-        std::shared_ptr<const dVec>(m_state, &m_state->coord),
-        std::shared_ptr<const dVec>(m_state, &m_state->prev_coord),
-        std::shared_ptr<const dVec>(m_state, &m_state->physical_forces),
+        std::shared_ptr<const VecArray>(m_state, &m_state->coord),
+        std::shared_ptr<const VecArray>(m_state, &m_state->prev_coord),
+        std::shared_ptr<const VecArray>(m_state, &m_state->physical_forces),
         m_force_mgr,
         m_bead_context,
         m_thermal_context,
@@ -48,8 +48,8 @@ std::shared_ptr<Observable> ObservableInitializer::createEnergyObservable(const 
 std::shared_ptr<Observable> ObservableInitializer::createClassicalObservable(const std::string& out_unit) const
 {
     return std::make_shared<ClassicalObservable>(
-        std::shared_ptr<const dVec>(m_state, &m_state->coord),
-        std::shared_ptr<const dVec>(m_state, &m_state->prev_coord),
+        std::shared_ptr<const VecArray>(m_state, &m_state->coord),
+        std::shared_ptr<const VecArray>(m_state, &m_state->prev_coord),
         m_velocity_context,
         m_thermostat_context,
         m_bead_context,
@@ -76,7 +76,7 @@ std::shared_ptr<Observable> ObservableInitializer::createBosonicObservable(const
 std::shared_ptr<Observable> ObservableInitializer::createGSFObservable(const std::string& out_unit) const
 {
     return std::make_shared<GSFActionObservable>(
-        std::shared_ptr<const dVec>(m_state, &m_state->coord),
+        std::shared_ptr<const VecArray>(m_state, &m_state->coord),
         m_force_mgr,
         m_bead_context,
         m_thermal_context,

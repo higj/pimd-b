@@ -15,7 +15,7 @@ public:
      * @brief Constructor for the class handling observables associated with the GSF action.
      */
     GSFActionObservable(
-        const std::shared_ptr<const dVec>& coord,
+        const std::shared_ptr<const VecArray>& coord,
         const std::shared_ptr<const ForceManager>& force_mgr,
         const BeadContext& bead_ctx,
         const ThermalContext& thermal_ctx,
@@ -33,7 +33,7 @@ public:
     void calculate() override;
 
 private:
-    std::shared_ptr<const dVec> m_coord;
+    std::shared_ptr<const VecArray> m_coord;
     std::shared_ptr<const ForceManager> m_force_mgr;
 
     BeadContext m_bead_ctx;

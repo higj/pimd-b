@@ -19,8 +19,8 @@ SystemState::SystemState(int rank, int nproc, int natoms, int nbeads, bool fixco
 }
 
 void SystemState::zeroMomentum() {
-    dVec momentum_cm;           // Resulting center of mass momentum vector
-    dVec momentum_cm_per_bead;  // Contribution of the current time-slice to the center of mass momentum vector
+    VecArray momentum_cm;           // Resulting center of mass momentum vector
+    VecArray momentum_cm_per_bead;  // Contribution of the current time-slice to the center of mass momentum vector
 
     //const int natoms = momenta.len();
 
@@ -50,7 +50,7 @@ void SystemState::zeroMomentum() {
     }
 }
 
-void SystemState::updatePreviousCoordinates(dVec& prev) {
+void SystemState::updatePreviousCoordinates(VecArray& prev) {
     const int coord_size = coord.size();
 
     MPI_Sendrecv(
@@ -71,7 +71,7 @@ void SystemState::updatePreviousCoordinates(dVec& prev) {
     // MPI_Sendrecv is blocking and synchronous, so no barrier is needed here.
 }
 
-void SystemState::updateNextCoordinates(dVec& next) {
+void SystemState::updateNextCoordinates(VecArray& next) {
     const int coord_size = coord.size();
 
     MPI_Sendrecv(

@@ -20,8 +20,8 @@
 class BosonicExchangeBase {
 public:
     explicit BosonicExchangeBase(
-        const std::shared_ptr<const dVec>& coord_first_bead,
-        const std::shared_ptr<const dVec>& coord_last_bead,
+        const std::shared_ptr<const VecArray>& coord_first_bead,
+        const std::shared_ptr<const VecArray>& coord_last_bead,
         const ThermalContext& thermal_ctx,
         const SpringContext& spring_ctx,
         const BoxContext& box_ctx,
@@ -31,7 +31,7 @@ public:
     ///BosonicExchangeBase(const BosonicExchangeBase&) = delete;
     ///BosonicExchangeBase& operator=(const BosonicExchangeBase&) = delete;
 
-    void exteriorSpringForce(dVec& f);
+    void exteriorSpringForce(VecArray& f);
 
     virtual void prepare() = 0;
     virtual double effectivePotential() = 0;
@@ -62,11 +62,11 @@ protected:
     [[nodiscard]] double getExteriorSeparationSquared(int first_idx, int last_idx) const;
 
     // Pure virtual functions (must be implemented by derived classes)
-    virtual void springForceFirstBead(dVec& f) = 0;
-    virtual void springForceLastBead(dVec& f) = 0;
+    virtual void springForceFirstBead(VecArray& f) = 0;
+    virtual void springForceLastBead(VecArray& f) = 0;
 
-    std::shared_ptr<const dVec> m_coord_first_bead;
-    std::shared_ptr<const dVec> m_coord_last_bead;
+    std::shared_ptr<const VecArray> m_coord_first_bead;
+    std::shared_ptr<const VecArray> m_coord_last_bead;
 
     ThermalContext m_thermal_ctx;
     SpringContext m_spring_ctx;

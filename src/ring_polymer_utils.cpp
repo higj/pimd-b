@@ -2,7 +2,7 @@
 
 namespace RingPolymerUtils
 {
-    double classicalSpringEnergy(const dVec& coord, const dVec& prev_coord, double spring_constant, const BoxContext& box_ctx) {
+    double classicalSpringEnergy(const VecArray& coord, const VecArray& prev_coord, double spring_constant, const BoxContext& box_ctx) {
         //assert(!m_context.config->bosonic || (m_context.config->bosonic && m_context.config->this_bead != 0));
 
         double interior_spring_energy = 0.0;

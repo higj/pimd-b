@@ -4,9 +4,9 @@
 #include "strategies/observables/primitive_kinetic_energy_strategy.h"
 
 EnergyObservable::EnergyObservable(
-        const std::shared_ptr<const dVec>& coord,
-        const std::shared_ptr<const dVec>& prev_coord,
-        const std::shared_ptr<const dVec>& physical_forces,
+        const std::shared_ptr<const VecArray>& coord,
+        const std::shared_ptr<const VecArray>& prev_coord,
+        const std::shared_ptr<const VecArray>& physical_forces,
         const std::shared_ptr<const ForceManager>& force_mgr,
         const BeadContext& bead_ctx,
         const ThermalContext& thermal_ctx,

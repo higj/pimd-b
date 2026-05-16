@@ -8,7 +8,7 @@ XyzPositionInitializer::XyzPositionInitializer(
     const std::string& filename,
     int first_idx,
     const std::string& init_pos_unit,
-    const std::shared_ptr<dVec>& coord,
+    const std::shared_ptr<VecArray>& coord,
     const BoxContext& box_ctx
 )
     : PositionInitializer(coord, box_ctx), m_filename(filename), m_first_idx(first_idx), m_init_pos_unit(init_pos_unit) {
@@ -20,7 +20,7 @@ void XyzPositionInitializer::initialize() {
     loadFromFile(std::vformat(m_filename, std::make_format_args(m_first_idx)), m_init_pos_unit, *m_coord);
 }
 
-void XyzPositionInitializer::loadFromFile(const std::string& xyz_filename, const std::string& init_pos_unit, dVec& destination)
+void XyzPositionInitializer::loadFromFile(const std::string& xyz_filename, const std::string& init_pos_unit, VecArray& destination)
 {
     std::ifstream input_file(xyz_filename);
 

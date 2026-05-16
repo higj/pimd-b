@@ -19,8 +19,8 @@ public:
      * @brief Classical observable class constructor.
      */
     ClassicalObservable(
-        const std::shared_ptr<const dVec>& coord,
-        const std::shared_ptr<const dVec>& prev_coord,
+        const std::shared_ptr<const VecArray>& coord,
+        const std::shared_ptr<const VecArray>& prev_coord,
         const VelocityContext& vel_ctx,
         const ThermostatContext& thermostat_ctx,
         const BeadContext& bead_ctx,
@@ -35,8 +35,8 @@ public:
     void calculate() override;
 
 private:
-    std::shared_ptr<const dVec> m_coord;
-    std::shared_ptr<const dVec> m_prev_coord;
+    std::shared_ptr<const VecArray> m_coord;
+    std::shared_ptr<const VecArray> m_prev_coord;
     std::unique_ptr<ClassicalSpringEnergyStrategy> m_spring_energy_strategy;
 
     VelocityContext m_vel_ctx;

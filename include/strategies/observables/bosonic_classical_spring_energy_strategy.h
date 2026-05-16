@@ -13,8 +13,8 @@ public:
     );
 
     double calculateSpringEnergy(
-        const dVec& coord,
-        const dVec& prev_coord,
+        const VecArray& coord,
+        const VecArray& prev_coord,
         const SpringContext& spring_ctx, 
         const BoxContext& box_ctx
     ) override;

@@ -2,8 +2,8 @@
 #include "propagators/normal_modes/normal_modes_transformation_matrix.h"
 
 NormalModes::NormalModes(
-    const std::shared_ptr<const dVec>& coord,
-    const std::shared_ptr<dVec>& momenta,
+    const std::shared_ptr<const VecArray>& coord,
+    const std::shared_ptr<VecArray>& momenta,
     int natoms,
     int nbeads,
     int this_bead

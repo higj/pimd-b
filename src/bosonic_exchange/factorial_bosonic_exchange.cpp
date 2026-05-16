@@ -5,8 +5,8 @@
 #include "bosonic_exchange/factorial_bosonic_exchange.h"
 
 FactorialBosonicExchange::FactorialBosonicExchange(
-    const std::shared_ptr<const dVec>& coord_first_bead,
-    const std::shared_ptr<const dVec>& coord_last_bead,
+    const std::shared_ptr<const VecArray>& coord_first_bead,
+    const std::shared_ptr<const VecArray>& coord_last_bead,
     const ThermalContext& thermal_ctx,
     const SpringContext& spring_ctx,
     const BoxContext& box_ctx,
@@ -90,12 +90,12 @@ double FactorialBosonicExchange::effectivePotential()
     return (-1.0 / m_thermal_ctx.thermo_beta) * log(weights_sum / permutation_counter);
 }
 
-void FactorialBosonicExchange::springForceLastBead(dVec& f)
+void FactorialBosonicExchange::springForceLastBead(VecArray& f)
 {
     /// TODO: Either reset "f" at the beginning of each MD step, or don't "+=" the force later in this function
     f.reset();
 
-    dVec temp_force(m_bead_ctx.natoms);
+    VecArray temp_force(m_bead_ctx.natoms);
     double denom_weight = 0.0;
 
     do
@@ -141,12 +141,12 @@ void FactorialBosonicExchange::springForceLastBead(dVec& f)
     }
 }
 
-void FactorialBosonicExchange::springForceFirstBead(dVec& f)
+void FactorialBosonicExchange::springForceFirstBead(VecArray& f)
 {
     /// TODO: Either reset "f" at the beginning of each MD step, or don't "+=" the force later in this function
     f.reset();
 
-    dVec temp_force(m_bead_ctx.natoms);
+    VecArray temp_force(m_bead_ctx.natoms);
     double denom_weight = 0.0;
 
     do

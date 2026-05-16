@@ -3,8 +3,8 @@
 #include "bosonic_exchange/bosonic_exchange_base.h"
 
 BosonicExchangeBase::BosonicExchangeBase(
-    const std::shared_ptr<const dVec>& coord_first_bead,
-    const std::shared_ptr<const dVec>& coord_last_bead,
+    const std::shared_ptr<const VecArray>& coord_first_bead,
+    const std::shared_ptr<const VecArray>& coord_last_bead,
     const ThermalContext& thermal_ctx,
     const SpringContext& spring_ctx,
     const BoxContext& box_ctx,
@@ -53,7 +53,7 @@ double BosonicExchangeBase::getExteriorSeparationSquared(int first_idx, int last
  *
  * @param[out] f Vector to store the forces.
  */
-void BosonicExchangeBase::exteriorSpringForce(dVec& f)
+void BosonicExchangeBase::exteriorSpringForce(VecArray& f)
 {
     if (m_bead_ctx.this_bead == 0)
     {

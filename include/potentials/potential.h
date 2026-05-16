@@ -10,7 +10,7 @@ public:
     virtual ~Potential() = default;
 
     // Potential
-    virtual double V(const dVec& x)
+    virtual double V(const VecArray& x)
     {
         double total = 0.0;
         for (int i = 0; i < x.len(); ++i) {
@@ -22,9 +22,9 @@ public:
     }
 
     // Potential gradient
-    virtual dVec gradV(const dVec& x)
+    virtual VecArray gradV(const VecArray& x)
     {
-        dVec result(x.len());
+        VecArray result(x.len());
         for (int i = 0; i < x.len(); ++i) {
             SingleVec arr{};
             for (int axis = 0; axis < NDIM; ++axis) arr[axis] = x(i, axis);
@@ -35,7 +35,7 @@ public:
     }
 
     // Potential laplacian
-    virtual double laplacianV(const dVec& x)
+    virtual double laplacianV(const VecArray& x)
     {
         double total = 0.0;
         for (int i = 0; i < x.len(); ++i) {

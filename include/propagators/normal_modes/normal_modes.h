@@ -28,8 +28,8 @@ public:
      * @param this_bead The index of the current MPI bead (process).
      */
     explicit NormalModes(
-        const std::shared_ptr<const dVec>& coord, 
-        const std::shared_ptr<dVec>& momenta,
+        const std::shared_ptr<const VecArray>& coord, 
+        const std::shared_ptr<VecArray>& momenta,
         int natoms,
         int nbeads,
         int this_bead
@@ -146,8 +146,8 @@ private:
      */
     [[nodiscard]] int globIndexBead(int axis, int atom, int bead) const { return globIndexAtom(axis, atom) + bead; };
 
-    std::shared_ptr<const dVec> m_coord;
-    std::shared_ptr<dVec> m_momenta;
+    std::shared_ptr<const VecArray> m_coord;
+    std::shared_ptr<VecArray> m_momenta;
     int m_natoms;
     int m_nbeads;
     int m_this_bead;

@@ -8,8 +8,8 @@ BosonicClassicalSpringEnergyStrategy::BosonicClassicalSpringEnergyStrategy(
 }
 
 double BosonicClassicalSpringEnergyStrategy::calculateSpringEnergy(
-    [[maybe_unused]] const dVec& coord,
-    [[maybe_unused]] const dVec& prev_coord,
+    [[maybe_unused]] const VecArray& coord,
+    [[maybe_unused]] const VecArray& prev_coord,
     [[maybe_unused]] const SpringContext& spring_ctx,
     [[maybe_unused]] const BoxContext& box_ctx
 )

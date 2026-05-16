@@ -6,8 +6,8 @@
 #include "output_paths.h"
 
 BosonicExchange::BosonicExchange(
-    const std::shared_ptr<const dVec>& coord_first_bead,
-    const std::shared_ptr<const dVec>& coord_last_bead,
+    const std::shared_ptr<const VecArray>& coord_first_bead,
+    const std::shared_ptr<const VecArray>& coord_last_bead,
     const ThermalContext& thermal_ctx,
     const SpringContext& spring_ctx,
     const BoxContext& box_ctx,
@@ -230,7 +230,7 @@ void BosonicExchange::evaluateConnectionProbabilities()
     }
 }
 
-void BosonicExchange::springForceLastBead(dVec& f)
+void BosonicExchange::springForceLastBead(VecArray& f)
 {
     for (int l = 0; l < m_bead_ctx.natoms; l++)
     {
@@ -256,7 +256,7 @@ void BosonicExchange::springForceLastBead(dVec& f)
     }
 }
 
-void BosonicExchange::springForceFirstBead(dVec& f)
+void BosonicExchange::springForceFirstBead(VecArray& f)
 {
     for (int l = 0; l < m_bead_ctx.natoms; l++)
     {

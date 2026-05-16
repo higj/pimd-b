@@ -14,7 +14,7 @@ class RandomPositionInitializer final : public PositionInitializer {
 public:
     explicit RandomPositionInitializer(
         const std::shared_ptr<RandomGenerators>& rng,
-        const std::shared_ptr<dVec>& coords, 
+        const std::shared_ptr<VecArray>& coords, 
         const BoxContext& box_ctx
     );
     void initialize() override;

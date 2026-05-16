@@ -4,9 +4,9 @@
 
 class SystemState {
 public:
-    dVec coord, momenta;
-    dVec spring_forces, physical_forces;
-    dVec prev_coord, next_coord;
+    VecArray coord, momenta;
+    VecArray spring_forces, physical_forces;
+    VecArray prev_coord, next_coord;
 
     /**
      * Initializes the system state (coordinates, momenta and forces) with the given parameters.
@@ -82,7 +82,7 @@ public:
      * @param minimum_image Flag determining whether the minimum image convention should be applied.
      * @return
      */
-    //[[nodiscard]] dVec getSeparation(int first_ptcl, int second_ptcl, bool minimum_image) const;
+    //[[nodiscard]] VecArray getSeparation(int first_ptcl, int second_ptcl, bool minimum_image) const;
 
     /**
      * Returns the vectorial distance between two particles at the same imaginary time slice.
@@ -96,7 +96,7 @@ public:
      * @param minimum_image Flag determining whether the minimum image convention should be applied.
      * @return Vectorial distance between the two particles.
      */
-    //[[nodiscard]] dVec getSeparation(const dVec& positions, int first_ptcl, int second_ptcl, bool minimum_image) const;
+    //[[nodiscard]] VecArray getSeparation(const VecArray& positions, int first_ptcl, int second_ptcl, bool minimum_image) const;
 private:         
     int m_rank; // Current process id ("rank" of MPI_Comm_rank), also referred to as "this_bead"
     int m_nproc; // Number of processes ("size" of MPI_Comm_size)
@@ -112,7 +112,7 @@ private:
      *
      * @param prev Vector to store the previous coordinates.
      */
-    void updatePreviousCoordinates(dVec& prev);
+    void updatePreviousCoordinates(VecArray& prev);
 
     /**
      * Receives coordinates from the next time-slice,
@@ -120,5 +120,5 @@ private:
      *
      * @param next Vector to store the next coordinates.
      */
-    void updateNextCoordinates(dVec& next);
+    void updateNextCoordinates(VecArray& next);
 };

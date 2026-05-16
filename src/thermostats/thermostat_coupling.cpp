@@ -1,11 +1,11 @@
 #include "thermostats/thermostat_coupling.h"
 #include "propagators/normal_modes/normal_modes.h"
 
-Coupling::Coupling(const std::shared_ptr<dVec>& momenta) : m_momenta(momenta) {}
+Coupling::Coupling(const std::shared_ptr<VecArray>& momenta) : m_momenta(momenta) {}
 
 /* -------------------------------- */
 
-CartesianCoupling::CartesianCoupling(const std::shared_ptr<dVec>& momenta) : Coupling(momenta) {}
+CartesianCoupling::CartesianCoupling(const std::shared_ptr<VecArray>& momenta) : Coupling(momenta) {}
 
 void CartesianCoupling::mpiCommunication() {}
 
@@ -21,7 +21,7 @@ void CartesianCoupling::updateCoupledMomenta() {}
 
 /* -------------------------------- */
 
-NormalModesCoupling::NormalModesCoupling(const std::shared_ptr<dVec>& momenta, const std::shared_ptr<NormalModes>& normal_modes, int this_bead)
+NormalModesCoupling::NormalModesCoupling(const std::shared_ptr<VecArray>& momenta, const std::shared_ptr<NormalModes>& normal_modes, int this_bead)
 : Coupling(momenta), m_normal_modes(normal_modes), m_this_bead(this_bead) {}
 
 void NormalModesCoupling::mpiCommunication() {

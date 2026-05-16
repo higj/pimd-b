@@ -17,7 +17,7 @@ DumpInitializer::DumpInitializer(
 
 std::shared_ptr<Dump> DumpInitializer::createPositionsDump(const std::string& out_unit) const {
     return std::make_shared<PositionDump>(
-        std::shared_ptr<dVec>(m_state, &m_state->coord),
+        std::shared_ptr<VecArray>(m_state, &m_state->coord),
         m_config->this_bead,
         m_config->sfreq, /// TODO: Generalize the save frequency option to dumps, observables, etc.
         out_unit

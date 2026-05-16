@@ -4,7 +4,7 @@
 #include <stdexcept>
 
 GridPositionInitializer::GridPositionInitializer(
-    const std::shared_ptr<dVec>& coord, 
+    const std::shared_ptr<VecArray>& coord, 
     const BoxContext& box_ctx)
     : PositionInitializer(coord, box_ctx) {
 }
@@ -21,7 +21,7 @@ void GridPositionInitializer::initialize() {
     // Determine the number and the size of initial grid boxes in each dimension
     int tot_num_grid_boxes = 1;
     iVec num_nn_grid;
-    dVec size_nn_grid;
+    VecArray size_nn_grid;
 
     for (int i = 0; i < NDIM; i++) {
         num_nn_grid(0, i) = static_cast<int>(std::ceil((m_box_ctx.box_size / init_side) - EPS));
@@ -41,7 +41,7 @@ void GridPositionInitializer::initialize() {
         throw std::runtime_error("Number of grid boxes is less than the number of particles");
     }
 
-    dVec pos;
+    VecArray pos;
     for (int n = 0; n < tot_num_grid_boxes; n++) {
         iVec grid_index;
 

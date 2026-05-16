@@ -7,8 +7,8 @@
 class FactorialBosonicExchange final : public BosonicExchangeBase {
 public:
     explicit FactorialBosonicExchange(
-        const std::shared_ptr<const dVec>& coord_first_bead,
-        const std::shared_ptr<const dVec>& coord_last_bead,
+        const std::shared_ptr<const VecArray>& coord_first_bead,
+        const std::shared_ptr<const VecArray>& coord_last_bead,
         const ThermalContext& thermal_ctx,
         const SpringContext& spring_ctx,
         const BoxContext& box_ctx,
@@ -61,14 +61,14 @@ protected:
      *
      * @param[out] f Spring forces acting on the particles at time-slice P.
      */
-    void springForceLastBead(dVec& f) override;
+    void springForceLastBead(VecArray& f) override;
 
     /**
      * Evaluates the bosonic spring forces acting on the particles at the first imaginary time slice.
      *
      * @param[out] f Spring forces acting on the particles at time-slice 1.
      */
-    void springForceFirstBead(dVec& f) override;
+    void springForceFirstBead(VecArray& f) override;
 
 private:
     /**

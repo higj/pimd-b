@@ -20,8 +20,8 @@ public:
      * @param context The context containing system parameters and coordinates.
      */
     explicit BosonicExchange(
-        const std::shared_ptr<const dVec>& coord_first_bead,
-        const std::shared_ptr<const dVec>& coord_last_bead,
+        const std::shared_ptr<const VecArray>& coord_first_bead,
+        const std::shared_ptr<const VecArray>& coord_last_bead,
         const ThermalContext& thermal_ctx,
         const SpringContext& spring_ctx,
         const BoxContext& box_ctx,
@@ -92,13 +92,13 @@ protected:
      * @brief Compute the spring force on the first bead.
      * @param f Output force vector.
      */
-    void springForceFirstBead(dVec& f) override;
+    void springForceFirstBead(VecArray& f) override;
 
     /**
      * @brief Compute the spring force on the last bead.
      * @param f Output force vector.
      */
-    void springForceLastBead(dVec& f) override;
+    void springForceLastBead(VecArray& f) override;
 
 private:
     /**

@@ -21,7 +21,7 @@ void ManualMomentumInitializer::initialize()
     loadFromFile(std::vformat(m_filename, std::make_format_args(arg)), m_init_vel_unit, m_state->momenta);
 }
 
-void ManualMomentumInitializer::loadFromFile(const std::string& vel_filename, const std::string& init_vel_unit, dVec& destination) const
+void ManualMomentumInitializer::loadFromFile(const std::string& vel_filename, const std::string& init_vel_unit, VecArray& destination) const
 {
     std::ifstream input_file(vel_filename);
 

@@ -6,7 +6,7 @@
 
 class XyzPositionInitializer final : public PositionInitializer {
 public:
-    XyzPositionInitializer(const std::string& filename, int first_idx, const std::string& init_pos_unit, const std::shared_ptr<dVec>& coord, const BoxContext& box_ctx);
+    XyzPositionInitializer(const std::string& filename, int first_idx, const std::string& init_pos_unit, const std::shared_ptr<VecArray>& coord, const BoxContext& box_ctx);
 
     /**
      * Initializes positions from user-provided files.
@@ -25,5 +25,5 @@ private:
      * @param init_pos_unit Unit of the positions in the file.
      * @param destination Destination vector to store the loaded momenta.
      */
-    static void loadFromFile(const std::string& xyz_filename, const std::string& init_pos_unit, dVec& destination);
+    static void loadFromFile(const std::string& xyz_filename, const std::string& init_pos_unit, VecArray& destination);
 };

@@ -260,7 +260,7 @@ VectorArray<T, dim> operator*(const T& lhs_scalar, VectorArray<T, dim> rhs_vec) 
 }
 
 // Define an array of vectors of doubles of dimension NDIM
-using dVec = VectorArray<double, NDIM>;
+using VecArray = VectorArray<double, NDIM>;
 
 // Define a lightweight array for single-particle / pairwise vectors of dimension NDIM
 using SingleVec = std::array<double, NDIM>;

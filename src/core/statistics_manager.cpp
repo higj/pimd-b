@@ -73,20 +73,20 @@ std::shared_ptr<BosonicExchangeBase> StatisticsManager::createBosonicExchangeObj
     const std::shared_ptr<SystemState>& state
 )
 {
-    std::shared_ptr<dVec> x_first_bead;
-    std::shared_ptr<dVec> x_last_bead;
+    std::shared_ptr<VecArray> x_first_bead;
+    std::shared_ptr<VecArray> x_last_bead;
 
     if (state->currentBead() == 0)
     {
         // At the first imaginary time slice, the last ("P") slice is the previous one
-        x_first_bead = std::shared_ptr<dVec>(state, &state->coord);
-        x_last_bead = std::shared_ptr<dVec>(state, &state->prev_coord);
+        x_first_bead = std::shared_ptr<VecArray>(state, &state->coord);
+        x_last_bead = std::shared_ptr<VecArray>(state, &state->prev_coord);
     }
     else
     {
         // At the last imaginary time slice ("P"), the first slice is the next one
-        x_first_bead = std::shared_ptr<dVec>(state, &state->next_coord);
-        x_last_bead = std::shared_ptr<dVec>(state, &state->coord);
+        x_first_bead = std::shared_ptr<VecArray>(state, &state->next_coord);
+        x_last_bead = std::shared_ptr<VecArray>(state, &state->coord);
     }
 
 #if FACTORIAL_BOSONIC_ALGORITHM
