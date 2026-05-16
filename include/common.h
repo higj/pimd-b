@@ -48,10 +48,10 @@ constexpr auto EPS = 1.0E-7;
  * @tparam dim Dimension of the vectors.
  */
 template <typename T, int dim>
-class VectorArray {
+class VectorCollection {
 public:
-    VectorArray() : m_rows(1), m_arr(m_rows * dim, T()) {}
-    explicit VectorArray(const int rows) : m_rows(rows), m_arr(rows * dim, T()) {}
+    VectorCollection() : m_rows(1), m_arr(m_rows * dim, T()) {}
+    explicit VectorCollection(const int rows) : m_rows(rows), m_arr(rows * dim, T()) {}
 
     /**
      * Retrieve the flattened (absolute) index of the "axis" component of the ith vector.
@@ -167,8 +167,8 @@ public:
      * @param other Vector array to be added.
      * @return New vector resulting from the addition.
      */
-    VectorArray<T, dim> operator+(const VectorArray<T, dim>& other) const {
-        VectorArray<T, dim> result(*this);  // Create a copy of the current VectorArray
+    VectorCollection<T, dim> operator+(const VectorCollection<T, dim>& other) const {
+        VectorCollection<T, dim> result(*this);  // Create a copy of the current VectorCollection
 
         // Perform element-wise addition
         for (int i = 0; i < size(); ++i) {
@@ -184,8 +184,8 @@ public:
      * @param rhs_scalar Scalar value to multiply the vector by.
      * @return Copy of the vector multiplied by the scalar.
      */
-    VectorArray<T, dim> operator*(const T& rhs_scalar) const {
-        VectorArray<T, dim> result(*this);  // Create a copy of the current VectorArray
+    VectorCollection<T, dim> operator*(const T& rhs_scalar) const {
+        VectorCollection<T, dim> result(*this);  // Create a copy of the current VectorCollection
 
         // Perform scalar multiplication for each element
         for (int i = 0; i < size(); ++i) {
@@ -201,7 +201,7 @@ public:
      * @param scalar Scalar value to multiply the vector by.
      * @return Reference to the modified vector.
      */
-    VectorArray& operator*=(const T& scalar) {
+    VectorCollection& operator*=(const T& scalar) {
         for (int i = 0; i < size(); ++i) {
             m_arr[i] *= scalar;
         }
@@ -213,10 +213,10 @@ public:
      *
      * @param i First vector index.
      * @param j Second vector index.
-     * @return VectorArray containing the difference between the two vectors.
+     * @return VectorCollection containing the difference between the two vectors.
      */
-    VectorArray<T, dim> getSeparation(int i, int j) const {
-        VectorArray<T, dim> sep;
+    VectorCollection<T, dim> getSeparation(int i, int j) const {
+        VectorCollection<T, dim> sep;
 
         for (int axis = 0; axis < dim; ++axis) {
             sep(0, axis) = (*this)(i, axis) - (*this)(j, axis);
@@ -255,12 +255,12 @@ private:
 
 // Use a non-member operator overload for the right-hand side case
 template <typename T, int dim>
-VectorArray<T, dim> operator*(const T& lhs_scalar, VectorArray<T, dim> rhs_vec) {
+VectorCollection<T, dim> operator*(const T& lhs_scalar, VectorCollection<T, dim> rhs_vec) {
     return rhs_vec * lhs_scalar;
 }
 
 // Define an array of vectors of doubles of dimension NDIM
-using VecArray = VectorArray<double, NDIM>;
+using VecArray = VectorCollection<double, NDIM>;
 
 // Define a lightweight array for single-particle / pairwise vectors of dimension NDIM
 using Vec = std::array<double, NDIM>;
@@ -273,7 +273,7 @@ inline double norm(const Vec& v) {
 }
 
 // Define an array of vectors of integers of dimension NDIM
-using IntVecArray = VectorArray<int, NDIM>;
+using IntVecArray = VectorCollection<int, NDIM>;
 
 // Define a map of variant types
 using VariantMap = std::unordered_map<std::string, std::variant<int, unsigned int, long, double, bool, std::string>>;
