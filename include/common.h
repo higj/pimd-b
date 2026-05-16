@@ -263,10 +263,10 @@ VectorArray<T, dim> operator*(const T& lhs_scalar, VectorArray<T, dim> rhs_vec) 
 using VecArray = VectorArray<double, NDIM>;
 
 // Define a lightweight array for single-particle / pairwise vectors of dimension NDIM
-using SingleVec = std::array<double, NDIM>;
+using Vec = std::array<double, NDIM>;
 
-// Helper function to calculate the norm of an SingleVec
-inline double norm(const SingleVec& v) {
+// Helper function to calculate the norm of an Vec
+inline double norm(const Vec& v) {
     double sum = 0.0;
     for (double val : v) sum += val * val;
     return std::sqrt(sum);

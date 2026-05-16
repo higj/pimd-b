@@ -15,7 +15,7 @@ AzizPotential::AzizPotential() {
     /// @todo Compute the tail correction here
 }
 
-double AzizPotential::V(const SingleVec& x) {
+double AzizPotential::V(const Vec& x) {
     // Scale the distance relative to the Aziz equilibrium distance
     const double r_scaled = norm(x) / rm;
     const double Urep = A * exp(-alpha * r_scaled);
@@ -34,8 +34,8 @@ double AzizPotential::V(const SingleVec& x) {
     }
 }
 
-SingleVec AzizPotential::gradV(const SingleVec& x) {
-    SingleVec grad{};
+Vec AzizPotential::gradV(const Vec& x) {
+    Vec grad{};
     const double n = norm(x);
     const double r_scaled = n / rm;
     const double T1 = -A * alpha * exp(-alpha * r_scaled);
@@ -69,7 +69,7 @@ SingleVec AzizPotential::gradV(const SingleVec& x) {
     return grad;
 }
 
-double AzizPotential::laplacianV(const SingleVec& x) {
+double AzizPotential::laplacianV(const Vec& x) {
     const double n = norm(x);
     const double r_scaled = n / rm;
 

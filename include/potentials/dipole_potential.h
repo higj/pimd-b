@@ -10,13 +10,13 @@ public:
     ~DipolePotential() override = default;
 
     // Potential
-    double V(const SingleVec& x) override;
+    double V(const Vec& x) override;
 
     // Potential gradient
-    SingleVec gradV(const SingleVec& x) override;
+    Vec gradV(const Vec& x) override;
 
     // Potential laplacian
-    double laplacianV(const SingleVec& x) override;
+    double laplacianV(const Vec& x) override;
 
     [[nodiscard]] bool isFree() const override { return false; }
 

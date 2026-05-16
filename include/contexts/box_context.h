@@ -34,7 +34,7 @@ struct BoxContext
         }
     }
 
-    void applyMinimumImageIfNeeded(SingleVec& dx_arr) const
+    void applyMinimumImageIfNeeded(Vec& dx_arr) const
     {
         if (pbc)
         {

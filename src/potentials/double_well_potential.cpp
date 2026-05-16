@@ -3,7 +3,7 @@
 DoubleWellPotential::DoubleWellPotential(double mass, double strength, double loc)
     : mass(mass), strength(strength), loc(loc) {}
 
-double DoubleWellPotential::V(const SingleVec& x) {
+double DoubleWellPotential::V(const Vec& x) {
     double potential = 0.0;
     const double loc2 = loc * loc;
 
@@ -14,8 +14,8 @@ double DoubleWellPotential::V(const SingleVec& x) {
     return potential * mass * strength;
 }
 
-SingleVec DoubleWellPotential::gradV(const SingleVec& x) {
-    SingleVec grad{};
+Vec DoubleWellPotential::gradV(const Vec& x) {
+    Vec grad{};
     const double loc2 = loc * loc;
 
     double prefactor = 0.0;
@@ -31,7 +31,7 @@ SingleVec DoubleWellPotential::gradV(const SingleVec& x) {
     return grad;
 }
 
-double DoubleWellPotential::laplacianV(const SingleVec& /* x */) {
+double DoubleWellPotential::laplacianV(const Vec& /* x */) {
     // @todo Complete the Laplacian?
     return 0.0;
 }

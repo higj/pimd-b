@@ -2,13 +2,13 @@
 
 DipolePotential::DipolePotential(double strength) : strength(strength) {}
 
-double DipolePotential::V(const SingleVec& x) {
+double DipolePotential::V(const Vec& x) {
     const double n = norm(x);
     return strength / (n * n * n);
 }
 
-SingleVec DipolePotential::gradV(const SingleVec& x) {
-    SingleVec grad{};
+Vec DipolePotential::gradV(const Vec& x) {
+    Vec grad{};
     const double n = norm(x);
     const double prefactor = -3.0 * strength / (n * n * n * n * n);
 
@@ -18,7 +18,7 @@ SingleVec DipolePotential::gradV(const SingleVec& x) {
     return grad;
 }
 
-double DipolePotential::laplacianV(const SingleVec& /* x */) {
+double DipolePotential::laplacianV(const Vec& /* x */) {
     // @todo Complete the Laplacian?
     return 0.0;
 }

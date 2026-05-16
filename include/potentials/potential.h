@@ -14,7 +14,7 @@ public:
     {
         double total = 0.0;
         for (int i = 0; i < x.len(); ++i) {
-            SingleVec arr{};
+            Vec arr{};
             for (int axis = 0; axis < NDIM; ++axis) arr[axis] = x(i, axis);
             total += V(arr);
         }
@@ -26,7 +26,7 @@ public:
     {
         VecArray result(x.len());
         for (int i = 0; i < x.len(); ++i) {
-            SingleVec arr{};
+            Vec arr{};
             for (int axis = 0; axis < NDIM; ++axis) arr[axis] = x(i, axis);
             auto grad = gradV(arr);
             for (int axis = 0; axis < NDIM; ++axis) result(i, axis) = grad[axis];
@@ -39,7 +39,7 @@ public:
     {
         double total = 0.0;
         for (int i = 0; i < x.len(); ++i) {
-            SingleVec arr{};
+            Vec arr{};
             for (int axis = 0; axis < NDIM; ++axis) arr[axis] = x(i, axis);
             total += laplacianV(arr);
         }
@@ -47,9 +47,9 @@ public:
     }
 
     // Single-particle overloads (avoid heap allocations)
-    virtual double V(const SingleVec& /* x */) { return 0.0; }
-    virtual SingleVec gradV(const SingleVec& /* x */) { return {}; }
-    virtual double laplacianV(const SingleVec& /* x */) { return 0.0; }
+    virtual double V(const Vec& /* x */) { return 0.0; }
+    virtual Vec gradV(const Vec& /* x */) { return {}; }
+    virtual double laplacianV(const Vec& /* x */) { return 0.0; }
 
     [[nodiscard]] virtual bool isFree() const { return true; }
 
