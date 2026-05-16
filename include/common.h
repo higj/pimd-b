@@ -273,7 +273,7 @@ inline double norm(const Vec& v) {
 }
 
 // Define an array of vectors of integers of dimension NDIM
-using iVec = VectorArray<int, NDIM>;
+using IntVecArray = VectorArray<int, NDIM>;
 
 // Define a map of variant types
 using VariantMap = std::unordered_map<std::string, std::variant<int, unsigned int, long, double, bool, std::string>>;

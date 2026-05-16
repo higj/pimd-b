@@ -20,7 +20,7 @@ void GridPositionInitializer::initialize() {
 
     // Determine the number and the size of initial grid boxes in each dimension
     int tot_num_grid_boxes = 1;
-    iVec num_nn_grid;
+    IntVecArray num_nn_grid;
     VecArray size_nn_grid;
 
     for (int i = 0; i < NDIM; i++) {
@@ -43,7 +43,7 @@ void GridPositionInitializer::initialize() {
 
     VecArray pos;
     for (int n = 0; n < tot_num_grid_boxes; n++) {
-        iVec grid_index;
+        IntVecArray grid_index;
 
         for (int i = 0; i < NDIM; i++) {
             int scale = 1;
