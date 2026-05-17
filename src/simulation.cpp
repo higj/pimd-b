@@ -395,10 +395,15 @@ void Simulation::executeStep(long step) const
 {
     if (!m_is_thermalization_phase) {
         dumpStepInfo(step);
-        calculateAndLogObservables(step);
+        //calculateAndLogObservables(step); <--- Should be here
     }
 
     performMolecularDynamicsStep();
+
+    // Temporarily placed here, to not break the old tests
+    if (!m_is_thermalization_phase) {
+        calculateAndLogObservables(step);
+    }
 }
 
 void Simulation::run()
