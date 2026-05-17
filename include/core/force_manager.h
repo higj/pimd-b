@@ -2,18 +2,27 @@
 
 #include "system_state.h"
 #include "potentials/potential.h"
+#include "contexts/box_context.h"
 
 #include <memory>
 
-struct SimulationConfig;
-struct BeadContext;
-struct BoxContext;
 struct SpringContext;
 class SpringForceStrategy;
 
 class ForceManager {
 public:
-    explicit ForceManager(const SimulationConfig& config);
+    /**
+     * @param ext_potential Pre-built external potential (ownership transferred).
+     * @param int_potential Pre-built interaction potential (ownership transferred).
+     * @param cutoff        Interaction cutoff radius in internal units. Negative means no cutoff.
+     * @param box_ctx       Box context used to clamp the cutoff to L/2 when PBC is active.
+     */
+    ForceManager(
+        std::unique_ptr<Potential> ext_potential,
+        std::unique_ptr<Potential> int_potential,
+        double cutoff,
+        const BoxContext& box_ctx
+    );
 
     ~ForceManager();
 
@@ -45,18 +54,4 @@ public:
 
 private:
     std::unique_ptr<SpringForceStrategy> m_spring_force_strategy;
-
-    /**
-     * Initializes the potential based on the input parameters.
-     *
-     * @param config Simulation configuration containing potential parameters.
-     * @param potential_name Name of the potential.
-     * @param potential_options Physical parameters of the potential.
-     * @return Pointer to the initialized potential.
-     */
-    [[nodiscard]] static std::unique_ptr<Potential> initializePotential(
-        const SimulationConfig& config,
-        const std::string& potential_name,
-        const VariantMap& potential_options
-    );
 };

@@ -1,4 +1,5 @@
 #include "params.h"
+#include "core/potential_config.h"
 #include "../libs/string_utils.h"
 
 #include <regex>
@@ -129,12 +130,12 @@ void Params::loadThermostatParams(SimulationConfig& config) const {
     };
 
     // Read and validate thermostat type first (this drives other validations)
-    config.thermostat_type = m_reader.GetString(Sections::SIMULATION, "thermostat", "error");
-    if (config.thermostat_type == "error") {
+    config.thermostat.type = m_reader.GetString(Sections::SIMULATION, "thermostat", "error");
+    if (config.thermostat.type == "error") {
         throw std::invalid_argument("Thermostat must be specified!");
     }
-    if (!StringUtils::labelInArray(config.thermostat_type, allowed_thermostats)) {
-        throw std::invalid_argument(std::format("Unsupported thermostat type ({})", config.thermostat_type));
+    if (!StringUtils::labelInArray(config.thermostat.type, allowed_thermostats)) {
+        throw std::invalid_argument(std::format("Unsupported thermostat type ({})", config.thermostat.type));
     }
 
     // Validate temperature. When no thermostat is used, temperature value may still be used for initializing velocities
@@ -160,8 +161,8 @@ void Params::loadThermostatParams(SimulationConfig& config) const {
     config.beta_half_k = config.thermo_beta * 0.5 * config.spring_constant;
 
     // Determine if this is a Nose-Hoover type thermostat
-    const bool is_nose_hoover = config.thermostat_type.find("nose_hoover") != std::string::npos;
-    config.thermostat_params["is_nose_hoover"] = is_nose_hoover;
+    const bool is_nose_hoover = config.thermostat.type.find("nose_hoover") != std::string::npos;
+    config.thermostat.is_nose_hoover = is_nose_hoover;
 
     // Handle nchains parameter (only for Nose-Hoover thermostats)
     if (m_reader.HasValue(Sections::SIMULATION, "nchains") && !is_nose_hoover) {
@@ -174,23 +175,20 @@ void Params::loadThermostatParams(SimulationConfig& config) const {
         if (nchains < 1) {
             throw std::invalid_argument(std::format("Invalid number of Nose-Hoover chains ({}<1)", nchains));
         }
-        config.thermostat_params["nchains"] = nchains;
+        config.thermostat.nchains = nchains;
     }
 
     // Handle normal mode thermostat coupling
     bool nmthermostat = m_reader.GetBoolean(Sections::SIMULATION, "nmthermostat", false);
-    if (nmthermostat && config.thermostat_type == "none") {
+    if (nmthermostat && config.thermostat.type == "none") {
         throw std::invalid_argument("nmthermostat cannot be used in NVE ensemble!");
     }
 
     // Only set nmthermostat if we're using a thermostat
-    /// TODO: Fix this later (currently nmthermostat is always set, even for "none" thermostat)
-    //if (config.thermostat_type != "none") {
-    config.thermostat_params["nmthermostat"] = nmthermostat;
-    //}
+    config.thermostat.couple_to_nm = nmthermostat;
 
     // Handle gamma parameter (only relevant for Langevin thermostat)
-    if (config.thermostat_type == "langevin") {
+    if (config.thermostat.type == "langevin") {
         const bool gamma_specified = m_reader.HasValue(Sections::SIMULATION, "gamma");
         double gamma;
 
@@ -205,7 +203,7 @@ void Params::loadThermostatParams(SimulationConfig& config) const {
             gamma = 1 / (100.0 * config.dt);
         }
 
-        config.thermostat_params["gamma"] = gamma;
+        config.thermostat.gamma = gamma;
     }
 }
 
@@ -333,25 +331,28 @@ void Params::loadExternalPotentialParams(SimulationConfig& config) const {
     using namespace std::string_view_literals;
     constexpr auto allowed_ext_potential_names = std::array{"free"sv, "harmonic"sv, "double_well"sv, "cosine"sv};
 
-    config.ext_pot_name = m_reader.GetString(Sections::EXT_POTENTIAL, "name", "free");
-    if (!StringUtils::labelInArray(config.ext_pot_name, allowed_ext_potential_names))
-        throw std::invalid_argument(std::format("The specified external potential ({}) is not supported!",
-            config.ext_pot_name));
+    const std::string name = m_reader.GetString(Sections::EXT_POTENTIAL, "name", "free");
+    if (!StringUtils::labelInArray(name, allowed_ext_potential_names))
+        throw std::invalid_argument(std::format("The specified external potential ({}) is not supported!", name));
 
-    /// TODO: Convert to switch-case
-    if (config.ext_pot_name == "harmonic") {
+    if (name == "harmonic") {
         // In atomic units, the angular frequency of the oscillator has the same dimensions as the energy
-        config.ext_pot_params["omega"] = Units::getQuantity(
+        const double omega = Units::getQuantity(
             "energy", m_reader.Get(Sections::EXT_POTENTIAL, "omega", "1.0 millielectronvolt"));
-    } else if (config.ext_pot_name == "double_well") {
-        config.ext_pot_params["strength"] = Units::getQuantity(
+        config.ext_potential_cfg = PotentialConfig{name, HarmonicPotentialParams{config.mass, omega}};
+    } else if (name == "double_well") {
+        const double strength = Units::getQuantity(
             "energy", m_reader.Get(Sections::EXT_POTENTIAL, "strength", "1.0 millielectronvolt"));
-        config.ext_pot_params["location"] = Units::getQuantity(
+        const double location = Units::getQuantity(
             "length", m_reader.Get(Sections::EXT_POTENTIAL, "location", "1.0 angstrom"));
-    } else if (config.ext_pot_name == "cosine") {
-        config.ext_pot_params["amplitude"] = Units::getQuantity(
+        config.ext_potential_cfg = PotentialConfig{name, DoubleWellPotentialParams{config.mass, strength, location}};
+    } else if (name == "cosine") {
+        const double amplitude = Units::getQuantity(
             "energy", m_reader.Get(Sections::EXT_POTENTIAL, "amplitude", "1.0 millielectronvolt"));
-        config.ext_pot_params["phase"] = m_reader.GetReal(Sections::EXT_POTENTIAL, "phase", 1.0);
+        const double phase = m_reader.GetReal(Sections::EXT_POTENTIAL, "phase", 1.0);
+        config.ext_potential_cfg = PotentialConfig{name, CosinePotentialParams{amplitude, config.box_size, phase}};
+    } else {
+        config.ext_potential_cfg = PotentialConfig{};  // defaults to "free"
     }
 }
 
@@ -364,29 +365,35 @@ void Params::loadInteractionPotentialParams(SimulationConfig& config) const {
     using namespace std::string_view_literals;
     constexpr auto allowed_int_potential_names = std::array{ "aziz"sv, "free"sv, "harmonic"sv, "dipole"sv };
 
-    config.int_pot_name = m_reader.GetString(Sections::INT_POTENTIAL, "name", "free");
+    const std::string name = m_reader.GetString(Sections::INT_POTENTIAL, "name", "free");
+    if (!StringUtils::labelInArray(name, allowed_int_potential_names))
+        throw std::invalid_argument(std::format("The specified interaction potential ({}) is not supported!", name));
 
-    if (!StringUtils::labelInArray(config.int_pot_name, allowed_int_potential_names))
-        throw std::invalid_argument(std::format("The specified interaction potential ({}) is not supported!",
-            config.int_pot_name));
+    // In the special case of free particles the cutoff is forced to zero (no pairwise loops).
+    // For all other potentials the user-supplied cutoff is used (negative = no cutoff).
+    const double cutoff = (name == "free")
+        ? 0.0
+        : Units::getQuantity("length", m_reader.Get(Sections::INT_POTENTIAL, "cutoff", "-1.0 angstrom"));
 
-    config.int_pot_params["cutoff"] = Units::getQuantity("length", m_reader.Get(Sections::INT_POTENTIAL, "cutoff", "-1.0 angstrom"));
-
-    /// TODO: Convert to switch-case
-    if (config.int_pot_name == "free") {
-        // In the special case of free particles, the cutoff distance is set to zero
-        config.int_pot_params["cutoff"] = 0.0;
-    } else if (config.int_pot_name == "harmonic") {
-        // In atomic units, the angular frequency of the oscillator has the same dimensions as the energy
-        config.int_pot_params["omega"] = Units::getQuantity(
+    if (name == "free") {
+        config.int_potential_cfg = PotentialConfig{name, FreePotentialParams{}, cutoff};
+    } else if (name == "harmonic") {
+        const double omega = Units::getQuantity(
             "energy", m_reader.Get(Sections::INT_POTENTIAL, "omega", "1.0 millielectronvolt"));
-    } else if (config.int_pot_name == "double_well") {
-        config.int_pot_params["strength"] = Units::getQuantity(
+        config.int_potential_cfg = PotentialConfig{name, HarmonicPotentialParams{config.mass, omega}, cutoff};
+    } else if (name == "double_well") {
+        const double strength = Units::getQuantity(
             "energy", m_reader.Get(Sections::INT_POTENTIAL, "strength", "1.0 millielectronvolt"));
-        config.int_pot_params["location"] = Units::getQuantity(
+        const double location = Units::getQuantity(
             "length", m_reader.Get(Sections::INT_POTENTIAL, "location", "1.0 angstrom"));
-    } else if (config.int_pot_name == "dipole") {
-        config.int_pot_params["strength"] = m_reader.GetReal(Sections::INT_POTENTIAL, "strength", 1.0);
+        config.int_potential_cfg = PotentialConfig{name, DoubleWellPotentialParams{config.mass, strength, location}, cutoff};
+    } else if (name == "dipole") {
+        const double strength = m_reader.GetReal(Sections::INT_POTENTIAL, "strength", 1.0);
+        config.int_potential_cfg = PotentialConfig{name, DipolePotentialParams{strength}, cutoff};
+    } else if (name == "aziz") {
+        config.int_potential_cfg = PotentialConfig{name, AzizPotentialParams{}, cutoff};
+    } else {
+        config.int_potential_cfg = PotentialConfig{name, FreePotentialParams{}, cutoff};
     }
 }
 

@@ -1,25 +1,25 @@
 #include "core/force_manager.h"
-#include "core/simulation_config.h"
 #include "core/statistics_manager.h"
-#include "potentials.h"
 #include "strategies/forces/spring_force_strategy.h"
 
-ForceManager::ForceManager(const SimulationConfig& config)
-    : m_spring_force_strategy(StatisticsManager::getInstance().createSpringForceStrategy())
+ForceManager::ForceManager(
+    std::unique_ptr<Potential> ext_pot,
+    std::unique_ptr<Potential> int_pot,
+    double cutoff_in,
+    const BoxContext& box_ctx
+) : m_spring_force_strategy(StatisticsManager::getInstance().createSpringForceStrategy())
 {
-    ext_potential = initializePotential(config, config.ext_pot_name, config.ext_pot_params);
-    int_potential = initializePotential(config, config.int_pot_name, config.int_pot_params);
+    ext_potential = std::move(ext_pot);
+    int_potential = std::move(int_pot);
+    cutoff = cutoff_in;
 
-    // If the interaction potential is set to "free", then the cutoff distance is meaningless
-    cutoff = (config.int_pot_name == "free") ? 0.0 : std::get<double>(config.int_pot_params.at("cutoff"));
-
-    // For cubic cells with PBC, the cutoff distance must be no greater than L/2 for consistency with
-    // the minimum image convention (see 1.6.3 in Allen & Tildesley).
-    if (config.pbc)
-    {
-        cutoff = std::min(cutoff, 0.5 * config.box_size);
-    }
+    // For cubic cells with PBC, the cutoff must be no greater than L/2
+    // to be consistent with the minimum image convention
+    // (see section 1.6.3 in Allen & Tildesley).
+    if (box_ctx.pbc && cutoff > 0.0)
+        cutoff = std::min(cutoff, 0.5 * box_ctx.box_size);
 }
+
 
 ForceManager::~ForceManager() = default;
 
@@ -68,49 +68,4 @@ void ForceManager::updateForces(SystemState& state, const SpringContext& spring_
 
     // Then, update the physical forces acting on the particles.
     updatePhysicalForces(state, box_ctx);
-}
-
-std::unique_ptr<Potential> ForceManager::initializePotential(
-    const SimulationConfig& config,
-    const std::string& potential_name,
-    const VariantMap& potential_options
-)
-{
-    if (potential_name == "free")
-    {
-        return std::make_unique<Potential>();
-    }
-
-    if (potential_name == "harmonic")
-    {
-        double omega = std::get<double>(potential_options.at("omega"));
-        return std::make_unique<HarmonicPotential>(config.mass, omega);
-    }
-
-    if (potential_name == "double_well")
-    {
-        double strength = std::get<double>(potential_options.at("strength"));
-        double loc = std::get<double>(potential_options.at("location"));
-        return std::make_unique<DoubleWellPotential>(config.mass, strength, loc);
-    }
-
-    if (potential_name == "dipole")
-    {
-        double strength = std::get<double>(potential_options.at("strength"));
-        return std::make_unique<DipolePotential>(strength);
-    }
-
-    if (potential_name == "cosine")
-    {
-        double amplitude = std::get<double>(potential_options.at("amplitude"));
-        double phase = std::get<double>(potential_options.at("phase"));
-        return std::make_unique<CosinePotential>(amplitude, config.box_size, phase);
-    }
-
-    if (potential_name == "aziz")
-    {
-        return std::make_unique<AzizPotential>();
-    }
-
-    return std::make_unique<Potential>();
 }

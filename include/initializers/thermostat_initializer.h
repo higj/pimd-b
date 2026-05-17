@@ -3,11 +3,11 @@
 #include "common.h"
 #include "contexts/thermal_context.h"
 #include "contexts/normal_modes_context.h"
+#include "core/simulation_config.h"
 
 #include <memory>
 #include <string>
 
-struct SimulationConfig;
 class Thermostat;
 class SystemState;
 class RandomGenerators;
@@ -28,8 +28,7 @@ public:
 private:
     double m_mass;
     double m_dt;
-    std::string m_thermostat_type;
-    VariantMap m_thermostat_params;
+    ThermostatConfig m_thermostat_config;
     ThermalContext m_thermal_ctx;
     NormalModesContext m_nm_ctx;
 };

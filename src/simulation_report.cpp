@@ -77,8 +77,8 @@ void SimulationReport::initializeParameterLines(const SimulationConfig& config) 
     m_parameter_lines.push_back(formattedReportLine("Mass", std::format("{} amu", out_mass)));
 
     m_parameter_lines.push_back(formattedReportLine("Total number of MD steps", config.steps));
-    m_parameter_lines.push_back(formattedReportLine("Interaction potential name", config.int_pot_name));
-    m_parameter_lines.push_back(formattedReportLine("External potential name", config.ext_pot_name));
+    m_parameter_lines.push_back(formattedReportLine("Interaction potential name", config.int_potential_cfg.name()));
+    m_parameter_lines.push_back(formattedReportLine("External potential name", config.ext_potential_cfg.name()));
 }
 
 void SimulationReport::initializeFeatureLines() {

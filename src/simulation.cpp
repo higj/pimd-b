@@ -35,8 +35,14 @@ Simulation::Simulation(int rank, int nproc, const std::shared_ptr<SimulationConf
     initializeMomenta(config);
     initializeQuantumStatistics(config->bosonic);
 
-    // Initialize other resources
-    m_force_mgr = std::make_shared<ForceManager>(*config);
+    // createPotential() is called exactly once per config; it moves ownership
+    // into ForceManager and will throw if accidentally called again.
+    m_force_mgr = std::make_shared<ForceManager>(
+        config->ext_potential_cfg.createPotential(),
+        config->int_potential_cfg.createPotential(),
+        config->int_potential_cfg.cutoff(),
+        m_box_ctx
+    );
     initializeForces(m_state, m_force_mgr, m_spring_ctx, m_box_ctx);
 
     m_normal_modes = initializeNormalModes(config, m_state);
@@ -44,7 +50,7 @@ Simulation::Simulation(int rank, int nproc, const std::shared_ptr<SimulationConf
     m_nm_ctx = NormalModesContext{
         .normal_modes = m_normal_modes,
         // TODO: Here we assume that "nmthermostat" exists. Currently it does, but what if thermostat is "none"?
-        .couple_to_nm = std::get<bool>(config->thermostat_params["nmthermostat"])
+        .couple_to_nm = config->thermostat.couple_to_nm
     };
 
     // CR: It's OK imo to pass all of config to the local function (of the class Simulation) that initializes the propagator.
@@ -66,7 +72,7 @@ Simulation::Simulation(int rank, int nproc, const std::shared_ptr<SimulationConf
 
     m_thermostat_ctx = ThermostatContext{
         .thermostat = m_thermostat,
-        .thermostat_type = config->thermostat_type
+        .thermostat_type = config->thermostat.type
     };
 
     m_velocity_ctx = VelocityContext{
@@ -154,7 +160,7 @@ std::shared_ptr<NormalModes> Simulation::initializeNormalModes(
     const std::shared_ptr<SystemState>& state)
 {
     /// TODO: Perhaps we should initialize NormalModes regardless of the propagator type and/or coupling?
-    if (const bool couple_to_nm = std::get<bool>(config->thermostat_params["nmthermostat"]);
+    if (const bool couple_to_nm = config->thermostat.couple_to_nm;
         config->propagator_type == "normal_modes" || couple_to_nm)
     {
         return std::make_shared<NormalModes>(

@@ -3,6 +3,15 @@
 #include "common.h"
 
 #include <string>
+#include "core/potential_config.h"
+
+struct ThermostatConfig {
+    std::string type;
+    bool couple_to_nm = false;
+    double gamma = 0.0;
+    bool is_nose_hoover = false;
+    int nchains = 0;
+};
 
 // Holds immutable configuration parameters, parsed from the configuration file
 struct SimulationConfig {
@@ -29,8 +38,7 @@ struct SimulationConfig {
     bool pbc;           // Enable periodic boundary conditions?
 
     // Thermostat related parameters
-    std::string thermostat_type;
-    VariantMap thermostat_params;
+    ThermostatConfig thermostat;
 
     bool out_pos;       // Output trajectories?
     bool out_vel;       // Output velocities?
@@ -42,16 +50,12 @@ struct SimulationConfig {
     std::string init_pos_filename, init_vel_filename;
     int init_pos_index_offset, init_vel_index_offset;
 
-    // Map holding the interaction potential parameters
-    VariantMap int_pot_params;
-    // Map holding the interaction potential parameters
-    VariantMap ext_pot_params;
+    // Configuration objects that carry parameters and create the concrete Potential
+    PotentialConfig ext_potential_cfg;
+    PotentialConfig int_potential_cfg;
 
-    // Propagator and thermostat types
+    // Propagator type
     std::string propagator_type;
-
-    // External and interaction potential names
-    std::string ext_pot_name, int_pot_name;
 
     // Map holding the dump parameters
     StringMap dumps_list;
