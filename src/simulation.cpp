@@ -43,7 +43,7 @@ Simulation::Simulation(int rank, int nproc, const std::shared_ptr<SimulationConf
         config->int_potential_cfg.cutoff(),
         m_box_ctx
     );
-    initializeForces(m_state, m_force_mgr, m_spring_ctx, m_box_ctx);
+    //initializeForces(m_state, m_force_mgr, m_spring_ctx, m_box_ctx); <--- TODO: Uncomment this later
 
     m_normal_modes = initializeNormalModes(config, m_state);
 
@@ -395,12 +395,12 @@ void Simulation::executeStep(long step) const
 {
     if (!m_is_thermalization_phase) {
         dumpStepInfo(step);
-        //calculateAndLogObservables(step); <--- Should be here
+        //calculateAndLogObservables(step); <--- TODO: Should be here
     }
 
     performMolecularDynamicsStep();
 
-    // Temporarily placed here, to not break the old tests
+    // TODO: Temporarily placed here, to not break the old tests
     if (!m_is_thermalization_phase) {
         calculateAndLogObservables(step);
     }

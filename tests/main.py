@@ -91,8 +91,10 @@ def compare_output(actual_output, expected_output):
     data_expected = read_data(expected_output)
     
     # Check if the number of steps match
-    if len(data_actual['step']) != len(data_expected['step']):
-        raise AssertionError("Test failed: Number of steps do not match.")
+    len_actual = len(data_actual['step'])
+    len_expected = len(data_expected['step'])
+    if len_actual != len_expected:
+        raise AssertionError(f"Test failed: Number of steps do not match (expected {len_expected}, got {len_actual}).")
     
     columns = list(data_actual.keys())
     
