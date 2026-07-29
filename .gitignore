@@ -366,3 +366,5 @@ FodyWeavers.xsd
 
 # Build folder
 build/
+/vcpkg-configuration.json
+/vcpkg.json
