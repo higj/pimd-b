@@ -39,6 +39,7 @@ public:
 
     virtual double getDistinctProbability() = 0;
     virtual double getLongestProbability() = 0;
+    virtual double getSign() = 0;
 
     virtual void printBosonicDebug() = 0;
 

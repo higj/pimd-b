@@ -83,6 +83,12 @@ public:
     double getLongestProbability() override;
 
     /**
+     * @brief The average permutation sign as defined in Eq. (9) https://doi.org/10.1063/5.0008720.
+     * @return The average sign.
+     */
+    double getSign() override;
+
+    /**
      * @brief Print debug information about the bosonic exchange state.
      */
     void printBosonicDebug() override;

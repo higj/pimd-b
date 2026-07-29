@@ -204,6 +204,12 @@ double FactorialBosonicExchange::getLongestProbability()
     return 0.0;
 }
 
+double FactorialBosonicExchange::getSign()
+{
+    /// @todo Currently not implemented
+    return 0.0;
+}
+
 double FactorialBosonicExchange::primitiveEnergyEstimator()
 {
     double numerator = 0.0;

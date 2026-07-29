@@ -333,6 +333,32 @@ double BosonicExchange::primitiveEnergyEstimator()
 #endif
 }
 
+double BosonicExchange::getSign()
+{
+    // sign_ratio[m] stores the ratio W_f(m) / W_b(m) (fermionic sign weight over bosonic weight)
+    // This avoids numerical overflow/underflow since sign_ratio is strictly between -1 and 1.
+    std::vector<double> sign_ratio(m_bead_ctx.natoms + 1, 0.0);
+    sign_ratio[0] = 1.0;
+
+    for (int m = 1; m < m_bead_ctx.natoms + 1; ++m) {
+        double sum = 0.0;
+
+        for (int k = m; k > 0; --k) {
+            const int sign = (k & 1) ? 1 : -1;
+            // The exponent is: -beta * (E(m, k) + V(m-k) - V(m))
+            // This is strictly well-behaved because V(m) is the exact log-sum-exp of the bosonic partition function
+            const double exponent = -m_thermal_ctx.thermo_beta * 
+                (getEnk(m, k) + m_prefix_pot[m - k] - m_prefix_pot[m]);
+            
+            sum += sign * exp(exponent) * sign_ratio[m - k];
+        }
+
+        sign_ratio[m] = sum / static_cast<double>(m);
+    }
+
+    return sign_ratio[m_bead_ctx.natoms];
+}
+
 void BosonicExchange::printBosonicDebug()
 {
     if (m_bead_ctx.this_bead == 0)

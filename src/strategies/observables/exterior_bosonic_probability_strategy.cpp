@@ -15,3 +15,8 @@ double ExteriorBosonicProbabilityStrategy::getDistinctProbability() {
 double ExteriorBosonicProbabilityStrategy::getLongestProbability() {
     return m_bosonic_exchange->getLongestProbability();
 }
+
+
+double ExteriorBosonicProbabilityStrategy::getSign() {
+    return m_bosonic_exchange->getSign();
+}

@@ -47,6 +47,12 @@ public:
     double getLongestProbability() override;
 
     /**
+     * @brief The average permutation sign as defined in Eq. (9) https://doi.org/10.1063/5.0008720.
+     * @return The average sign.
+     */
+    double getSign() override;
+
+    /**
      * Calculates the contribution of the exterior beads to the primitive kinetic energy estimator.
      *
      * @return Weighted average of exterior spring energies over all permutations.

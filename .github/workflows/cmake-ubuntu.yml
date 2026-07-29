@@ -79,7 +79,7 @@ jobs:
         run: cmake -B ${{github.workspace}}/${{env.build_folder_name}} -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DNDIM=${{env.NDIM}} -DFACTORIAL_BOSONIC_ALGORITHM=${{matrix.alg_type_val}} -DCMAKE_CXX_COMPILER=g++-13 -DCMAKE_C_COMPILER=gcc-13 -DMPI_HOME=/home/${USER}/.openmpi
 
       - name: Build
-        run: cmake --build ${{github.workspace}}/${{env.build_folder_name}} --config ${{env.BUILD_TYPE}}
+        run: cmake --build ${{github.workspace}}/${{env.build_folder_name}} --config ${{env.BUILD_TYPE}} -j 4
 
       - uses: actions/setup-python@v5
         with:

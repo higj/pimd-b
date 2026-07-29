@@ -12,6 +12,7 @@ public:
 
     double getDistinctProbability() override;
     double getLongestProbability() override;
+    double getSign() override;
 
 private:
     std::shared_ptr<BosonicExchangeBase> m_bosonic_exchange;

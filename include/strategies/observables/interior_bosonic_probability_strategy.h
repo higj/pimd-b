@@ -6,4 +6,5 @@ class InteriorBosonicProbabilityStrategy : public BosonicProbabilityStrategy {
 public:
     double getDistinctProbability() override { return 0.0; }
     double getLongestProbability() override { return 0.0; }
+    double getSign() override { return 0.0; }
 };
