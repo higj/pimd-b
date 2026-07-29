@@ -1,3 +1,3 @@
 #include "potentials/potential.h"
 
-Potential::Potential() : tail_correction(0.0) {}
+Potential::Potential(bool is_free) : m_is_free(is_free), tail_correction(0.0) {}

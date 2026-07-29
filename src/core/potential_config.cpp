@@ -23,7 +23,7 @@ std::unique_ptr<Potential> PotentialConfig::createPotential()
     return std::visit([]<typename T>(const T& p) -> std::unique_ptr<Potential>
     {
         if constexpr (std::is_same_v<T, FreePotentialParams>)
-            return std::make_unique<Potential>();
+            return std::make_unique<Potential>(true);
 
         else if constexpr (std::is_same_v<T, HarmonicPotentialParams>)
             return std::make_unique<HarmonicPotential>(p.mass, p.omega);

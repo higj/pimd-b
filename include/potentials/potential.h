@@ -5,8 +5,11 @@
 /* -------------- Basic potential class -------------- */
 class Potential
 {
+protected:
+    bool m_is_free;
+
 public:
-    Potential();
+    explicit Potential(bool is_free = false);
     virtual ~Potential() = default;
 
     // Potential
@@ -51,7 +54,7 @@ public:
     virtual Vec gradV(const Vec& /* x */) { return {}; }
     virtual double laplacianV(const Vec& /* x */) { return 0.0; }
 
-    [[nodiscard]] virtual bool isFree() const { return true; }
+    [[nodiscard]] bool isFree() const { return m_is_free; }
 
     // Tail correction
     /// @todo Implement the tail correction

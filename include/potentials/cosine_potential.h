@@ -18,7 +18,7 @@ public:
     // Potential laplacian
     double laplacianV(const Vec& x) override;
 
-    [[nodiscard]] bool isFree() const override { return false; }
+
 
 private:
     double amplitude;   // Amplitude of the potential (V_0)
