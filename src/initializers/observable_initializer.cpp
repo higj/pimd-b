@@ -86,6 +86,16 @@ std::shared_ptr<Observable> ObservableInitializer::createGSFObservable(const std
     );
 }
 
+std::shared_ptr<Observable> ObservableInitializer::createCenterOfMassObservable(const std::string& out_unit) const
+{
+    return std::make_shared<CenterOfMassObservable>(
+        std::shared_ptr<const VecArray>(m_state, &m_state->coord),
+        m_bead_context,
+        m_stride,
+        out_unit
+    );
+}
+
 std::vector<ObservableItem> ObservableInitializer::parseObservablesList() const
 {
     std::vector<ObservableItem> items;
@@ -131,6 +141,9 @@ std::vector<std::shared_ptr<Observable>> ObservableInitializer::createObservable
                 break;
             case ObservableType::GSF:
                 observables.push_back(createGSFObservable(item.getEffectiveUnit()));
+                break;
+            case ObservableType::CENTER_OF_MASS:
+                observables.push_back(createCenterOfMassObservable(item.getEffectiveUnit()));
                 break;
             case ObservableType::UNKNOWN:
             default:

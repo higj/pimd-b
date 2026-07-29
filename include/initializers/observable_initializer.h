@@ -45,6 +45,7 @@ private:
     [[nodiscard]] std::shared_ptr<Observable> createClassicalObservable(const std::string& out_unit) const;
     [[nodiscard]] std::shared_ptr<Observable> createBosonicObservable(const std::string& out_unit) const;
     [[nodiscard]] std::shared_ptr<Observable> createGSFObservable(const std::string& out_unit) const;
+    [[nodiscard]] std::shared_ptr<Observable> createCenterOfMassObservable(const std::string& out_unit) const;
 
     long m_stride;
     StringMap m_observables_list;

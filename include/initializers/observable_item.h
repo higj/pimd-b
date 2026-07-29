@@ -9,6 +9,7 @@ enum class ObservableType : std::uint8_t {
     CLASSICAL,
     BOSONIC,
     GSF,
+    CENTER_OF_MASS,
     UNKNOWN
 };
 
@@ -24,6 +25,7 @@ public:
         if (name == "classical") return ObservableType::CLASSICAL;
         if (name == "bosonic") return ObservableType::BOSONIC;
         if (name == "gsf") return ObservableType::GSF;
+        if (name == "center_of_mass") return ObservableType::CENTER_OF_MASS;
         return ObservableType::UNKNOWN;
     }
 };
