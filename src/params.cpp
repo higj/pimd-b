@@ -329,7 +329,7 @@ void Params::loadMomentaInitParams(SimulationConfig& config) const {
  */
 void Params::loadExternalPotentialParams(SimulationConfig& config) const {
     using namespace std::string_view_literals;
-    constexpr auto allowed_ext_potential_names = std::array{"free"sv, "harmonic"sv, "double_well"sv, "cosine"sv};
+    constexpr auto allowed_ext_potential_names = std::array{"free"sv, "harmonic"sv, "anharmonic"sv, "double_well"sv, "cosine"sv};
 
     const std::string name = m_reader.GetString(Sections::EXT_POTENTIAL, "name", "free");
     if (!StringUtils::labelInArray(name, allowed_ext_potential_names))
@@ -340,6 +340,12 @@ void Params::loadExternalPotentialParams(SimulationConfig& config) const {
         const double omega = Units::getQuantity(
             "energy", m_reader.Get(Sections::EXT_POTENTIAL, "omega", "1.0 millielectronvolt"));
         config.ext_potential_cfg = PotentialConfig{name, HarmonicPotentialParams{config.mass, omega}};
+    } else if (name == "anharmonic") {
+        const double omega = Units::getQuantity(
+            "energy", m_reader.Get(Sections::EXT_POTENTIAL, "omega", "1.0 millielectronvolt"));
+        const double cubic_const = m_reader.GetReal(Sections::EXT_POTENTIAL, "cubic_const", 0.0);
+        const double quart_const = m_reader.GetReal(Sections::EXT_POTENTIAL, "quart_const", 0.0);
+        config.ext_potential_cfg = PotentialConfig{name, AnharmonicPotentialParams{config.mass, omega, cubic_const, quart_const}};
     } else if (name == "double_well") {
         const double strength = Units::getQuantity(
             "energy", m_reader.Get(Sections::EXT_POTENTIAL, "strength", "1.0 millielectronvolt"));
@@ -363,7 +369,7 @@ void Params::loadExternalPotentialParams(SimulationConfig& config) const {
  */
 void Params::loadInteractionPotentialParams(SimulationConfig& config) const {
     using namespace std::string_view_literals;
-    constexpr auto allowed_int_potential_names = std::array{ "aziz"sv, "free"sv, "harmonic"sv, "dipole"sv };
+    constexpr auto allowed_int_potential_names = std::array{ "aziz"sv, "free"sv, "harmonic"sv, "anharmonic"sv, "dipole"sv };
 
     const std::string name = m_reader.GetString(Sections::INT_POTENTIAL, "name", "free");
     if (!StringUtils::labelInArray(name, allowed_int_potential_names))
@@ -381,6 +387,12 @@ void Params::loadInteractionPotentialParams(SimulationConfig& config) const {
         const double omega = Units::getQuantity(
             "energy", m_reader.Get(Sections::INT_POTENTIAL, "omega", "1.0 millielectronvolt"));
         config.int_potential_cfg = PotentialConfig{name, HarmonicPotentialParams{config.mass, omega}, cutoff};
+    } else if (name == "anharmonic") {
+        const double omega = Units::getQuantity(
+            "energy", m_reader.Get(Sections::INT_POTENTIAL, "omega", "1.0 millielectronvolt"));
+        const double cubic_const = m_reader.GetReal(Sections::INT_POTENTIAL, "cubic_const", 0.0);
+        const double quart_const = m_reader.GetReal(Sections::INT_POTENTIAL, "quart_const", 0.0);
+        config.int_potential_cfg = PotentialConfig{name, AnharmonicPotentialParams{config.mass, omega, cubic_const, quart_const}, cutoff};
     } else if (name == "double_well") {
         const double strength = Units::getQuantity(
             "energy", m_reader.Get(Sections::INT_POTENTIAL, "strength", "1.0 millielectronvolt"));

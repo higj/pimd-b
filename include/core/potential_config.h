@@ -23,6 +23,13 @@ struct HarmonicPotentialParams {
     double omega;
 };
 
+struct AnharmonicPotentialParams {
+    double mass;
+    double omega;
+    double cubic_const;
+    double quart_const;
+};
+
 struct DoubleWellPotentialParams {
     double mass;
     double strength;
@@ -46,6 +53,7 @@ struct AzizPotentialParams {};
 using PotentialParams = std::variant<
     FreePotentialParams,
     HarmonicPotentialParams,
+    AnharmonicPotentialParams,
     DoubleWellPotentialParams,
     CosinePotentialParams,
     DipolePotentialParams,

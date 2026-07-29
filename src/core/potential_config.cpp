@@ -4,6 +4,7 @@
 // This keeps the compile-time dependency on potential types localised to this file.
 #include "potentials/potential.h"
 #include "potentials/harmonic_potential.h"
+#include "potentials/anharmonic_potential.h"
 #include "potentials/double_well_potential.h"
 #include "potentials/cosine_potential.h"
 #include "potentials/dipole_potential.h"
@@ -27,6 +28,9 @@ std::unique_ptr<Potential> PotentialConfig::createPotential()
 
         else if constexpr (std::is_same_v<T, HarmonicPotentialParams>)
             return std::make_unique<HarmonicPotential>(p.mass, p.omega);
+
+        else if constexpr (std::is_same_v<T, AnharmonicPotentialParams>)
+            return std::make_unique<AnharmonicPotential>(p.mass, p.omega, p.cubic_const, p.quart_const);
 
         else if constexpr (std::is_same_v<T, DoubleWellPotentialParams>)
             return std::make_unique<DoubleWellPotential>(p.mass, p.strength, p.location);
