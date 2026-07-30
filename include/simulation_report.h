@@ -28,6 +28,8 @@ private:
     void initializeParameterLines(const SimulationConfig& config);
     void initializeFeatureLines();
 
+    static std::string quantityInUserUnits(const double& value, const std::string& family, const std::string& key, const SimulationConfig& config);
+
     template <typename T>
     std::string formattedReportLine(const std::string& property_name, const T& value) {
         return std::format("{:<40}\t:\t{}\n", property_name, value);

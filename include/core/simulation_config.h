@@ -62,6 +62,9 @@ struct SimulationConfig {
     // Map holding the observable settings
     StringMap observables_list;
 
+    // Map holding the original user-requested units for the various physical quantities
+    StringMap units_list;
+
     unsigned int seed;  // Seed for random number generation
     int this_bead;      // Current process id ("rank" of MPI_Comm_rank)
 };

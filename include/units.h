@@ -174,4 +174,21 @@ namespace Units {
      * @return The numerical value of the quantity in internal units.
      */
     double getQuantity(const std::string& family, const std::string& input);
+
+    /**
+     * Small helper that stores an internal value and the original user unit.
+     * - `value` holds the value in internal units (what the simulation uses).
+     * - `unit` is the user-provided unit token (e.g. "kelvin", "angstrom", "fs").
+     *
+     * Construction via `fromUser` parses the "<number> <unit>" input and
+     * converts the numeric value to internal units while remembering the unit.
+     */
+    struct Quantity {
+        double value = 0.0;
+        std::string unit;
+        std::string family;
+
+        static Quantity create(const std::string& family, const std::string& input);
+        [[nodiscard]] double toInternal() const;
+    };
 }

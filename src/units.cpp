@@ -84,4 +84,14 @@ namespace Units {
         // Match the provided unit to known units.
         return convertToInternal(family, raw_unit, value);
     }
+
+    Quantity Quantity::create(const std::string& family, const std::string& input) {
+        auto [value, unit] = parseQuantity(input);
+        return Quantity{ .value = value, .unit = unit, .family = family };
+    }
+
+    // Convert user unit to internal (atomic) unit
+    double Quantity::toInternal() const {
+        return convertToInternal(family, unit, value);
+    }
 }

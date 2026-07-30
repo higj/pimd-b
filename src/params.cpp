@@ -6,6 +6,8 @@
 #include <format>
 #include <filesystem>
 
+using Quantity = Units::Quantity;
+
 Params::Params(const std::string& filename, const int& rank) : m_reader(filename), m_rank(rank) {
     printStatus("Initializing the simulation parameters", rank);
 
@@ -34,15 +36,43 @@ std::shared_ptr<SimulationConfig> Params::load() const {
     return config;
 }
 
+double Params::loadQuantity(
+    const std::string& family,
+    const std::string& section,
+    const std::string& key,
+    const std::string& default_value,
+    double& destination,
+    StringMap& units_destination
+) const {
+    const Quantity quantity = Quantity::create(
+        family,
+        m_reader.Get(section, key, default_value)
+    );
+
+    destination = quantity.toInternal();
+    units_destination[key] = quantity.unit;
+
+    return quantity.value; // Return the original user-provided value (not converted to internal units)
+}
+
 /**
  * Load basic parameters pertaining to the simulation.
  *
  * @param config Config object to load parameters into.
  */
 void Params::loadSimulationParams(SimulationConfig& config) const {
-    config.dt = Units::getQuantity("time", m_reader.Get(Sections::SIMULATION, "dt", "1.0 femtosecond"));
-    if (config.dt <= 0.0)
-        throw std::invalid_argument(std::format("Invalid time-step ({} is not positive)", config.dt));
+    //config.dt = Units::getQuantity("time", m_reader.Get(Sections::SIMULATION, "dt", "1.0 femtosecond"));
+    const double dt = loadQuantity(
+        "time", 
+        Sections::SIMULATION, 
+        "dt", 
+        "1.0 femtosecond", 
+        config.dt, 
+        config.units_list
+    );
+
+    if (dt <= 0.0)
+        throw std::invalid_argument(std::format("Invalid time-step ({} is not positive)", dt));
 
     const double threshold = m_reader.GetReal(Sections::SIMULATION, "threshold", 0.0);
     if (config.threshold < 0)
@@ -84,13 +114,31 @@ void Params::loadSystemParams(SimulationConfig& config) const {
     if (config.natoms < 1)
         throw std::invalid_argument(std::format("Invalid number of particles (specified {})", config.natoms));
 
-    config.mass = Units::getQuantity("mass", m_reader.Get(Sections::SYSTEM, "mass", "1.0 dalton"));
-    if (config.mass <= 0.0)
-        throw std::invalid_argument(std::format("The provided mass ({0:4.3f}) is unphysical!", config.mass));
+    //config.mass = Units::getQuantity("mass", m_reader.Get(Sections::SYSTEM, "mass", "1.0 dalton"));
+    const double mass = loadQuantity(
+        "mass",
+        Sections::SYSTEM,
+        "mass",
+        "1.0 dalton",
+        config.mass,
+        config.units_list
+    );
 
-    config.box_size = Units::getQuantity("length", m_reader.Get(Sections::SYSTEM, "size", "1.0 picometer"));
-    if (config.box_size <= 0.0)
-        throw std::invalid_argument(std::format("The provided system size ({0:4.3f}) is unphysical!", config.box_size));
+    if (mass <= 0.0)
+        throw std::invalid_argument(std::format("The provided mass ({0:4.3f}) is unphysical!", mass));
+
+    //config.box_size = Units::getQuantity("length", m_reader.Get(Sections::SYSTEM, "size", "1.0 picometer"));
+    const double box_size = loadQuantity(
+        "length",
+        Sections::SYSTEM,
+        "size",
+        "1.0 picometer",
+        config.box_size,
+        config.units_list
+    );
+
+    if (box_size <= 0.0)
+        throw std::invalid_argument(std::format("The provided system size ({0:4.3f}) is unphysical!", box_size));
 }
 
 /**
@@ -139,9 +187,18 @@ void Params::loadThermostatParams(SimulationConfig& config) const {
     }
 
     // Validate temperature. When no thermostat is used, temperature value may still be used for initializing velocities
-    config.temperature = Units::getQuantity("temperature", m_reader.Get(Sections::SYSTEM, "temperature", "1.0 kelvin"));
-    if (config.temperature <= 0) {
-        throw std::invalid_argument(std::format("The specified temperature ({0:4.3f} kelvin) is not positive", config.temperature));
+    //config.temperature = Units::getQuantity("temperature", m_reader.Get(Sections::SYSTEM, "temperature", "1.0 kelvin"));
+    const double temperature = loadQuantity(
+        "temperature",
+        Sections::SYSTEM,
+        "temperature",
+        "1.0 kelvin",
+        config.temperature,
+        config.units_list
+    );
+
+    if (temperature <= 0) {
+        throw std::invalid_argument(std::format("The specified temperature ({0:4.3f} kelvin) is not positive", temperature));
     }
 
     // Define additional parameters based on rudimentary config parameters

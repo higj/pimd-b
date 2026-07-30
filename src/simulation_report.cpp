@@ -42,6 +42,17 @@ void SimulationReport::writeReport(double wall_time) {
     report_file.close();
 }
 
+std::string SimulationReport::quantityInUserUnits(
+    const double& value,
+    const std::string& family, 
+    const std::string& key, 
+    const SimulationConfig& config)
+{
+    const std::string out_unit = config.units_list.at(key);
+    double out_value = Units::convertToUser(family, out_unit, value);
+    return std::format("{} {}", out_value, out_unit);
+}
+
 void SimulationReport::initializeParameterLines(const SimulationConfig& config) {
     // Statistics and algorithm information
     if (config.bosonic) {
@@ -58,6 +69,12 @@ void SimulationReport::initializeParameterLines(const SimulationConfig& config) 
 
     // Configuration parameters
     m_parameter_lines.push_back(formattedReportLine("Time propagation algorithm", config.propagator_type));
+    m_parameter_lines.push_back(
+        formattedReportLine(
+            "Time step", 
+            quantityInUserUnits(config.dt, "time", "dt", config)
+        )
+    );
     m_parameter_lines.push_back(formattedReportLine("Periodic boundary conditions", config.pbc));
     m_parameter_lines.push_back(formattedReportLine("Dimension", NDIM));
     m_parameter_lines.push_back(formattedReportLine("Seed", config.seed));
@@ -67,6 +84,7 @@ void SimulationReport::initializeParameterLines(const SimulationConfig& config) 
     m_parameter_lines.push_back(formattedReportLine("Number of beads", config.nbeads));
 
     // Unit conversions
+    /*
     double out_temperature = Units::convertToUser("temperature", "kelvin", config.temperature);
     m_parameter_lines.push_back(formattedReportLine("Temperature", std::format("{} kelvin", out_temperature)));
 
@@ -75,6 +93,27 @@ void SimulationReport::initializeParameterLines(const SimulationConfig& config) 
 
     double out_mass = Units::convertToUser("mass", "dalton", config.mass);
     m_parameter_lines.push_back(formattedReportLine("Mass", std::format("{} amu", out_mass)));
+    */
+    m_parameter_lines.push_back(
+        formattedReportLine(
+            "Temperature",
+            quantityInUserUnits(config.temperature, "temperature", "temperature", config)
+        )
+    );
+
+    m_parameter_lines.push_back(
+        formattedReportLine(
+            "Linear size of the system",
+            quantityInUserUnits(config.box_size, "length", "size", config)
+        )
+    );
+
+    m_parameter_lines.push_back(
+        formattedReportLine(
+            "Mass",
+            quantityInUserUnits(config.mass, "mass", "mass", config)
+        )
+    );
 
     m_parameter_lines.push_back(formattedReportLine("Total number of MD steps", config.steps));
     m_parameter_lines.push_back(formattedReportLine("Interaction potential name", config.int_potential_cfg.name()));

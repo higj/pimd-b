@@ -19,6 +19,14 @@ class Params {
 public:
     explicit Params(const std::string& filename, const int& rank);
     [[nodiscard]] std::shared_ptr<SimulationConfig> load() const;
+    double loadQuantity(
+        const std::string& family,
+        const std::string& section,
+        const std::string& key,
+        const std::string& default_value,
+        double& destination,
+        StringMap& units_destination
+    ) const;
 private:
     INIReader m_reader;
     int m_rank;
