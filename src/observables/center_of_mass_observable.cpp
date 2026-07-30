@@ -35,8 +35,8 @@ void CenterOfMassObservable::calculate()
 
     for (int axis = 0; axis < NDIM; ++axis)
     {
-        // Normalize by the number of quantum particles
-        local_com[axis] /= m_bead_ctx.natoms;
+        // Normalize by the total number of beads
+        local_com[axis] /= (m_bead_ctx.natoms * m_bead_ctx.nbeads);
 
         // Store the COM of this replica
         quantities["com_" + std::to_string(axis)] = Units::convertToUser("length", m_out_unit, local_com[axis]);
