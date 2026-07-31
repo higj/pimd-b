@@ -115,7 +115,7 @@ Similarly, the `initial_velocity` option gives the user the ability to initializ
 * `manual`: the velocities are initialized from the files `init/vel_XX.dat` where `XX` symbolizes the two-digit index of the imaginary time-slice, starting from 01.
 * `manual(<filename_format>)`: similar behavior to `xyz(<filename_format>)`.
 
-The `size` option defines the linear size of the system. Currently, only cube geometry is supported. In the absence of periodic boundary conditions, `size` only affects the way initial positions are generated. However, if periodic boundary conditions are enabled, the system size also affects the cutoff distance for interactions, as well as the estimators. Also, the coordinates may be wrapped in this case, and minimum image convention can potentially be employed, if such functionality is desired.
+The `size` option defines the linear size of the system. Currently, only cube geometry is supported. In the absence of periodic boundary conditions, `size` only affects the way initial positions are generated (when random generation is requested). However, if periodic boundary conditions are enabled, the system size also affects the cutoff distance for interactions, as well as the estimators. Also, the coordinates may be wrapped in this case, and minimum image convention can potentially be employed, if such functionality is desired.
 
 ### Propagators
 
@@ -161,7 +161,7 @@ Currently, the following observable *types* are supported:
 
 * `energy`: Calculates the quantum energy of the system using different estimators. Currently, the thermodynamic (primitive), virial, and potential energy estimators are supported.
 * `classical`: Calculates observables related to the classical ring-polymer system, such as the kinetic energy (due to the fictitious momenta), spring energies, and temperature.
-* `bosonic`: Calculates the probabilities of two types of topologies: where all particles are separate and where all particles are connected (dimensionless estimator). Printed *only* in bosonic simulations.
+* `bosonic`: Calculates the sign, as well as the probabilities of two types of topologies: where all particles are separate and where all particles are connected (dimensionless estimator). Printed *only* in bosonic simulations.
 * `gsf`: Calculates observables associated with the action resulting from the generalized Suzuki factorization (GSF). The central quantity is $\ln w_{\mathrm{GSF}}$, where $w_{\mathrm{GSF}}$ is the statistical weight that is used for re-weighting the observables in the GSF scheme (see J. Chem. Phys. 135, 064104 (2011)). In addition, it calculates the potential energy estimator at odd imaginary-time slices, based on the operator method.
 
 Internally, the simulation uses atomic units. However, the input parameters may be provided in the units of your choosing (e.g., electron-volts for energy).
@@ -184,6 +184,9 @@ The following options are available in the `[simulation]` and `[system]` section
 |`fixcom`     |  Set to `true` to remove the center of mass motion (Default: `true`) |
 |`seed`     | Random number generator seed (a positive integer below $9 \times 10^8$) |
 |`initial_position`     | Method for generating the initial positions of the beads |
+|`initial_position_unit`  | Units of the initial coordinates (when using `xyz`) |
+|`initial_position_frame`  | The exact `xyz` frame to load (Default: `0`) |
+|`initial_position_frame_mode`  | Zero-based `index` versus literal `step` interpretation of the frame |
 |`initial_velocity`     | Method for generating the initial velocities of the beads. `random` samples from the Maxwell-Boltzmann distribution. `manual` loads velocities from a provided file. (Default: `random`) |
 |`temperature`     |  Temperature of the quantum system (units of temperature) |
 |`natoms`     |  Number of particles in the quantum system |
