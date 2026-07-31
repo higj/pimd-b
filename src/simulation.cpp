@@ -1,4 +1,5 @@
 #include "simulation.h"
+#include "mpi_utils.h"
 #include "core/simulation_config.h"
 #include "core/system_state.h"
 #include "core/force_manager.h"
@@ -239,6 +240,8 @@ void Simulation::initializePositions(const std::shared_ptr<SimulationConfig>& co
             config->init_pos_filename,
             config->this_bead + config->init_pos_index_offset,
             config->init_pos_unit,
+            config->init_pos_frame,
+            config->init_pos_frame_mode,
             std::shared_ptr<VecArray>(m_state, &m_state->coord),
             m_box_ctx
         );
@@ -248,7 +251,13 @@ void Simulation::initializePositions(const std::shared_ptr<SimulationConfig>& co
         throw std::invalid_argument("Unknown position initialization method: " + config->init_pos_type);
     }
 
-    initializer->initialize();
+    MpiUtils::runCollectively(
+        "XYZ coordinate initialization",
+        [&] {
+            initializer->initialize();
+        }
+    );
+
 
     // Communicate the new coordinates to the neighboring processes
     m_state->updateNeighboringCoordinates();

@@ -311,9 +311,38 @@ void Params::loadCoordInitParams(SimulationConfig& config) const {
         if (!m_reader.HasValue(Sections::SIMULATION, "initial_position_unit")) {
             throw std::invalid_argument("Coordinate initialization method is 'xyz' but the units have not been specified (use 'initial_position_unit')");
         }
-        // TODO: Check correctness of the unit (perhaps create a universal function for this, and do this in other places as well)
+        /// TODO: Check correctness of the unit (perhaps create a universal function for this, and do this in other places as well)
         config.init_pos_unit = m_reader.Get(Sections::SIMULATION, "initial_position_unit", "angstrom");
+
+        config.init_pos_frame = m_reader.GetLong(Sections::SIMULATION, "initial_position_frame", 0);
+        if (config.init_pos_frame < 0) {
+            throw std::invalid_argument("initial_position_frame must be non-negative");
+        }
+
+        const std::string frame_mode = m_reader.GetString(
+            Sections::SIMULATION,
+            "initial_position_frame_mode",
+            "index"
+        );
+        if (frame_mode == "index") {
+            config.init_pos_frame_mode = XyzFrameSelectionMode::Index;
+        } else if (frame_mode == "step") {
+            config.init_pos_frame_mode = XyzFrameSelectionMode::Step;
+        } else {
+            throw std::invalid_argument(std::format(
+                "Unsupported initial_position_frame_mode '{}'; expected 'index' or 'step'",
+                frame_mode
+            ));
+        }
+
         config.init_pos_filename = init_pos_specification;
+    } else if (
+        m_reader.HasValue(Sections::SIMULATION, "initial_position_frame") ||
+        m_reader.HasValue(Sections::SIMULATION, "initial_position_frame_mode")
+    ) {
+        throw std::invalid_argument(
+            "initial_position_frame and initial_position_frame_mode can only be used with initial_position = xyz(...)"
+        );
     }
 
     config.init_pos_type = init_pos_type;
@@ -373,6 +402,7 @@ void Params::loadMomentaInitParams(SimulationConfig& config) const {
         }
         // TODO: Check correctness of the unit (perhaps create a universal function for this, and do this in other places as well)
         config.init_vel_unit = m_reader.Get(Sections::SIMULATION, "initial_velocity_unit", "angstrom/ps");
+        config.init_vel_frame = m_reader.GetLong(Sections::SIMULATION, "initial_velocity_frame", 0);
     }
 
     /// TODO: Local init_vel_type isn't really necessary

@@ -13,6 +13,11 @@ struct ThermostatConfig {
     int nchains = 0;
 };
 
+enum class XyzFrameSelectionMode {
+    Index,
+    Step
+};
+
 // Holds immutable configuration parameters, parsed from the configuration file
 struct SimulationConfig {
     double temperature;
@@ -47,6 +52,8 @@ struct SimulationConfig {
     // Initialization method name for positions and velocities
     std::string init_pos_type, init_vel_type;
     std::string init_pos_unit, init_vel_unit;
+    long init_pos_frame, init_vel_frame;
+    XyzFrameSelectionMode init_pos_frame_mode = XyzFrameSelectionMode::Index;
     std::string init_pos_filename, init_vel_filename;
     int init_pos_index_offset, init_vel_index_offset;
 
