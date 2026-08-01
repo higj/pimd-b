@@ -31,7 +31,11 @@ void VelocityDump::output(int step)
 
     for (int ptcl_idx = 0; ptcl_idx < m_natoms; ++ptcl_idx)
     {
-        m_out_file << (ptcl_idx + 1) << " 1";
+        //m_out_file << (ptcl_idx + 1) << " 1"; // Old format: particle index and type
+
+        // We want the velocity dump to be in the same format as the position dump,
+        // so we use "1" as a placeholder for the atom type. (TODO: Might break tests that expect the old format)
+        m_out_file << "1";
 
         for (int axis = 0; axis < NDIM; ++axis)
         {
