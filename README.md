@@ -176,17 +176,20 @@ The following options are available in the `[simulation]` and `[system]` section
 |`threshold`     |  Defines the percentage of steps to throw away for thermalization (float between 0 and 1) |
 |`sfreq`     | Frequency at which the observables are calculated in the production stage |
 |`gamma`    |  Friction coefficient for the Langevin thermostat in units of inverse time (Default: $\frac{1}{100\Delta t}$) |
-| `nchains` | Number of components in each Nose-Hoover chain for Nose-Hoover-type thermostats
+|`nchains` | Number of components in each Nose-Hoover chain for Nose-Hoover-type thermostats
 |`nbeads`     |  Number of imaginary time-slices (beads) |
 |`bosonic`     |  Set to `true`/`false` for bosonic/distinguishable PIMD (Default: `false`) |
 |`pbc`     |  Set to `true` to enable periodic boundary conditions (Default: `false`) |
 |`fixcom`     |  Set to `true` to remove the center of mass motion (Default: `true`) |
 |`seed`     | Random number generator seed (a positive integer below $9 \times 10^8$) |
 |`initial_position`     | Method for generating the initial positions of the beads |
-|`initial_position_unit`  | Units of the initial coordinates (when using `xyz`) |
-|`initial_position_frame`  | The exact `xyz` frame to load (Default: `0`) |
-|`initial_position_frame_mode`  | Zero-based `index` versus literal `step` interpretation of the frame |
+|`initial_position_unit`  | Units of the initial positions (when using `xyz`) |
+|`initial_position_frame`  | The exact `xyz` position frame to load (Default: `0`) |
+|`initial_position_frame_mode`  | Zero-based `index` versus literal `step` interpretation of the position frame |
 |`initial_velocity`     | Method for generating the initial velocities of the beads. `random` samples from the Maxwell-Boltzmann distribution. `xyz` loads velocities from a provided `xyz` file. (Default: `random`) |
+|`initial_velocity_unit`  | Units of the initial velocities (when using `xyz`) |
+|`initial_velocity_frame`  | The exact `xyz` velocity frame to load (Default: `0`) |
+|`initial_velocity_frame_mode`  | Zero-based `index` versus literal `step` interpretation of the velocity frame |
 |`temperature`     |  Temperature of the quantum system (units of temperature) |
 |`natoms`     |  Number of particles in the quantum system |
 |`size`     |  Linear size of the system (units of length) |
