@@ -281,12 +281,14 @@ void Simulation::initializeMomenta(const std::shared_ptr<SimulationConfig>& conf
             config->thermo_beta
         );
     }
-    else if (config->init_vel_type == "manual")
+    else if (config->init_vel_type == "xyz")
     {
-        initializer = std::make_unique<ManualMomentumInitializer>(
+        initializer = std::make_unique<XyzMomentumInitializer>(
             config->init_vel_filename,
-            config->init_vel_index_offset,
+            config->this_bead + config->init_vel_index_offset,
             config->init_vel_unit,
+            config->init_vel_frame,
+            config->init_vel_frame_mode,
             m_state,
             config->mass
         );

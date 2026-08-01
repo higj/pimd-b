@@ -8,7 +8,79 @@
 
 using Quantity = Units::Quantity;
 
-Params::Params(const std::string& filename, const int& rank) : m_reader(filename), m_rank(rank) {
+namespace {
+    /**
+     * Shared validation logic for "xyz" / "xyz(format)" style position/velocity initialization.
+     * Verifies the (optional) filename format, determines whether on-disk bead numbering starts at
+     * 0 or 1, and enforces the mandatory unit and frame-selection parameters.
+     *
+     * @param reader          The INI reader to pull the unit/frame parameters from.
+     * @param section         Section to read the unit/frame parameters from.
+     * @param label           Human-readable label used in error messages (e.g. "Coordinate", "Velocity").
+     * @param key_prefix      Key prefix shared by the unit/frame parameters (e.g. "initial_position").
+     * @param specification   The filename/format string parsed out of "xyz(...)" syntax (may be empty).
+     * @param[out] index_offset Set to 1 if bead index 0 is missing on disk (numbering starts at 1), else 0.
+     * @param[out] filename     Set to the (unformatted) filename/format string, stored verbatim.
+     * @param[out] unit         Set to the user-specified unit string.
+     * @param[out] frame        Set to the selected frame index.
+     * @param[out] frame_mode   Set to the selected frame-selection mode.
+     */
+    template <typename Reader>
+    void loadXyzInitParams(
+        const Reader& reader,
+        const std::string& section,
+        const std::string& label,
+        const std::string& key_prefix,
+        const std::string& specification,
+        int& index_offset,
+        std::string& filename,
+        std::string& unit,
+        long& frame,
+        XyzFrameSelectionMode& frame_mode
+    ) {
+        try {
+            // If the user provided a filename format, try to format it using the first bead index
+            constexpr int dummy = 0;
+            const std::string formatted_filename = std::vformat(specification, std::make_format_args(dummy));
+            /// TODO: What if both 0 and 1 don't exist?
+            index_offset = static_cast<int>(!std::filesystem::exists(formatted_filename));
+            filename = specification;
+        } catch (const std::format_error&) {
+            throw std::invalid_argument(
+                std::format("The filename format ({}) for {} initialization is invalid!", specification, label));
+        } catch (...) {
+            throw std::runtime_error(
+                std::format("Filename format ({}) for {} initialization validation failed", specification, label));
+        }
+
+        // If the initialization method is "xyz" but the user didn't provide a unit,
+        // we throw an error instead of using a default (don't be smarter than the user)
+        const std::string unit_key = key_prefix + "_unit";
+        if (!reader.HasValue(section, unit_key)) {
+            throw std::invalid_argument(
+                label + " initialization method is 'xyz' but the units have not been specified (use '" + unit_key + "')");
+        }
+        unit = reader.Get(section, unit_key, "");
+
+        frame = reader.GetLong(section, key_prefix + "_frame", 0);
+        if (frame < 0) {
+            throw std::invalid_argument(key_prefix + "_frame must be non-negative");
+        }
+
+        const std::string frame_mode_str = reader.GetString(section, key_prefix + "_frame_mode", "index");
+        if (frame_mode_str == "index") {
+            frame_mode = XyzFrameSelectionMode::Index;
+        } else if (frame_mode_str == "step") {
+            frame_mode = XyzFrameSelectionMode::Step;
+        } else {
+            throw std::invalid_argument(std::format(
+                "Unsupported {}_frame_mode '{}'; expected 'index' or 'step'", key_prefix, frame_mode_str));
+        }
+    }
+
+}
+
+Params::Params(const std::string& filename, int rank) : m_reader(filename), m_rank(rank) {
     printStatus("Initializing the simulation parameters", rank);
 
     if (m_reader.ParseError() < 0)
@@ -22,12 +94,21 @@ std::shared_ptr<SimulationConfig> Params::load() const {
 
     // TODO: Check for unknown headers. Warn the user if any are found.
 
+
+    // NOTE: The calls below have implicit ordering dependencies - reordering them can silently
+    // leave config fields unset or unvalidated. Known dependencies:
+    //   - loadPropagatorParams needs config.bosonic (set by loadSimulationParams)
+    //   - loadThermostatParams needs config.mass (set by loadSystemParams) and config.dt,
+    //     config.nbeads (set by loadSimulationParams)
+    //   - loadExternalPotentialParams / loadInteractionPotentialParams need config.mass and
+    //     config.box_size (set by loadSystemParams)
+    // If you add or reorder a load*Params function, please keep this list in sync.
     loadSimulationParams(*config);
     loadSystemParams(*config);
     loadPropagatorParams(*config);
     loadThermostatParams(*config);
     loadCoordInitParams(*config);
-    loadMomentaInitParams(*config);
+    loadVelocityInitParams(*config);
     loadExternalPotentialParams(*config);
     loadInteractionPotentialParams(*config);
     loadOutputParams(*config);
@@ -74,9 +155,12 @@ void Params::loadSimulationParams(SimulationConfig& config) const {
     if (dt <= 0.0)
         throw std::invalid_argument(std::format("Invalid time-step ({} is not positive)", dt));
 
+    // Config's threshold is specified as a fraction of the total number of steps,
+    // so we shall convert it to an absolute number of steps later on.
+    // For now, we just validate that the user-provided threshold is in [0, 1].
     const double threshold = m_reader.GetReal(Sections::SIMULATION, "threshold", 0.0);
-    if (config.threshold < 0)
-        throw std::invalid_argument(std::format("Invalid threshold ({} is negative)", config.threshold));
+    if (threshold < 0.0 || threshold > 1.0)
+        throw std::invalid_argument(std::format("Invalid threshold ({} must lie in [0, 1])", threshold));
 
     config.steps = static_cast<long>(std::stod(m_reader.Get(Sections::SIMULATION, "steps", "1e5")));
     if (config.steps < 1)
@@ -94,6 +178,9 @@ void Params::loadSimulationParams(SimulationConfig& config) const {
         throw std::invalid_argument(std::format("Invalid number of beads ({}<1)", config.nbeads));
 
     // unsigned int seed = static_cast<unsigned int>(time(nullptr))
+    // TODO: For large seed values, we might be at risk of a silent precision loss through the double round-trip;
+    // GetInteger/GetLong-style integer parsing (or a small helper that accepts scientific notation without going through double) would be safer, and
+    // would match the pattern already used for steps/sfreq.
     config.seed = static_cast<unsigned int>(std::stod(m_reader.Get(Sections::SIMULATION, "seed", "1234")));
 
     // Bosonic or distinguishable simulation?
@@ -198,7 +285,13 @@ void Params::loadThermostatParams(SimulationConfig& config) const {
     );
 
     if (temperature <= 0) {
-        throw std::invalid_argument(std::format("The specified temperature ({0:4.3f} kelvin) is not positive", temperature));
+        throw std::invalid_argument(
+            std::format(
+                "The specified temperature ({0:4.3f} {1}) is not positive", 
+                temperature,
+                config.units_list["temperature"]
+            )
+        );
     }
 
     // Define additional parameters based on rudimentary config parameters
@@ -288,54 +381,19 @@ void Params::loadCoordInitParams(SimulationConfig& config) const {
             init_pos_type));
 
     if (init_pos_type == "xyz") {
-        try {
-            // If the user provided a filename format, try to format it using the first bead index
-            const int dummy = 0;
-            std::string formatted_filename = std::vformat(init_pos_specification, std::make_format_args(dummy));
-            /// TODO: What if both 0 and 1 don't exist?
-            config.init_pos_index_offset = static_cast<int>(!std::filesystem::exists(formatted_filename));
-        } catch (const std::format_error&) {
-            throw std::invalid_argument(
-                std::format("The filename format ({}) for coordinate initialization is invalid!",
-                    init_pos_specification)
-            );
-        } catch (...) {
-            throw std::runtime_error(
-                std::format("Filename format ({}) for coordinate initialization validation failed",
-                    init_pos_specification)
-            );
-        }
-
-        // If the initialization method is "xyz" but the user didn't provide a unit,
-        // we throw an error instead of using a default (don't be smarter than the user)
-        if (!m_reader.HasValue(Sections::SIMULATION, "initial_position_unit")) {
-            throw std::invalid_argument("Coordinate initialization method is 'xyz' but the units have not been specified (use 'initial_position_unit')");
-        }
         /// TODO: Check correctness of the unit (perhaps create a universal function for this, and do this in other places as well)
-        config.init_pos_unit = m_reader.Get(Sections::SIMULATION, "initial_position_unit", "angstrom");
-
-        config.init_pos_frame = m_reader.GetLong(Sections::SIMULATION, "initial_position_frame", 0);
-        if (config.init_pos_frame < 0) {
-            throw std::invalid_argument("initial_position_frame must be non-negative");
-        }
-
-        const std::string frame_mode = m_reader.GetString(
+        loadXyzInitParams(
+            m_reader,
             Sections::SIMULATION,
-            "initial_position_frame_mode",
-            "index"
+            "Coordinate",
+            "initial_position",
+            init_pos_specification,
+            config.init_pos_index_offset,
+            config.init_pos_filename,
+            config.init_pos_unit,
+            config.init_pos_frame,
+            config.init_pos_frame_mode
         );
-        if (frame_mode == "index") {
-            config.init_pos_frame_mode = XyzFrameSelectionMode::Index;
-        } else if (frame_mode == "step") {
-            config.init_pos_frame_mode = XyzFrameSelectionMode::Step;
-        } else {
-            throw std::invalid_argument(std::format(
-                "Unsupported initial_position_frame_mode '{}'; expected 'index' or 'step'",
-                frame_mode
-            ));
-        }
-
-        config.init_pos_filename = init_pos_specification;
     } else if (
         m_reader.HasValue(Sections::SIMULATION, "initial_position_frame") ||
         m_reader.HasValue(Sections::SIMULATION, "initial_position_frame_mode")
@@ -349,15 +407,15 @@ void Params::loadCoordInitParams(SimulationConfig& config) const {
 }
 
 /**
- * Load parameters pertaining to the momentum initialization.
+ * Load parameters pertaining to the velocity initialization.
  *
  * @param config Config object to load parameters into.
  */
-void Params::loadMomentaInitParams(SimulationConfig& config) const {
+void Params::loadVelocityInitParams(SimulationConfig& config) const {
     // Allowed velocity initialization methods:
     //  "random": samples from Maxwell-Boltzmann distribution
-    //  "manual": reads from vel_X.dat files
-    //  "manual(format)": reads from format(X) files
+    //  "xyz": reads from strict XYZ format files
+    //  "xyz(format)": reads from XYZ format with per-bead files
     std::string init_vel_type, init_vel_specification;
 
     if (!StringUtils::parseTokenParentheses(
@@ -369,40 +427,31 @@ void Params::loadMomentaInitParams(SimulationConfig& config) const {
     }
 
     using namespace std::string_view_literals;
-    constexpr auto allowed_vel_init_methods = std::array{ "random"sv, "manual"sv };
+    constexpr auto allowed_vel_init_methods = std::array{ "random"sv, "xyz"sv };
 
     if (!StringUtils::labelInArray(init_vel_type, allowed_vel_init_methods))
         throw std::invalid_argument(std::format("The specified velocity initialization method ({}) is not supported!",
             init_vel_type));
 
-    if (init_vel_type == "manual" && !init_vel_specification.empty()) {
-        try {
-            const int dummy = 0;
-            // Try using specification as filename format
-            std::string formatted_filename = std::vformat(init_vel_specification, std::make_format_args(dummy));
-            /// TODO: What if both 0 and 1 don't exist?
-            config.init_vel_index_offset = static_cast<int>(!std::filesystem::exists(formatted_filename));
-            config.init_vel_filename = init_vel_specification;
-        } catch (const std::format_error&) {
-            throw std::invalid_argument(
-                std::format("The filename format ({}) for velocity initialization is invalid!",
-                    init_vel_specification)
-            );
-        } catch (...) {
-            throw std::runtime_error(
-                std::format("Filename format ({}) for velocity initialization validation failed",
-                    init_vel_specification)
-            );
-        }
-
-        // If the initialization method is "manual" but the user didn't provide a unit,
-        // we throw an error instead of using a default (don't be smarter than the user)
-        if (!m_reader.HasValue(Sections::SIMULATION, "initial_velocity_unit")) {
-            throw std::invalid_argument("Velocity initialization method is 'manual' but the units have not been specified (use 'initial_velocity_unit')");
-        }
-        // TODO: Check correctness of the unit (perhaps create a universal function for this, and do this in other places as well)
-        config.init_vel_unit = m_reader.Get(Sections::SIMULATION, "initial_velocity_unit", "angstrom/ps");
-        config.init_vel_frame = m_reader.GetLong(Sections::SIMULATION, "initial_velocity_frame", 0);
+    if (init_vel_type == "xyz") {
+        loadXyzInitParams(
+            m_reader,
+            Sections::SIMULATION,
+            "Velocity",
+            "initial_velocity",
+            init_vel_specification,
+            config.init_vel_index_offset,
+            config.init_vel_filename,
+            config.init_vel_unit,
+            config.init_vel_frame,
+            config.init_vel_frame_mode
+        );
+    } else if (
+        m_reader.HasValue(Sections::SIMULATION, "initial_velocity_frame") ||
+        m_reader.HasValue(Sections::SIMULATION, "initial_velocity_frame_mode")) {
+        throw std::invalid_argument(
+            "initial_velocity_frame and initial_velocity_frame_mode can only be used with initial_velocity = xyz(...)"
+        );
     }
 
     /// TODO: Local init_vel_type isn't really necessary
@@ -442,7 +491,7 @@ void Params::loadExternalPotentialParams(SimulationConfig& config) const {
     } else if (name == "cosine") {
         const double amplitude = Units::getQuantity(
             "energy", m_reader.Get(Sections::EXT_POTENTIAL, "amplitude", "1.0 millielectronvolt"));
-        const double phase = m_reader.GetReal(Sections::EXT_POTENTIAL, "phase", 1.0);
+        const double phase = m_reader.GetReal(Sections::EXT_POTENTIAL, "phase", 0.0);
         config.ext_potential_cfg = PotentialConfig{name, CosinePotentialParams{amplitude, config.box_size, phase}};
     } else {
         config.ext_potential_cfg = PotentialConfig{};  // defaults to "free"

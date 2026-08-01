@@ -54,6 +54,7 @@ struct SimulationConfig {
     std::string init_pos_unit, init_vel_unit;
     long init_pos_frame, init_vel_frame;
     XyzFrameSelectionMode init_pos_frame_mode = XyzFrameSelectionMode::Index;
+    XyzFrameSelectionMode init_vel_frame_mode = XyzFrameSelectionMode::Index;
     std::string init_pos_filename, init_vel_filename;
     int init_pos_index_offset, init_vel_index_offset;
 

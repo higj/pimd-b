@@ -17,7 +17,7 @@ namespace Sections {
 
 class Params {
 public:
-    explicit Params(const std::string& filename, const int& rank);
+    explicit Params(const std::string& filename, int rank);
     [[nodiscard]] std::shared_ptr<SimulationConfig> load() const;
     double loadQuantity(
         const std::string& family,
@@ -36,7 +36,7 @@ private:
     void loadPropagatorParams(SimulationConfig& config) const;
     void loadThermostatParams(SimulationConfig& config) const;
     void loadCoordInitParams(SimulationConfig& config) const;
-    void loadMomentaInitParams(SimulationConfig& config) const;
+    void loadVelocityInitParams(SimulationConfig& config) const;
     void loadExternalPotentialParams(SimulationConfig& config) const;
     void loadInteractionPotentialParams(SimulationConfig& config) const;
     void loadOutputParams(SimulationConfig& config) const;

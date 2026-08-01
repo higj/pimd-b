@@ -107,13 +107,12 @@ The `initial_position` option allows to specify the method of initialization for
 * `xyz(<filename>.xyz)`: initializes the coordinates based on the provided `.xyz` file. A given particle is initialized at the same location across all imaginary time-slices (beads).
 * `xyz(<filename_format>)`: if the provided filename is a [Python format string](https://docs.python.org/3/library/string.html#formatspec), the indices of the imaginary time-slices (starting with either 0 or 1, automatically detected from the available files) are substituted as the format argument, and the resulting filenames are then used to initialize the coordinates. The formatted string can contain only a single replacement field.
 
-For multi-frame XYZ files, `initial_position_frame` selects the frame to load (default: `0`). `initial_position_frame_mode = index` (default) selects the zero-based frame index. `initial_position_frame_mode = step` instead selects the frame whose required XYZ comment line is exactly `Step <number>`. For example, `initial_position_frame = 10` with `initial_position_frame_mode = step` selects a frame with the comment line `Step 10`.
+When using the `xyz` option, the user must specify the units of the coordinates using the `initial_position_unit` option. For multi-frame XYZ files, `initial_position_frame` selects the frame to load (default: `0`). `initial_position_frame_mode = index` (default) selects the zero-based frame index. `initial_position_frame_mode = step` instead selects the frame whose required XYZ comment line is exactly `Step <number>`. For example, `initial_position_frame = 10` with `initial_position_frame_mode = step` selects a frame with the comment line `Step 10`.
 
 Similarly, the `initial_velocity` option gives the user the ability to initialize the bead velocities. Currently, the following options are available:
 
 * `random` (default): samples velocities from the Maxwell-Boltzmann distribution at the given temperature of the simulation.
-* `manual`: the velocities are initialized from the files `init/vel_XX.dat` where `XX` symbolizes the two-digit index of the imaginary time-slice, starting from 01.
-* `manual(<filename_format>)`: similar behavior to `xyz(<filename_format>)`.
+* `xyz`: the velocities are initialized from `xyz` files, in the same way as the positions. In particular, the units, the frame and the frame mode are specified using `initial_velocity_unit`, `initial_velocity_frame` and `initial_velocity_frame_mode`, respectively.
 
 The `size` option defines the linear size of the system. Currently, only cube geometry is supported. In the absence of periodic boundary conditions, `size` only affects the way initial positions are generated (when random generation is requested). However, if periodic boundary conditions are enabled, the system size also affects the cutoff distance for interactions, as well as the estimators. Also, the coordinates may be wrapped in this case, and minimum image convention can potentially be employed, if such functionality is desired.
 
@@ -187,7 +186,7 @@ The following options are available in the `[simulation]` and `[system]` section
 |`initial_position_unit`  | Units of the initial coordinates (when using `xyz`) |
 |`initial_position_frame`  | The exact `xyz` frame to load (Default: `0`) |
 |`initial_position_frame_mode`  | Zero-based `index` versus literal `step` interpretation of the frame |
-|`initial_velocity`     | Method for generating the initial velocities of the beads. `random` samples from the Maxwell-Boltzmann distribution. `manual` loads velocities from a provided file. (Default: `random`) |
+|`initial_velocity`     | Method for generating the initial velocities of the beads. `random` samples from the Maxwell-Boltzmann distribution. `xyz` loads velocities from a provided `xyz` file. (Default: `random`) |
 |`temperature`     |  Temperature of the quantum system (units of temperature) |
 |`natoms`     |  Number of particles in the quantum system |
 |`size`     |  Linear size of the system (units of length) |
