@@ -64,6 +64,26 @@ namespace Units {
         return number / convertToInternal(family, unit, 1.0);
     }
 
+    bool isValidUnit(const std::string& family, const std::string& unit) noexcept {
+        try
+        {
+            convertToUser(family, unit, 1.0);
+            return true;
+        }
+        catch (const std::invalid_argument&)
+        {
+            return false;
+        }
+    }
+
+    void validateUnit(const std::string& family, const std::string& unit)
+    {
+        if (!isValidUnit(family, unit)) {
+            throw std::invalid_argument(unit + " is an invalid unit for " + family + ".");
+        }
+    }
+
+
     std::pair<double, std::string> parseQuantity(const std::string& input) {
         std::istringstream iss(input);
         std::string unit;

@@ -4,23 +4,13 @@
 VelocityDump::VelocityDump(const VelocityContext& dump_context, int this_bead, int out_freq, const std::string& out_unit) :
     Dump(this_bead, out_freq, out_unit), m_context(dump_context), m_natoms(dump_context.momenta->len())
 {
-    // Check the correctness of the provided unit ahead of time
-    try
-    {
-        Units::convertToUser("velocity", out_unit, 1.0);
-    }
-    catch (const std::invalid_argument&)
-    {
-        throw std::invalid_argument("Invalid output unit for velocity dump.");
-    }
+    Units::validateUnit("velocity", out_unit);
 }
 
 void VelocityDump::initialize()
 {
     // Open the output file for appending, creating it if it doesn't exist
     // TODO: Consider using std::filesystem to ensure the output directory exists before opening the file
-    // TODO: Note that velocities are dumped to xyz files, which will likely break the tests that expect the old (.dat) format.
-    // We should consider changing the file extension to .vel or similar.
     m_out_file.open(std::format("{}/velocity_{}.xyz", Output::FOLDER_NAME, m_this_bead), std::ios::out | std::ios::app);
     //m_out_file << std::format("# Units: {}\n", m_out_unit);
 }

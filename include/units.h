@@ -162,6 +162,12 @@ namespace Units {
     // Converts the internal (atomic) units to the desired output units
     double convertToUser(const std::string& family, const std::string& unit, double number);
 
+    // Checks if the provided unit is valid for the given family of units
+    bool isValidUnit(const std::string& family, const std::string& unit) noexcept;
+
+    // Throws an exception if the provided unit is invalid for the given family of units
+    void validateUnit(const std::string& family, const std::string& unit);
+
     // Parse a string containing a numerical value and a unit
     std::pair<double, std::string> parseQuantity(const std::string& input);
 

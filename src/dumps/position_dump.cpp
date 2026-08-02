@@ -5,15 +5,7 @@ PositionDump::PositionDump(const std::shared_ptr<const VecArray>& coord, int thi
                            const std::string& out_unit) :
     Dump(this_bead, out_freq, out_unit), m_coord(coord), m_natoms(coord->len())
 {
-    // Check the correctness of the provided unit ahead of time
-    try
-    {
-        Units::convertToUser("length", out_unit, 1.0);
-    }
-    catch (const std::invalid_argument&)
-    {
-        throw std::invalid_argument("Invalid output unit for position dump.");
-    }
+    Units::validateUnit("length", out_unit);
 }
 
 void PositionDump::initialize()
