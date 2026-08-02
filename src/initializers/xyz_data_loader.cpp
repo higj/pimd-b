@@ -241,15 +241,14 @@ Vec XyzDataLoader::parseDataLine(
     }
 
     // XYZ file line should have exactly one atom label, followed by 3 numeric values (even when NDIM is 2 or 1, the file format still expects 3 values for compatibility)
-    if (tokens.size() < 4) {
+    if (tokens.size() != 4) {
         throwMalformedFrame(
             xyz_filename,
             frame_index,
             std::format(
-                "data line {} is '{}'; expected an atom identifier followed by {} values",
+                "data line {} is '{}'; expected an atom identifier followed by three values",
                 atom_index,
-                line,
-                NDIM
+                line
             )
         );
     }

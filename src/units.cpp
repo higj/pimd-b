@@ -83,7 +83,6 @@ namespace Units {
         }
     }
 
-
     std::pair<double, std::string> parseQuantity(const std::string& input) {
         std::istringstream iss(input);
         std::string unit;
