@@ -164,31 +164,51 @@ def extract_numeric_data(file_path):
 
 
 def test_coordinates(output_folder, test_folder, in_file):
-    test_xyz_files = list(test_folder.glob("*.xyz"))
-            
-    # If the test contains '.xyz' files, compare them.
+    # Matches 'position_' followed by any number of digits and '.xyz'
+    pattern = re.compile(r"^position_\d+\.xyz$")
+
+    # Filter files in test_folder matching the pattern
+    test_xyz_files = [
+        f
+        for f in test_folder.glob("*.xyz")
+        if f.is_file() and pattern.match(f.name)
+    ]
+
+    # If the test contains relevant 'position_XX.xyz' files, compare them.
     # Otherwise, skip this test.
     if test_xyz_files:
         print("Comparing trajectories...")
-        xyz_file_names = [file.name for file in test_xyz_files]  # Expected xyz file names
+        xyz_file_names = [file.name for file in test_xyz_files]
 
-        # Check if the simulation output directory has the same number of xyz files and same filenames
-        out_xyz_files = list(output_folder.glob("*.xyz"))
-                
+        # Filter files in output_folder using the same pattern
+        out_xyz_files = [
+            f
+            for f in output_folder.glob("*.xyz")
+            if f.is_file() and pattern.match(f.name)
+        ]
+
         if len(out_xyz_files) != len(test_xyz_files):
-            raise AssertionError(f"Test failed: number of xyz files found in {output_folder} is incorrect.")
-                
+            raise AssertionError(
+                f"Test failed: number of position xyz files found in {output_folder} is incorrect."
+            )
+
         for xyz_file in out_xyz_files:
             if xyz_file.name not in xyz_file_names:
-                raise AssertionError(f"Test failed: the generated xyz files have incorrect names.")
-                
+                raise AssertionError(
+                    f"Test failed: the generated xyz files have incorrect names."
+                )
+
         natoms = get_number_of_atoms(tests_dir / in_file)
-                
+
         for xyz_file_name in xyz_file_names:
             out_xyz_file = output_folder / xyz_file_name
             test_xyz_file = test_folder / xyz_file_name
-            compare_xyz(actual_xyz_file=out_xyz_file, expected_xyz_file=test_xyz_file, natoms=natoms)
-                    
+            compare_xyz(
+                actual_xyz_file=out_xyz_file,
+                expected_xyz_file=test_xyz_file,
+                natoms=natoms,
+            )
+
         print("Test passed: Trajectories match.")
 
 
