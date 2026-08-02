@@ -240,7 +240,8 @@ Vec XyzDataLoader::parseDataLine(
         tokens.push_back(token);
     }
 
-    if (tokens.size() < NDIM + 1) {
+    // XYZ file line should have exactly one atom label, followed by 3 numeric values (even when NDIM is 2 or 1, the file format still expects 3 values for compatibility)
+    if (tokens.size() < 4) {
         throwMalformedFrame(
             xyz_filename,
             frame_index,
@@ -255,7 +256,7 @@ Vec XyzDataLoader::parseDataLine(
 
     Vec data{};
     for (int axis = 0; axis < NDIM; ++axis) {
-        const std::string& data_token = tokens[tokens.size() - NDIM + axis];
+        const std::string& data_token = tokens[1 + axis];  // Always start from position 1 (after atom label)
 
         try {
             std::size_t parsed_length = 0;

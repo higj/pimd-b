@@ -368,3 +368,4 @@ FodyWeavers.xsd
 build/
 /vcpkg-configuration.json
 /vcpkg.json
+/CMakePresets.json

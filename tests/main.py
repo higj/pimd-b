@@ -193,12 +193,12 @@ def test_coordinates(output_folder, test_folder, in_file):
 
 
 def test_velocities(output_folder, test_folder):
-    # Function to filter files with names in the format "velocity_X.dat"
+    # Function to filter files with names in the format "velocity_X.xyz"
     def is_velocity_file(file):
-        return file.name.startswith("velocity_") and file.name.endswith(".dat") and file.stem.split("_")[1].isdigit()
+        return file.name.startswith("velocity_") and file.name.endswith(".xyz") and file.stem.split("_")[1].isdigit()
 
-    # Check if the test case has at least one file with the format "velocity_X.dat"
-    velocity_files = list(filter(is_velocity_file, test_folder.glob("velocity_*.dat")))
+    # Check if the test case has at least one file with the format "velocity_X.xyz"
+    velocity_files = list(filter(is_velocity_file, test_folder.glob("velocity_*.xyz")))
     
     # If not, quit the test
     if not velocity_files:
@@ -206,13 +206,13 @@ def test_velocities(output_folder, test_folder):
 
     print("Comparing velocities...")
     
-    # Get the names of all 'velocity_X.dat' files in test
+    # Get the names of all 'velocity_X.xyz' files in test
     velocity_file_names = [file.name for file in velocity_files]
 
     # Check if the output directory has the same number of files and same filenames
-    out_velocity_files = list(filter(is_velocity_file, output_folder.glob("velocity_*.dat")))
+    out_velocity_files = list(filter(is_velocity_file, output_folder.glob("velocity_*.xyz")))
     if len(out_velocity_files) != len(velocity_files):
-        raise AssertionError(f"Test failed: Different number of 'velocity_X.dat' files found in {output_folder}")
+        raise AssertionError(f"Test failed: Different number of 'velocity_X.xyz' files found in {output_folder}")
     
     for velocity_file in out_velocity_files:
         if velocity_file.name not in velocity_file_names:

@@ -22,6 +22,8 @@ include_directories(libs)
 
 # Create the executable
 add_executable(pimdb ${PIMDB_SRC} ${PIMDB_HEADERS} ${PIMDB_LIBS})
+# Configure inih library for longer configuration lines
+target_compile_definitions(pimdb PRIVATE INI_USE_STACK=0 INI_ALLOW_REALLOC=1 INI_MAX_LINE=2048)
 
 # MPI
 find_package(MPI REQUIRED)

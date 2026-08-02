@@ -37,7 +37,7 @@
           "cacheVariables": {
             "CMAKE_BUILD_TYPE": "Release",
             "FACTORIAL_BOSONIC_ALGORITHM": "0",
-            "NDIM": "3"
+            "NDIM": "1"
           }
         },
         {

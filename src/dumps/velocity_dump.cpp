@@ -17,7 +17,11 @@ VelocityDump::VelocityDump(const VelocityContext& dump_context, int this_bead, i
 
 void VelocityDump::initialize()
 {
-    m_out_file.open(std::format("{}/velocity_{}.dat", Output::FOLDER_NAME, m_this_bead), std::ios::out | std::ios::app);
+    // Open the output file for appending, creating it if it doesn't exist
+    // TODO: Consider using std::filesystem to ensure the output directory exists before opening the file
+    // TODO: Note that velocities are dumped to xyz files, which will likely break the tests that expect the old (.dat) format.
+    // We should consider changing the file extension to .vel or similar.
+    m_out_file.open(std::format("{}/velocity_{}.xyz", Output::FOLDER_NAME, m_this_bead), std::ios::out | std::ios::app);
     //m_out_file << std::format("# Units: {}\n", m_out_unit);
 }
 
