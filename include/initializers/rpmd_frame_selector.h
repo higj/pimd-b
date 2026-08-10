@@ -67,6 +67,6 @@ private:
     static std::vector<long> computeFrameIndices(
         const long num_frames,
         const int num_runs,
-        const int nvt_discard_frac
+        const float nvt_discard_frac
     );
 };

@@ -15,9 +15,9 @@ struct ThermostatConfig {
 
 // RPMD-related parameters
 struct RpmdConfig {
-    bool enabled;        // Is RPMD mode active?
-    int num_runs;          // Number of independent simulations to perform
-    int nvt_discard_frac;  // Fraction of the NVT trajectory to discard before sampling starts
+    bool enabled;             // Is RPMD mode active?
+    int num_runs;             // Number of independent simulations to perform
+    double nvt_discard_frac;  // Fraction of the NVT trajectory to discard before sampling starts
 };
 
 enum class XyzFrameSelectionMode {

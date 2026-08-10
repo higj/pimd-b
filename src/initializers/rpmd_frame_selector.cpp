@@ -92,7 +92,7 @@ long RpmdFrameSelector::countFramesInXyzFile(const std::string& filename, int fi
 std::vector<long> RpmdFrameSelector::computeFrameIndices(
     const long num_frames,
     const int num_runs,
-    const int nvt_discard_frac
+    const float nvt_discard_frac
 )
 {
     const long equilibration_frame = static_cast<long>(

@@ -597,7 +597,7 @@ void Params::loadRpmdParams(SimulationConfig& config) const {
         if (config.rpmd_config.num_runs < 1)
             throw std::invalid_argument("rpmd_nruns must be at least 1");
 
-        config.rpmd_config.nvt_discard_frac = m_reader.GetInteger(Sections::SIMULATION, "rpmd_nvt_discard_fraction", 0);
+        config.rpmd_config.nvt_discard_frac = m_reader.GetReal(Sections::SIMULATION, "rpmd_nvt_discard_fraction", 0.0);
         if (config.rpmd_config.nvt_discard_frac < 0 || config.rpmd_config.nvt_discard_frac >= 1)
             throw std::invalid_argument("rpmd_nvt_discard_fraction must be non-negative and less than 1");
 
