@@ -8,11 +8,13 @@ PositionDump::PositionDump(const std::shared_ptr<const VecArray>& coord, int thi
     Units::validateUnit("length", out_unit);
 }
 
+/*
 void PositionDump::initialize()
 {
     m_out_file.open(std::format("{}/position_{}.xyz", Output::FOLDER_NAME, m_this_bead), std::ios::out | std::ios::app);
     //m_out_file << std::format("# Units: {}\n", m_out_unit);
 }
+*/
 
 void PositionDump::output(int step)
 {

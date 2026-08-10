@@ -1,14 +1,16 @@
 #include "observables_logger.h"
+
 #include "observables/observable.h"
 #include "output_paths.h"
 #include "mpi.h"
 
 #include <format>
 #include <ranges>
+#include <filesystem>
 
 // Constructor opens the file and writes the header
 ObservablesLogger::ObservablesLogger(
-    const std::string& filename,
+    const std::filesystem::path& filename,
     int this_bead,
     long frequency,
     const std::vector<std::shared_ptr<Observable>>& observables
@@ -17,28 +19,7 @@ ObservablesLogger::ObservablesLogger(
     m_frequency(frequency),
     m_observables(observables)
 {
-    if (this_bead == 0)
-    {
-        m_file.open(std::format("{}/{}", Output::FOLDER_NAME, filename), std::ios::out | std::ios::app);
-
-        if (!m_file.is_open())
-        {
-            throw std::ios_base::failure(std::format("Failed to open {}.", Output::MAIN_FILENAME));
-        }
-
-        // Write the header
-        m_file << std::format("{:^16s}", "step");
-
-        for (const auto& observable : observables)
-        {
-            for (const auto& key : observable->quantities | std::views::keys)
-            {
-                m_file << std::vformat(" {:^16s}", std::make_format_args(key));
-            }
-        }
-
-        m_file << '\n';
-    }
+    openFileAndWriteHeader(filename);
 }
 
 // Destructor closes the file if open
@@ -61,6 +42,19 @@ void ObservablesLogger::log(long step)
         writeObservables();
         if (m_this_bead == 0) m_file << '\n';
     //}
+}
+
+void ObservablesLogger::reopenFile(const std::filesystem::path& new_filename) {
+    if (m_this_bead == 0)
+    {
+        // Close the current file if it's open
+        if (m_file.is_open())
+        {
+            m_file.close();
+        }
+
+        openFileAndWriteHeader(new_filename);
+    }
 }
 
 void ObservablesLogger::writeTimeStep(long step) {
@@ -101,5 +95,33 @@ void ObservablesLogger::writeObservables() {
                 m_file << std::format(" {:^16.8e}", quantity_value);
             }
         }
+    }
+}
+
+void ObservablesLogger::openFileAndWriteHeader(const std::filesystem::path& filename) {
+    if (m_this_bead == 0) {
+        // Construct the full path to the output file
+        //const std::filesystem::path file_path = Output::FOLDER_NAME / filename; // Moved folder specification to Simulation::initializeObservablesLogger
+
+        // Ensure the output directory exists
+        std::filesystem::create_directories(filename.parent_path());
+
+        // Open the file in append mode to avoid overwriting existing data
+        m_file.open(filename, std::ios::out | std::ios::app);
+
+        if (!m_file.is_open()) {
+            throw std::ios_base::failure(std::format("Failed to open {}.", filename.string()));
+        }
+
+        // Write the header
+        m_file << std::format("{:^16s}", "step");
+
+        for (const auto& observable : m_observables) {
+            for (const auto& key : observable->quantities | std::views::keys) {
+                m_file << std::vformat(" {:^16s}", std::make_format_args(key));
+            }
+        }
+
+        m_file << '\n';
     }
 }

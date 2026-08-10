@@ -1,5 +1,6 @@
 #pragma once
 
+#include "contexts/rpmd_context.h"
 #include "contexts/thermal_context.h"
 #include "contexts/bead_context.h"
 #include "contexts/spring_context.h"

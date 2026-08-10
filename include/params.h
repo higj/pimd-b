@@ -41,4 +41,5 @@ private:
     void loadInteractionPotentialParams(SimulationConfig& config) const;
     void loadOutputParams(SimulationConfig& config) const;
     void loadObservableParams(SimulationConfig& config) const;
+    void loadRpmdParams(SimulationConfig& config) const;
 };

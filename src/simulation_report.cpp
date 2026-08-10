@@ -67,6 +67,8 @@ void SimulationReport::initializeParameterLines(const SimulationConfig& config) 
         m_parameter_lines.push_back(formattedReportLine("Statistics", "Boltzmannonic"));
     }
 
+    /// TODO: Add thermostat
+
     // Configuration parameters
     m_parameter_lines.push_back(formattedReportLine("Time propagation algorithm", config.propagator_type));
     m_parameter_lines.push_back(
@@ -118,6 +120,13 @@ void SimulationReport::initializeParameterLines(const SimulationConfig& config) 
     m_parameter_lines.push_back(formattedReportLine("Total number of MD steps", config.steps));
     m_parameter_lines.push_back(formattedReportLine("Interaction potential name", config.int_potential_cfg.name()));
     m_parameter_lines.push_back(formattedReportLine("External potential name", config.ext_potential_cfg.name()));
+
+    if (config.rpmd_config.enabled)
+    {
+        //m_parameter_lines.push_back(formattedReportLine("RPMD mode", "Enabled"));
+        m_parameter_lines.push_back(formattedReportLine("RPMD number of runs", config.rpmd_config.num_runs));
+        m_parameter_lines.push_back(formattedReportLine("RPMD discard fraction", config.rpmd_config.nvt_discard_frac));
+    }
 }
 
 void SimulationReport::initializeFeatureLines() {

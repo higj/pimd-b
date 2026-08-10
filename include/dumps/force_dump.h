@@ -2,6 +2,7 @@
 
 #include "dumps/dump.h"
 
+#include <format>
 #include <memory>
 
 class SystemState;
@@ -16,7 +17,7 @@ public:
     /**
      * @brief Initializes the forces dat file.
      */
-    void initialize() override;
+    //void initialize() override;
 
     /**
      * Outputs the forces.
@@ -24,6 +25,9 @@ public:
      * @param step Current step of the simulation.
      */
     void output(int step) override;
+
+protected:
+    [[nodiscard]] std::string fileName() const override { return std::format("force_{}.dat", m_this_bead); }
 
 private:
     std::shared_ptr<SystemState> m_state;

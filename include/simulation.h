@@ -4,7 +4,12 @@
 #include "contexts.h"
 
 #include <memory>
+#include <functional>
+#include <optional>
+#include <filesystem>
 
+class RpmdFrameSelector;
+enum class XyzFrameSelectionMode;
 struct SimulationConfig;
 class SystemState;
 class RandomGenerators;
@@ -35,10 +40,17 @@ public:
 private:
     long m_steps;
     long m_threshold;
+    long m_sfreq;
     bool m_is_thermalization_phase;
 
+    // Flag indicating whether the simulation is running in RPMD mode
+    bool m_is_rpmd;
+
+    // RPMD frame selector, used to determine which frame to use for each run (only initialized if RPMD is enabled)
+    std::unique_ptr<RpmdFrameSelector> m_rpmd_frame_selector;
+
     /**
-     * Initializes the basic contexts that depend only on the configuration parameters
+     * @brief Initializes the basic contexts that depend only on the configuration parameters
      * and not on the state of the simulation.
      *
      * @param config The simulation configuration object containing parameters like temperature, box size, etc.
@@ -55,6 +67,10 @@ private:
     void setStep(long step);
 
     static double getWallTime();
+
+    void runPathIntegralMolecularDynamics();
+
+    void runRingPolymerMolecularDynamics();
 
     /**
      * @brief Reset the observables at the beginning of each step.
@@ -76,6 +92,21 @@ private:
 
     void performMolecularDynamicsStep() const;
 
+    /**
+     * @brief Ensures the observables logger is initialized with the given filename.
+     * Creates it lazily on first call, or reopens with a new filename if already initialized.
+     *
+     * @param filename The name of the file to initialize the observables logger with.
+     */
+    void initializeObservablesLogger(const std::filesystem::path& filename);
+
+    /**
+     * @brief Ensures the dump objects are initialized with the given filename.
+     *
+     * @param base_folder The path to the folder where the dumps will be saved.
+     */
+    void initializeDumps(const std::filesystem::path& base_folder);
+
     void calculateObservables() const;
 
     void calculateAndLogObservables(long step) const;
@@ -89,6 +120,53 @@ private:
 
     void executeStep(long step) const;
 
+    // ============ Initialization Factories ============
+    /**
+     * @brief Type alias for position initialization factories.
+     * The factory takes an optional (xyz) frame index and performs the initialization.
+     */
+    using PositionInitFactory = std::function<void(std::optional<long>)>;
+
+    /**
+     * @brief Type alias for momentum initialization factories.
+     * The factory takes an optional (xyz) frame index and performs the initialization.
+     */
+    using MomentumInitFactory = std::function<void(std::optional<long>)>;
+
+    /**
+     * @brief Stores the factory for position initialization.
+     * Bound during construction of the Simulation object based on the configuration parameters.
+     * Invoked with optional frame index during RPMD runs.
+     */
+    PositionInitFactory m_position_init_factory;
+
+    /**
+     * @brief Stores the factory for momentum initialization.
+     * Bound during construction of the Simulation object based on the configuration parameters.
+     * Invoked with optional frame index during RPMD runs.
+     */
+    MomentumInitFactory m_momentum_init_factory;
+
+    /**
+     * @brief Creates and binds the position initialization factory based on the configuration parameters.
+     * This captures all configuration details needed for position initialization without storing them in the Simulation object.
+     *
+     * @param config The simulation configuration object
+     */
+    void bindPositionInitFactory(
+        const std::shared_ptr<SimulationConfig>& config
+    );
+
+    /**
+     * @brief Creates and binds the momentum initialization factory based on the configuration parameters.
+     * This captures all configuration details needed for momentum initialization without storing them in the Simulation object.
+     *
+     * @param config The simulation configuration object
+    */
+    void bindMomentumInitFactory(
+        const std::shared_ptr<SimulationConfig>& config
+    );
+
     //std::shared_ptr<SimulationConfig> m_config;
     std::shared_ptr<SystemState> m_state;
     std::shared_ptr<RandomGenerators> m_rng;
@@ -97,6 +175,7 @@ private:
     std::shared_ptr<Propagator> m_propagator;
     std::shared_ptr<Thermostat> m_thermostat;
 
+    RpmdContext m_rpmd_context;
     ThermalContext m_thermal_ctx;
     SpringContext m_spring_ctx;
     BoxContext m_box_ctx;
@@ -112,10 +191,10 @@ private:
 
     std::unique_ptr<SimulationReport> m_report;
 
-    std::vector<std::shared_ptr<Dump>> initializeDumps(
+    /*std::vector<std::shared_ptr<Dump>> initializeDumps(
         const std::shared_ptr<SimulationConfig>& config,
         const VelocityContext& vel_ctx
-    ) const;
+    ) const;*/
 
      /**
       * Initializes the quantum statistics for the simulation (bosonic or distinguishable).

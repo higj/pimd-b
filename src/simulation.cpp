@@ -10,6 +10,7 @@
 #include "initializers/thermostat_initializer.h"
 #include "initializers/observable_initializer.h"
 #include "initializers/dump_initializer.h"
+#include "initializers/rpmd_frame_selector.h"
 #include "propagators.h"
 #include "observables_logger.h"
 #include "output_paths.h"
@@ -27,6 +28,8 @@
 Simulation::Simulation(int rank, int nproc, const std::shared_ptr<SimulationConfig>& config)
     : m_steps(config->steps),
       m_threshold(config->threshold),
+      m_sfreq(config->sfreq),
+      m_is_rpmd(config->rpmd_config.enabled),
       m_is_thermalization_phase(true),
       m_state(std::make_shared<SystemState>(rank, nproc, config->natoms, config->nbeads, config->fixcom, config->bosonic)),
       m_rng(std::make_shared<RandomGenerators>(config->seed + rank))
@@ -35,6 +38,12 @@ Simulation::Simulation(int rank, int nproc, const std::shared_ptr<SimulationConf
     initializePositions(config);
     initializeMomenta(config);
     initializeQuantumStatistics(config->bosonic);
+
+    // Initialize RPMD frame selector if RPMD is enabled. This will determine which frame to use for each independent run
+    if (m_is_rpmd)
+    {
+        m_rpmd_frame_selector = std::make_unique<RpmdFrameSelector>(config);
+    }
 
     // createPotential() is called exactly once per config; it moves ownership
     // into ForceManager and will throw if accidentally called again.
@@ -98,12 +107,16 @@ Simulation::Simulation(int rank, int nproc, const std::shared_ptr<SimulationConf
         m_thermostat_ctx
     ).createObservables();
 
+    /*
     // Initialize the output file for the observables
     m_obs_logger = std::make_unique<ObservablesLogger>(
         Output::MAIN_FILENAME, m_bead_ctx.this_bead, config->sfreq, m_observables
     );
+    */
 
-    m_dumps = initializeDumps(config, m_velocity_ctx);
+    /// TODO: Deal with dumps and report when RPMD is enabled. Currently, we only support dumps and report for a single run.
+    //m_dumps = initializeDumps(config, m_velocity_ctx);
+    m_dumps = DumpInitializer(config, m_state, m_velocity_ctx).createDumps();
     m_report = std::make_unique<SimulationReport>(*config, m_steps);
 }
 
@@ -113,6 +126,11 @@ void Simulation::initializeConfigurationDependentContexts(
     const std::shared_ptr<SimulationConfig>& config
 )
 {
+    m_rpmd_context = RpmdContext{
+        .enabled = config->rpmd_config.enabled,
+        .num_runs = config->rpmd_config.num_runs
+    };
+
     m_thermal_ctx = ThermalContext{
         .beta = config->beta,
         .thermo_beta = config->thermo_beta
@@ -211,7 +229,157 @@ std::shared_ptr<Propagator> Simulation::initializePropagator(
     return {};
 }
 
+void Simulation::bindPositionInitFactory(
+    const std::shared_ptr<SimulationConfig>& config
+) {
+    const std::string init_type = config->init_pos_type;
+    const std::string filename = config->init_pos_filename;
+    const int first_idx = config->this_bead + config->init_pos_index_offset;
+    const std::string unit = config->init_pos_unit;
+    //const XyzFrameSelectionMode frame_mode = frame_selection_mode.value_or(config->init_pos_frame_mode);
+    const XyzFrameSelectionMode frame_mode = config->rpmd_config.enabled ? XyzFrameSelectionMode::Index : config->init_pos_frame_mode;
+
+    m_position_init_factory = [this, init_type, filename, first_idx, unit, frame_mode, config]
+        (const std::optional<long> override_frame)
+    {
+        if (!m_state || !m_rng) {
+            throw std::runtime_error("State or RNG is not initialized before position initialization.");
+        }
+
+        std::unique_ptr<PositionInitializer> initializer;
+
+        if (init_type == "random") {
+            initializer = std::make_unique<RandomPositionInitializer>(
+                m_rng,
+                std::shared_ptr<VecArray>(m_state, &m_state->coord),
+                m_box_ctx
+            );
+        } else if (init_type == "grid") {
+            initializer = std::make_unique<GridPositionInitializer>(
+                std::shared_ptr<VecArray>(m_state, &m_state->coord),
+                m_box_ctx
+            );
+        } else if (init_type == "xyz") {
+            //const long effective_frame = override_frame.has_value() ? override_frame.value() : config->init_pos_frame;
+            //const long effective_frame = override_frame.value_or(config->init_pos_frame);
+            long effective_frame;
+            if (override_frame.has_value()) {
+                effective_frame = override_frame.value();
+            } else {
+                if (config->rpmd_config.enabled) {
+                    // If RPMD is enabled, set the effective frame to be the first frame of the XYZ file,
+                    // and let the RPMD frame selector handle the frame selection for each run later.
+                    effective_frame = 0;
+                } else {
+                    effective_frame = config->init_pos_frame;
+                }
+            }
+
+            initializer = std::make_unique<XyzPositionInitializer>(
+                filename,
+                first_idx,
+                unit,
+                effective_frame,
+                frame_mode,
+                std::shared_ptr<VecArray>(m_state, &m_state->coord),
+                m_box_ctx
+            );
+        } else {
+            throw std::invalid_argument("Unknown position initialization method: " + init_type);
+        }
+
+        MpiUtils::runCollectively(
+            "Position initialization",
+            [&] {
+                initializer->initialize();
+            }
+        );
+
+
+        // Communicate the new coordinates to the neighboring processes
+        m_state->updateNeighboringCoordinates();
+    };
+}
+
+void Simulation::bindMomentumInitFactory(
+    const std::shared_ptr<SimulationConfig>& config
+) {
+    const std::string init_type = config->init_vel_type;
+    const std::string filename = config->init_vel_filename;
+    const int first_idx = config->this_bead + config->init_vel_index_offset;
+    const std::string unit = config->init_vel_unit;
+    const XyzFrameSelectionMode frame_mode = config->rpmd_config.enabled ? XyzFrameSelectionMode::Index : config->init_vel_frame_mode;
+    const double mass = config->mass;
+    const double thermo_beta = config->thermo_beta;
+
+    m_momentum_init_factory = [this, init_type, filename, first_idx, unit, frame_mode, mass, thermo_beta, config]
+        (const std::optional<long> override_frame)
+    {
+        if (!m_state || !m_rng) {
+            throw std::runtime_error("State or RNG is not initialized before momentum initialization.");
+        }
+
+        std::unique_ptr<MomentumInitializer> initializer;
+
+        if (init_type == "random") {
+            initializer = std::make_unique<MaxwellBoltzmannMomentumInitializer>(
+                m_rng,
+                m_state,
+                mass,
+                thermo_beta
+            );
+        } else if (init_type == "xyz") {
+            //const long effective_frame = override_frame.has_value() ? override_frame.value() : config->init_vel_frame;
+            //const long effective_frame = override_frame.value_or(config->init_vel_frame);
+            long effective_frame;
+            if (override_frame.has_value()) {
+                effective_frame = override_frame.value();
+            } else {
+                if (config->rpmd_config.enabled) {
+                    // If RPMD is enabled, set the effective frame to be the first frame of the XYZ file,
+                    // and let the RPMD frame selector handle the frame selection for each run later.
+                    effective_frame = 0;
+                } else {
+                    effective_frame = config->init_vel_frame;
+                }
+            }
+
+            initializer = std::make_unique<XyzMomentumInitializer>(
+                filename,
+                first_idx,
+                unit,
+                effective_frame,
+                frame_mode,
+                m_state,
+                mass
+            );
+        } else {
+            throw std::invalid_argument("Unknown momentum initialization method: " + init_type);
+        }
+
+        MpiUtils::runCollectively(
+            "Momentum initialization",
+            [&] {
+                initializer->initialize();
+            }
+        );
+    };
+    
+}
+
 void Simulation::initializePositions(const std::shared_ptr<SimulationConfig>& config)
+{
+    bindPositionInitFactory(config);
+    m_position_init_factory(std::nullopt); // Use the factory with no frame override
+}
+
+void Simulation::initializeMomenta(const std::shared_ptr<SimulationConfig>& config)
+{
+    bindMomentumInitFactory(config);
+    m_momentum_init_factory(std::nullopt); // Use the factory with no frame override
+}
+
+/*void Simulation::initializePositions(const std::shared_ptr<SimulationConfig>& config)
 {
     if (!m_state || !m_rng) {
         throw std::runtime_error("State or RNG is not initialized before position initialization.");
@@ -299,7 +467,7 @@ void Simulation::initializeMomenta(const std::shared_ptr<SimulationConfig>& conf
     }
 
     initializer->initialize();
-}
+}*/
 
 void Simulation::initializeForces(
     const std::shared_ptr<SystemState>& state,
@@ -325,6 +493,7 @@ void Simulation::setStep(long step)
     m_is_thermalization_phase = (step < m_threshold);
 }
 
+/*
 std::vector<std::shared_ptr<Dump>> Simulation::initializeDumps(
     const std::shared_ptr<SimulationConfig>& config, 
     const VelocityContext& vel_ctx
@@ -338,6 +507,7 @@ std::vector<std::shared_ptr<Dump>> Simulation::initializeDumps(
 
     return dumps;
 }
+*/
 
 double Simulation::getWallTime()
 {
@@ -370,6 +540,32 @@ void Simulation::performMolecularDynamicsStep() const {
     m_propagator->step();
     m_thermostat->step();
     zeroMomentumIfRequired();
+}
+
+void Simulation::initializeObservablesLogger(const std::filesystem::path& filename) {
+    // If logger is not yet initialized, create it. Otherwise, reopen the file with the new filename.
+    if (!m_obs_logger)
+    {
+        m_obs_logger = std::make_unique<ObservablesLogger>(
+            filename,
+            m_bead_ctx.this_bead,
+            m_sfreq,
+            m_observables
+        );
+    }
+    else
+    {
+        // Logger already exists, so we just reopen the file with the new filename
+        m_obs_logger->reopenFile(filename);
+    }
+}
+
+void Simulation::initializeDumps(const std::filesystem::path& base_folder)
+{
+    for (const auto& dump : m_dumps)
+    {
+        dump->reopenFile(base_folder);
+    }
 }
 
 void Simulation::calculateObservables() const {
@@ -419,15 +615,87 @@ void Simulation::executeStep(long step) const
 
 void Simulation::run()
 {
+    if (m_is_rpmd) {
+        runRingPolymerMolecularDynamics();
+    } else {
+        runPathIntegralMolecularDynamics();
+    }
+}
+
+void Simulation::runPathIntegralMolecularDynamics() {
     printStatus("Running the simulation", m_bead_ctx.this_bead);
     const double start_time = getWallTime();
-    
+
+    // Initialize the observables logger for the main simulation output
+    initializeObservablesLogger(Output::getPimdFilename());
+    initializeDumps(Output::FOLDER_NAME);
+
     // Main loop performing molecular dynamics steps
-    for (long step = 0; step <= m_steps; ++step)
-    {
+    for (long step = 0; step <= m_steps; ++step) {
         setStep(step);
         executeStep(step);
     }
 
     finalizeSimulation(start_time);
+}
+
+void Simulation::runRingPolymerMolecularDynamics() {
+    if (!m_is_rpmd)
+    {
+        throw std::runtime_error("Attempted to run RPMD simulation when it is not enabled in config.");
+    }
+
+    if (!m_rpmd_frame_selector)
+    {
+        throw std::runtime_error("RPMD frame selector is not initialized. Ensure that it is created when RPMD is enabled.");
+    }
+
+    printStatus("Initializing RPMD", m_bead_ctx.this_bead);
+    printStatus(
+        std::format("Running {} independent NVE simulations", m_rpmd_context.num_runs),
+        m_bead_ctx.this_bead
+    );
+
+    const double start_time = getWallTime();
+
+    // Prepare the exact XYZ frame indices based on the number of runs and the fraction of NVT points that need to be discarded
+    const std::vector<long>& rpmd_frames = m_rpmd_frame_selector->getRpmdFrameIndices();
+    long last_frame_idx = m_rpmd_frame_selector->getNumFrames() - 1;
+
+    for (int run = 0; run < m_rpmd_context.num_runs; ++run) {
+        printStatus(std::format("Starting NVE run {}/{} (frame index {}/{})", run + 1, m_rpmd_context.num_runs, rpmd_frames[run], last_frame_idx), m_bead_ctx.this_bead);
+
+        const long frame = rpmd_frames[run];
+
+        // Re-initialize positions and momenta for the current RPMD run
+        m_position_init_factory(frame);
+        m_momentum_init_factory(frame);
+
+        /// TODO: Re-initialize the forces as well (once we do this in the constructor & update the tests)
+
+        const std::filesystem::path output_filename = Output::getRpmdFilename(run);
+        const std::filesystem::path output_folder = Output::getRpmdFolder(run);
+        initializeObservablesLogger(output_filename);
+        initializeDumps(output_folder);
+
+        // Main loop performing molecular dynamics steps for the current RPMD run
+        for (long step = 0; step <= m_steps; ++step) {
+            setStep(step);
+            executeStep(step);
+        }
+
+        printStatus(std::format("Completed NVE run {}/{}", run + 1, m_rpmd_context.num_runs), m_bead_ctx.this_bead);
+    }
+
+    const double wall_time = getWallTime() - start_time;
+
+    printStatus(
+        std::format(
+            "RPMD finished running successfully (Runtime = {:.3} sec)",
+            wall_time
+        ),
+        m_bead_ctx.this_bead
+    );
+
+    m_report->writeReport(wall_time); /// TODO: For RPMD we need a separate report
 }

@@ -9,7 +9,7 @@ class Observable;
 class ObservablesLogger {
 public:
     ObservablesLogger(
-        const std::string& filename, 
+        const std::filesystem::path& filename,
         int this_bead,
         long frequency,
         const std::vector<std::shared_ptr<Observable>>& observables
@@ -20,6 +20,13 @@ public:
 
     void log(long step);
 
+    /**
+     * @brief Close the current output file and reopen a new one with the specified filename.
+     * This is useful for RPMD mode where each run needs a separate output file.
+     * @param new_filename The name of the new file to open for logging observables.
+     */
+    void reopenFile(const std::filesystem::path& new_filename);
+
 private:
     std::ofstream m_file;
     int m_this_bead;
@@ -28,4 +35,5 @@ private:
 
     void writeTimeStep(long step);
     void writeObservables();
+    void openFileAndWriteHeader(const std::filesystem::path& filename);
 };

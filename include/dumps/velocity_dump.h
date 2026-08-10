@@ -13,7 +13,7 @@ public:
     /**
      * @brief Initializes the velocities dat file.
      */
-    void initialize() override;
+    //void initialize() override;
 
     /**
      * Outputs the velocities.
@@ -21,6 +21,9 @@ public:
      * @param step Current step of the simulation.
      */
     void output(int step) override;
+
+protected:
+    [[nodiscard]] std::string fileName() const override { return std::format("velocity_{}.xyz", m_this_bead); }
 
 private:
     VelocityContext m_context;

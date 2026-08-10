@@ -113,6 +113,7 @@ std::shared_ptr<SimulationConfig> Params::load() const {
     loadInteractionPotentialParams(*config);
     loadOutputParams(*config);
     loadObservableParams(*config);
+    loadRpmdParams(*config);
 
     return config;
 }
@@ -567,4 +568,41 @@ void Params::loadObservableParams(SimulationConfig& config) const {
     config.observables_list["bosonic"] = m_reader.Get(Sections::OBSERVABLES, "bosonic", "off");
     config.observables_list["gsf"] = m_reader.Get(Sections::OBSERVABLES, "gsf", "off");
     config.observables_list["center_of_mass"] = m_reader.Get(Sections::OBSERVABLES, "center_of_mass", "off");
+}
+
+
+void Params::loadRpmdParams(SimulationConfig& config) const {
+    // Only parse RPMD params if the directive is enabled at compile time
+    config.rpmd_config.enabled = m_reader.GetBoolean(Sections::SIMULATION, "rpmd_enabled", false);
+
+    if (config.rpmd_config.enabled) {
+        if (config.thermostat.type != "none") {
+            throw std::invalid_argument("RPMD mode is only supported in NVE ensemble (thermostat must be 'none')");
+        }
+
+        if (
+            m_reader.HasValue(Sections::SIMULATION, "initial_position_frame") ||
+            m_reader.HasValue(Sections::SIMULATION, "initial_position_frame_mode") ||
+            m_reader.HasValue(Sections::SIMULATION, "initial_velocity_frame") ||
+            m_reader.HasValue(Sections::SIMULATION, "initial_velocity_frame_mode")
+            )
+        {
+            throw std::invalid_argument(
+                "RPMD cannot be used simultaneously with 'initial_position_frame', 'initial_position_frame_mode', "
+                "'initial_velocity_frame', or 'initial_velocity_frame_mode' parameters."
+            );
+        }
+
+        config.rpmd_config.num_runs = m_reader.GetInteger(Sections::SIMULATION, "rpmd_nruns", 1);
+        if (config.rpmd_config.num_runs < 1)
+            throw std::invalid_argument("rpmd_nruns must be at least 1");
+
+        config.rpmd_config.nvt_discard_frac = m_reader.GetInteger(Sections::SIMULATION, "rpmd_nvt_discard_fraction", 0);
+        if (config.rpmd_config.nvt_discard_frac < 0 || config.rpmd_config.nvt_discard_frac >= 1)
+            throw std::invalid_argument("rpmd_nvt_discard_fraction must be non-negative and less than 1");
+
+        /*config.rpmd_config.xyz_path = m_reader.Get(Sections::SIMULATION, "rpmd_xyz_path", "");
+        if (config.rpmd_config.xyz_path.empty())
+            throw std::invalid_argument("rpmd_xyz_path must be specified when RPMD is enabled");*/
+    }
 }

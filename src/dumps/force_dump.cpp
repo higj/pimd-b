@@ -8,12 +8,13 @@ ForceDump::ForceDump(const std::shared_ptr<SystemState>& state, int this_bead, i
     Units::validateUnit("force", out_unit);
 }
 
+/*
 void ForceDump::initialize() {
     
     m_out_file.open(std::format("{}/force_{}.dat", Output::FOLDER_NAME, m_this_bead), std::ios::out | std::ios::app);
     //m_out_file.open(std::format("{}/force_{}.dat", Output::FOLDER_NAME, m_state->currentBead()), std::ios::out | std::ios::app);
     //m_out_file << std::format("# Units: {}\n", m_out_unit);
-}
+}*/
 
 void ForceDump::output(int step) {
     if (step % m_out_freq != 0)

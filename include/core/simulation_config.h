@@ -13,6 +13,13 @@ struct ThermostatConfig {
     int nchains = 0;
 };
 
+// RPMD-related parameters
+struct RpmdConfig {
+    bool enabled;        // Is RPMD mode active?
+    int num_runs;          // Number of independent simulations to perform
+    int nvt_discard_frac;  // Fraction of the NVT trajectory to discard before sampling starts
+};
+
 enum class XyzFrameSelectionMode {
     Index,
     Step
@@ -72,6 +79,9 @@ struct SimulationConfig {
 
     // Map holding the original user-requested units for the various physical quantities
     StringMap units_list;
+
+    // RPMD-related parameters
+    RpmdConfig rpmd_config;
 
     unsigned int seed;  // Seed for random number generation
     int this_bead;      // Current process id ("rank" of MPI_Comm_rank)

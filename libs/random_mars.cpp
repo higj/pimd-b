@@ -13,8 +13,10 @@ RanMars::RanMars(int seed) : u(nullptr)
     int ij, kl, i, j, k, l, ii, jj, m;
     double s, t;
 
-    if (seed <= 0 || seed > 900000000)
+    if (seed <= 0 || seed > 900000000) {
+        // TODO: For some reason, throwing does not stop the program. Investigate this
         throw std::invalid_argument("Invalid seed for Marsaglia random # generator");
+    }
 
     save = 0;
     u = new double[97 + 1];

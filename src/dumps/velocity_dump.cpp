@@ -7,13 +7,13 @@ VelocityDump::VelocityDump(const VelocityContext& dump_context, int this_bead, i
     Units::validateUnit("velocity", out_unit);
 }
 
-void VelocityDump::initialize()
+/*void VelocityDump::initialize()
 {
     // Open the output file for appending, creating it if it doesn't exist
     // TODO: Consider using std::filesystem to ensure the output directory exists before opening the file
     m_out_file.open(std::format("{}/velocity_{}.xyz", Output::FOLDER_NAME, m_this_bead), std::ios::out | std::ios::app);
     //m_out_file << std::format("# Units: {}\n", m_out_unit);
-}
+}*/
 
 void VelocityDump::output(int step)
 {
