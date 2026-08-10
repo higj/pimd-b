@@ -29,8 +29,8 @@ Simulation::Simulation(int rank, int nproc, const std::shared_ptr<SimulationConf
     : m_steps(config->steps),
       m_threshold(config->threshold),
       m_sfreq(config->sfreq),
-      m_is_rpmd(config->rpmd_config.enabled),
       m_is_thermalization_phase(true),
+      m_is_rpmd(config->rpmd_config.enabled),
       m_state(std::make_shared<SystemState>(rank, nproc, config->natoms, config->nbeads, config->fixcom, config->bosonic)),
       m_rng(std::make_shared<RandomGenerators>(config->seed + rank))
 {
@@ -128,7 +128,8 @@ void Simulation::initializeConfigurationDependentContexts(
 {
     m_rpmd_context = RpmdContext{
         .enabled = config->rpmd_config.enabled,
-        .num_runs = config->rpmd_config.num_runs
+        .num_runs = config->rpmd_config.num_runs,
+        .nvt_discard_frac = config->rpmd_config.nvt_discard_frac
     };
 
     m_thermal_ctx = ThermalContext{
