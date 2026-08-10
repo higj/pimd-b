@@ -6,7 +6,6 @@
 
 #include <format>
 #include <ranges>
-#include <filesystem>
 
 // Constructor opens the file and writes the header
 ObservablesLogger::ObservablesLogger(
