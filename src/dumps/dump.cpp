@@ -29,6 +29,6 @@ void Dump::reopenFile(const std::filesystem::path& folder) {
     m_out_file.open(full_path, std::ios::out | std::ios::app);
 
     if (!m_out_file.is_open()) {
-        throw std::ios_base::failure(std::format("Failed to open {}.", full_path.string()));
+        throw std::ios_base::failure("Failed to open " + full_path.string());
     }
 }
