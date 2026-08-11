@@ -53,7 +53,9 @@ Simulation::Simulation(int rank, int nproc, const std::shared_ptr<SimulationConf
         config->int_potential_cfg.cutoff(),
         m_box_ctx
     );
-    //initializeForces(m_state, m_force_mgr, m_spring_ctx, m_box_ctx); <--- TODO: Uncomment this later
+
+    // Positions are momenta are initialized by this point, so we can now initialize the forces
+    initializeForces(m_state, m_force_mgr, m_spring_ctx, m_box_ctx);
 
     m_normal_modes = initializeNormalModes(config, m_state);
 
@@ -601,17 +603,15 @@ void Simulation::finalizeSimulation(double start_time) const {
 
 void Simulation::executeStep(long step) const
 {
+    // Observables are only calculated and logged after the thermalization phase is complete.
+    // Logging occurs before the molecular dynamics step to ensure that the observables
+    // correspond to the state of the system at the beginning of the step, before any updates are made by the MD step.
     if (!m_is_thermalization_phase) {
         dumpStepInfo(step);
-        //calculateAndLogObservables(step); <--- TODO: Should be here
+        calculateAndLogObservables(step);
     }
 
     performMolecularDynamicsStep();
-
-    // TODO: Temporarily placed here, to not break the old tests
-    if (!m_is_thermalization_phase) {
-        calculateAndLogObservables(step);
-    }
 }
 
 void Simulation::run()
@@ -672,7 +672,8 @@ void Simulation::runRingPolymerMolecularDynamics() {
         m_position_init_factory(frame);
         m_momentum_init_factory(frame);
 
-        /// TODO: Re-initialize the forces as well (once we do this in the constructor & update the tests)
+        // Positions and momenta are re-initialized, so we need to re-calculate the forces for the current configuration
+        initializeForces(m_state, m_force_mgr, m_spring_ctx, m_box_ctx);
 
         const std::filesystem::path output_filename = Output::getRpmdFilename(run);
         const std::filesystem::path output_folder = Output::getRpmdFolder(run);
