@@ -641,14 +641,32 @@ void Simulation::runPathIntegralMolecularDynamics() {
 }
 
 void Simulation::runRingPolymerMolecularDynamics() {
+    // RPMD performs independent NVE (microcanonical) simulations by sampling
+    // configurations from a prior NVT run. Each run must use 'thermostat = none'
+    // to maintain constant total energy.
     if (!m_is_rpmd)
     {
-        throw std::runtime_error("Attempted to run RPMD simulation when it is not enabled in config.");
+        throw std::runtime_error(
+            "Attempted to run RPMD simulation when it is not enabled in config."
+        );
     }
 
     if (!m_rpmd_frame_selector)
     {
-        throw std::runtime_error("RPMD frame selector is not initialized. Ensure that it is created when RPMD is enabled.");
+        throw std::runtime_error(
+            "RPMD frame selector is not initialized. Ensure that it is created when RPMD is enabled."
+        );
+    }
+
+    if (m_thermostat_ctx.isEnabled())
+    {
+        throw std::runtime_error(
+            std::format(
+                "RPMD simulations should be run in NVE ensemble. "
+                "Please set the thermostat type to 'none' in the configuration file (currently set to '{}')."
+                , m_thermostat_ctx.thermostat_type
+            )
+        );
     }
 
     printStatus("Initializing RPMD", m_bead_ctx.this_bead);
@@ -666,6 +684,7 @@ void Simulation::runRingPolymerMolecularDynamics() {
     for (int run = 0; run < m_rpmd_context.num_runs; ++run) {
         printStatus(std::format("Starting NVE run {}/{} (frame index {}/{})", run + 1, m_rpmd_context.num_runs, rpmd_frames[run], last_frame_idx), m_bead_ctx.this_bead);
 
+        // Extract the frame index for the current RPMD run from the pre-computed list
         const long frame = rpmd_frames[run];
 
         // Re-initialize positions and momenta for the current RPMD run

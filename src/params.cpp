@@ -577,7 +577,12 @@ void Params::loadRpmdParams(SimulationConfig& config) const {
 
     if (config.rpmd_config.enabled) {
         if (config.thermostat.type != "none") {
-            throw std::invalid_argument("RPMD mode is only supported in NVE ensemble (thermostat must be 'none')");
+            throw std::invalid_argument(
+                std::format(
+                    "RPMD mode requires 'thermostat = none' but got '{}'", 
+                    config.thermostat.type
+                )
+            );
         }
 
         if (

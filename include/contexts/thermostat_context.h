@@ -8,4 +8,6 @@ class Thermostat;
 struct ThermostatContext {
     std::shared_ptr<Thermostat> thermostat;
     std::string thermostat_type;
+
+    bool isEnabled() const { return thermostat_type != "none"; }
 };

@@ -19,7 +19,7 @@ std::shared_ptr<Thermostat> ThermostatInitializer::createThermostat(
     const std::shared_ptr<RandomGenerators>& rng
 ) const {
     if (m_thermostat_config.type == "none") {
-        return std::make_shared<Thermostat>(m_thermal_ctx, m_nm_ctx, state);
+        return std::make_shared<NullThermostat>(m_thermal_ctx, m_nm_ctx, state);
     }
 
     if (m_thermostat_config.type == "langevin") {
