@@ -16,7 +16,7 @@ public:
     );
     virtual ~Thermostat();
 
-    void step();
+    virtual void step();
     virtual void momentaUpdate();
     virtual double getAdditionToH();
 
