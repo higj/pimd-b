@@ -9,5 +9,5 @@ struct ThermostatContext {
     std::shared_ptr<Thermostat> thermostat;
     std::string thermostat_type;
 
-    bool isEnabled() const { return thermostat_type != "none"; }
+    [[nodiscard]] bool isEnabled() const { return !thermostat_type.empty() && thermostat_type != "none"; }
 };
