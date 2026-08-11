@@ -265,6 +265,13 @@ void Params::loadThermostatParams(SimulationConfig& config) const {
         "none"sv                 // No thermostat (NVE simulation)
     };
 
+    /// TODO: Perhaps move config.rpmd_config.enabled initialization to here.
+    ///       Pros: We can allow the user to not specify the thermostat type
+    ///       when RPMD is enabled (set it to "none" automatically.)
+    ///       Cons: Moves RPMD-specific logic into a thermostat-specific function, which may not be ideal.
+    ///       Also, it may be better to require the user to explicitly specify the thermostat type even when RPMD is
+    ///       enabled, for clarity.
+
     // Read and validate thermostat type first (this drives other validations)
     config.thermostat.type = m_reader.GetString(Sections::SIMULATION, "thermostat", "error");
     if (config.thermostat.type == "error") {
@@ -572,7 +579,6 @@ void Params::loadObservableParams(SimulationConfig& config) const {
 
 
 void Params::loadRpmdParams(SimulationConfig& config) const {
-    // Only parse RPMD params if the directive is enabled at compile time
     config.rpmd_config.enabled = m_reader.GetBoolean(Sections::SIMULATION, "rpmd", false);
 
     if (config.rpmd_config.enabled) {
