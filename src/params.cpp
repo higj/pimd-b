@@ -573,7 +573,7 @@ void Params::loadObservableParams(SimulationConfig& config) const {
 
 void Params::loadRpmdParams(SimulationConfig& config) const {
     // Only parse RPMD params if the directive is enabled at compile time
-    config.rpmd_config.enabled = m_reader.GetBoolean(Sections::SIMULATION, "rpmd_enabled", false);
+    config.rpmd_config.enabled = m_reader.GetBoolean(Sections::SIMULATION, "rpmd", false);
 
     if (config.rpmd_config.enabled) {
         if (config.thermostat.type != "none") {
