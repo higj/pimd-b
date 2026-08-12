@@ -122,7 +122,7 @@ The `size` option defines the linear size of the system. Currently, only cube ge
 To enable the RPMD functionality, the user must set `rpmd = true` in the `[simulation]` section of the configuration file. The following additional options are available in the `[simulation]` section:
 
 * `rpmd_nruns`: specifies the number of NVE runs to perform. The default value is `1`. If set to a value greater than `1`, the program will perform multiple NVE runs, each starting from a different initial configuration taken from the same NVT trajectory provided in the `xyz` files through `initial_position` and `initial_velocity`. The program will attempt to to distribute the starting frames as evenly as possible over the available interval. The output associated with each NVE run will be stored in a separate subdirectory of `output` named `rpmd_0`, `rpmd_1`, etc.
-* `rpmd_nvt_discard_frac` (number between 0 and 1): specifies the fraction of the NVT trajectory to discard before sampling starts. The default value is `0.0`. For example, if set to `0.1`, the program will discard the first 10% of the available frames in the NVT trajectory before selecting the starting frames for the NVE runs.
+* `rpmd_nvt_discard_fraction` (number between 0 and 1): specifies the fraction of the NVT trajectory to discard before sampling starts. The default value is `0.0`. For example, if set to `0.1`, the program will discard the first 10% of the available frames in the NVT trajectory before selecting the starting frames for the NVE runs.
 
 ### Propagators
 
@@ -200,7 +200,7 @@ The following options are available in the `[simulation]` and `[system]` section
 |`initial_velocity_frame_mode`  | Zero-based `index` versus literal `step` interpretation of the velocity frame |
 |`rpmd`     |  Set to `true` to enable RPMD functionality (Default: `false`) |
 |`rpmd_nruns`     |  Number of NVE runs to perform (Default: `1`) |
-|`rpmd_nvt_discard_frac`     |  Fraction of the NVT trajectory to discard before sampling starts (Default: `0.0`) |
+|`rpmd_nvt_discard_fraction`     |  Fraction of the NVT trajectory to discard before sampling starts (Default: `0.0`) |
 |`temperature`     |  Temperature of the quantum system (units of temperature) |
 |`natoms`     |  Number of particles in the quantum system |
 |`size`     |  Linear size of the system (units of length) |
