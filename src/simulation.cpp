@@ -676,15 +676,16 @@ void Simulation::runRingPolymerMolecularDynamics() {
     // Prepare the exact XYZ frame indices based on the number of runs and the fraction of NVT points that need to be discarded
     const std::vector<long>& rpmd_frames = m_rpmd_frame_selector->getRpmdFrameIndices();
 
+    const long total_num_frames = m_rpmd_frame_selector->getNumFrames();
+    long last_frame_idx = total_num_frames - 1;
+
     printStatus(
         std::format(
             "Found {} frames in the provided XYZ files",
-            m_rpmd_frame_selector->getNumFrames()
+            total_num_frames
         ),
         m_bead_ctx.this_bead
     );
-
-    long last_frame_idx = m_rpmd_frame_selector->getNumFrames() - 1;
 
     printStatus(
         std::format("Running {} independent NVE simulations", m_rpmd_context.num_runs),
