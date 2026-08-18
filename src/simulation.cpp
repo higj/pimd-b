@@ -670,16 +670,26 @@ void Simulation::runRingPolymerMolecularDynamics() {
     }
 
     printStatus("Initializing RPMD", m_bead_ctx.this_bead);
-    printStatus(
-        std::format("Running {} independent NVE simulations", m_rpmd_context.num_runs),
-        m_bead_ctx.this_bead
-    );
 
     const double start_time = getWallTime();
 
     // Prepare the exact XYZ frame indices based on the number of runs and the fraction of NVT points that need to be discarded
     const std::vector<long>& rpmd_frames = m_rpmd_frame_selector->getRpmdFrameIndices();
+
+    printStatus(
+        std::format(
+            "Found {} frames in the provided XYZ files",
+            m_rpmd_frame_selector->getNumFrames()
+        ),
+        m_bead_ctx.this_bead
+    );
+
     long last_frame_idx = m_rpmd_frame_selector->getNumFrames() - 1;
+
+    printStatus(
+        std::format("Running {} independent NVE simulations", m_rpmd_context.num_runs),
+        m_bead_ctx.this_bead
+    );
 
     for (int run = 0; run < m_rpmd_context.num_runs; ++run) {
         printStatus(std::format("Starting NVE run {}/{} (frame index {}/{})", run + 1, m_rpmd_context.num_runs, rpmd_frames[run], last_frame_idx), m_bead_ctx.this_bead);

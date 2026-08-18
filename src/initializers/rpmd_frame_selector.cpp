@@ -7,7 +7,8 @@
 #include <cmath>
 #include <stdexcept>
 
-RpmdFrameSelector::RpmdFrameSelector(const std::shared_ptr<SimulationConfig>& config) {
+RpmdFrameSelector::RpmdFrameSelector(const std::shared_ptr<SimulationConfig>& config)
+{
     if (!config) {
         throw std::invalid_argument("SimulationConfig cannot be null");
     }
@@ -31,7 +32,8 @@ RpmdFrameSelector::RpmdFrameSelector(const std::shared_ptr<SimulationConfig>& co
     m_rpmd_frames = computeFrameIndices(
         m_num_frames,
         config->rpmd_config.num_runs,
-        config->rpmd_config.nvt_discard_frac
+        config->rpmd_config.nvt_discard_frac,
+        config->this_bead
     );
 }
 
@@ -92,12 +94,37 @@ long RpmdFrameSelector::countFramesInXyzFile(const std::string& filename, int fi
 std::vector<long> RpmdFrameSelector::computeFrameIndices(
     const long num_frames,
     const int num_runs,
-    const double nvt_discard_frac
+    const double nvt_discard_frac,
+    const int this_bead
 )
 {
     const long equilibration_frame = static_cast<long>(
         std::floor(nvt_discard_frac * num_frames)
         );
+
+    const long available_frames = num_frames - equilibration_frame;
+
+    // Validate that we have enough frames for the requested runs
+    if (available_frames < num_runs) {
+        throw std::runtime_error(
+            std::format(
+                "Insufficient frames for RPMD runs: {} runs requested but only {} frames available after equilibration (total frames: {}, discard fraction: {:.2f})",
+                num_runs,
+                available_frames,
+                num_frames,
+                nvt_discard_frac
+            )
+        );
+    }
+
+    // Warn if discard fraction is nonzero but results in zero frames discarded
+    if (nvt_discard_frac > 0.0 && equilibration_frame == 0) {
+        printWarning(std::format(
+            "Discard fraction is {} but rounds to 0 frames. No frames will be skipped for RPMD runs.",
+            nvt_discard_frac), 
+            this_bead
+        );
+    }
 
     std::vector<long> rpmd_frames;
 

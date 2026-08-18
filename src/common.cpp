@@ -8,6 +8,13 @@ void printMsg(const std::string& msg, int this_rank, int out_rank) {
     }
 }
 
+void printWarning(const std::string& msg, int this_rank, int out_rank) {
+    //printMsg("[!] " + msg, this_rank, out_rank);
+    if (this_rank == out_rank) {
+        std::cerr << "[!] " << msg << '\n';
+    }
+}
+
 void printInfo(const std::string& info, bool& info_flag, int this_rank, int out_rank) {
     printMsg(info, this_rank, out_rank);
     info_flag = true;

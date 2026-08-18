@@ -67,6 +67,7 @@ private:
     static std::vector<long> computeFrameIndices(
         const long num_frames,
         const int num_runs,
-        const double nvt_discard_frac
+        const double nvt_discard_frac,
+        const int this_bead
     );
 };
