@@ -5,32 +5,30 @@
 #include <vector>
 
 /**
- * @class BosonicExchange
- * @brief Implements the quadratic-scaling bosonic exchange algorithm for path integral molecular dynamics.
- *
- * This class implements the bosonic exchange algorithm by Yotam M. Y. Feldman and Barak Hirshberg (DOI: 10.1063/5.0173749).
- * It manages the evaluation of bosonic energies, connection probabilities, and related estimators.
+ * @class FictitiousExchange
+ * @brief Implements the quadratic-scaling fictitious-particle exchange algorithm for path integral molecular dynamics.
  *
  * @see BosonicExchangeBase
  */
-class BosonicExchange final : public BosonicExchangeBase {
+class FictitiousExchange final : public BosonicExchangeBase {
 public:
     /**
-     * @brief Construct a new BosonicExchange object.
+     * @brief Construct a new FictitiousExchange object.
      */
-    explicit BosonicExchange(
+    explicit FictitiousExchange(
         const std::shared_ptr<const VecArray>& coord_first_bead,
         const std::shared_ptr<const VecArray>& coord_last_bead,
         const ThermalContext& thermal_ctx,
         const SpringContext& spring_ctx,
         const BoxContext& box_ctx,
-        const BeadContext& bead_ctx
+        const BeadContext& bead_ctx,
+        double exchange_xi
     );
 
     /**
      * @brief Destructor.
      */
-    ~BosonicExchange() override = default;
+    ~FictitiousExchange() override = default;
 
     /**
      * @brief Compute the effective spring potential of the entire bosonic system (kinetic part of the density matrix).
@@ -150,6 +148,7 @@ private:
      */
     void evaluateSuffixPotential();
 
+    double m_xi;                                     ///< The fictitious particle parameter xi
     std::vector<double> m_cycle_energies;            ///< Array of cycle energies E(k,N) = E^[N-k+1,N]
     std::vector<double> m_prefix_pot;                ///< Forward potentials V^[1,1], V^[1,2], ..., V^[1,N]
     std::vector<double> m_suffix_pot;                ///< Backward potentials V^[1,N], V^[2,N], ..., V^[N,N]

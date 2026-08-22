@@ -1,25 +1,25 @@
+#include "bosonic_exchange/fictitious_exchange.h"
+
 #include <array>
-#include <fstream>
 #include <cmath>
 
-#include "bosonic_exchange/quadratic_bosonic_exchange.h"
-#include "output_paths.h"
-
-BosonicExchange::BosonicExchange(
+FictitiousExchange::FictitiousExchange(
     const std::shared_ptr<const VecArray>& coord_first_bead,
     const std::shared_ptr<const VecArray>& coord_last_bead,
     const ThermalContext& thermal_ctx,
     const SpringContext& spring_ctx,
     const BoxContext& box_ctx,
-    const BeadContext& bead_ctx
+    const BeadContext& bead_ctx,
+    double exchange_xi
 ) : BosonicExchangeBase(
-        coord_first_bead,
-        coord_last_bead,
-        thermal_ctx,
-        spring_ctx,
-        box_ctx,
-        bead_ctx),
-    m_cycle_energies(bead_ctx.natoms * (bead_ctx.natoms + 1) / 2),
+    coord_first_bead,
+    coord_last_bead,
+    thermal_ctx,
+    spring_ctx,
+    box_ctx,
+    bead_ctx),
+    m_xi(exchange_xi),
+    m_cycle_energies(bead_ctx.natoms* (bead_ctx.natoms + 1) / 2),
     m_prefix_pot(bead_ctx.natoms + 1),
     m_suffix_pot(bead_ctx.natoms + 1),
     m_connection_probabilities(bead_ctx.natoms* (bead_ctx.natoms)),
@@ -28,26 +28,22 @@ BosonicExchange::BosonicExchange(
     evaluateBosonicEnergies();
 }
 
-void BosonicExchange::evaluateBosonicEnergies()
-{
+void FictitiousExchange::evaluateBosonicEnergies() {
     evaluateCycleEnergies();
     evaluatePrefixPotential();
     evaluateSuffixPotential();
     evaluateConnectionProbabilities();
 }
 
-void BosonicExchange::prepare()
-{
+void FictitiousExchange::prepare() {
     evaluateBosonicEnergies();
 }
 
-void BosonicExchange::evaluateCycleEnergies()
-{
+void FictitiousExchange::evaluateCycleEnergies() {
     const double half_spring_k = 0.5 * m_spring_ctx.spring_constant;
 
     // Compute cycle energies using Eqs. 5-7 from the paper
-    for (int v = 0; v < m_bead_ctx.natoms; ++v)
-    {
+    for (int v = 0; v < m_bead_ctx.natoms; ++v) {
         // Initialize single-particle cycle energy E^[v,v] (Algorithm 1, line 5)
         const double diagonal_energy = getExteriorSeparationSquared(v, v);
 
@@ -56,8 +52,7 @@ void BosonicExchange::evaluateCycleEnergies()
         setEnk(v + 1, 1, half_spring_k * diagonal_energy);
 
         // Build up multi-particle cycles (Algorithm 1, lines 6-7)
-        for (int u = v - 1; u >= 0; --u)
-        {
+        for (int u = v - 1; u >= 0; --u) {
             const int cycle_length = v - u + 1;
 
             // Calculate squared distances needed to compute the cycle energy E^[u,v] from E^[u+1,v]
@@ -72,16 +67,15 @@ void BosonicExchange::evaluateCycleEnergies()
                 connect_diff // connect u to u+1
                 - break_diff // break cycle [u+1,v] 
                 + close_diff // close cycle from v to u
-            );
+                );
 
             const double total_cycle_energy = previous_cycle_energy + spring_correction;
 
             // Validate energy before storing
-            if (!std::isfinite(total_cycle_energy))
-            {
+            if (!std::isfinite(total_cycle_energy)) {
                 throw std::runtime_error(
                     std::format("Non-finite cycle energy computed for cycle [{},{}]: previous={:e}, correction={:e}",
-                                u, v, previous_cycle_energy, spring_correction)
+                        u, v, previous_cycle_energy, spring_correction)
                 );
             }
 
@@ -91,32 +85,27 @@ void BosonicExchange::evaluateCycleEnergies()
     }
 }
 
-double BosonicExchange::getEnk(int m, int k) const
-{
+double FictitiousExchange::getEnk(int m, int k) const {
     const int end_of_m = m * (m + 1) / 2;
     return m_cycle_energies[end_of_m - k];
 }
 
-void BosonicExchange::setEnk(int m, int k, double val)
-{
+void FictitiousExchange::setEnk(int m, int k, double val) {
     const int end_of_m = m * (m + 1) / 2;
     m_cycle_energies[end_of_m - k] = val;
 }
 
-void BosonicExchange::evaluatePrefixPotential()
-{
+void FictitiousExchange::evaluatePrefixPotential() {
     m_prefix_pot[0] = 0.0;
     std::vector<double> subdivision_potentials(m_bead_ctx.natoms);
 
     // Corresponds to lines 10-11 in Algorithm 1 in the paper ("last_idx" is "v" in the paper)
-    for (int last_idx = 1; last_idx <= m_bead_ctx.natoms; last_idx++)
-    {
+    for (int last_idx = 1; last_idx <= m_bead_ctx.natoms; last_idx++) {
         double e_shift = std::numeric_limits<double>::max();
 
         // Calculate the cycle energy of the last k particles in the sequence 1,...,last_idx
         // and add the prefix potential of the remaining particles.
-        for (int k = 1; k <= last_idx; k++)
-        {
+        for (int k = 1; k <= last_idx; k++) {
             // E^[v-k+1,v] corresponds to E(k,v). Note that here both "k" and "v" ("last_idx") are 1-based indices.
             subdivision_potentials[k - 1] = getEnk(last_idx, k) + m_prefix_pot[last_idx - k];
 
@@ -126,16 +115,14 @@ void BosonicExchange::evaluatePrefixPotential()
 
         // Calculate the sum of the exponentials
         double sig_denom = 0.0;
-        for (int k = 1; k <= last_idx; k++)
-        {
+        for (int k = 1; k <= last_idx; k++) {
             sig_denom += std::exp(-m_thermal_ctx.thermo_beta * (subdivision_potentials[k - 1] - e_shift));
         }
 
         // Calculate the prefix potential
         m_prefix_pot[last_idx] = e_shift - std::log(sig_denom / static_cast<double>(last_idx)) / m_thermal_ctx.thermo_beta;
 
-        if (!std::isfinite(m_prefix_pot[last_idx]))
-        {
+        if (!std::isfinite(m_prefix_pot[last_idx])) {
             throw std::overflow_error(
                 std::format(
                     "Invalid prefix potential calculation at last_idx={}: sig_denom={:.6e}, e_shift={:.6e}, result={:.6e}",
@@ -145,20 +132,17 @@ void BosonicExchange::evaluatePrefixPotential()
     }
 }
 
-void BosonicExchange::evaluateSuffixPotential()
-{
+void FictitiousExchange::evaluateSuffixPotential() {
     m_suffix_pot[m_bead_ctx.natoms] = 0.0;
     std::vector<double> subdivision_potentials(m_bead_ctx.natoms);
 
     // Corresponds to lines 14-15 in Algorithm 1 in the paper ("first_idx" is "u" in the paper)
-    for (int first_idx = m_bead_ctx.natoms - 1; first_idx > 0; first_idx--)
-    {
+    for (int first_idx = m_bead_ctx.natoms - 1; first_idx > 0; first_idx--) {
         double e_shift = std::numeric_limits<double>::max();
 
         // Calculate the cycle energy of the first "ell" particles in the sequence u,...,N
         // and add the suffix potential of the remaining particles.
-        for (int ell = first_idx; ell < m_bead_ctx.natoms; ell++)
-        {
+        for (int ell = first_idx; ell < m_bead_ctx.natoms; ell++) {
             // E^[u,ell] corresponds to E(ell-u+1,ell+1), since "u" ("first_idx") and "ell" are 0-based indices.
             // This is because the last element of the suffix potential, V^[N+1,N], is at index N, and not N+1.
             subdivision_potentials[ell] = getEnk(ell + 1, ell - first_idx + 1) + m_suffix_pot[ell + 1];
@@ -169,16 +153,14 @@ void BosonicExchange::evaluateSuffixPotential()
 
         // Calculate the sum of the exponentials
         double sig_denom = 0.0;
-        for (int ell = first_idx; ell < m_bead_ctx.natoms; ell++)
-        {
+        for (int ell = first_idx; ell < m_bead_ctx.natoms; ell++) {
             sig_denom += 1.0 / (ell + 1) * exp(-m_thermal_ctx.thermo_beta * (subdivision_potentials[ell] - e_shift));
         }
 
         // Calculate the suffix potential
         m_suffix_pot[first_idx] = e_shift - log(sig_denom) / m_thermal_ctx.thermo_beta;
 
-        if (!std::isfinite(m_suffix_pot[first_idx]))
-        {
+        if (!std::isfinite(m_suffix_pot[first_idx])) {
             throw std::overflow_error(
                 std::format(
                     "Invalid suffix potential calculation at first_idx={}: sig_denom={:.6e}, e_shift={:.6e}, result={:.6e}",
@@ -191,26 +173,21 @@ void BosonicExchange::evaluateSuffixPotential()
     m_suffix_pot[0] = m_prefix_pot[m_bead_ctx.natoms];
 }
 
-double BosonicExchange::effectivePotential()
-{
+double FictitiousExchange::effectivePotential() {
     return m_prefix_pot[m_bead_ctx.natoms];
 }
 
-double BosonicExchange::getVn(int n) const
-{
+double FictitiousExchange::getVn(int n) const {
     return m_prefix_pot[n];
 }
 
-double BosonicExchange::getEknSerialOrder(int i) const
-{
+double FictitiousExchange::getEknSerialOrder(int i) const {
     return m_cycle_energies[i];
 }
 
-void BosonicExchange::evaluateConnectionProbabilities()
-{
+void FictitiousExchange::evaluateConnectionProbabilities() {
     // Corresponds to lines 16-17 in Algorithm 1 in the paper
-    for (int l = 0; l < m_bead_ctx.natoms - 1; l++)
-    {
+    for (int l = 0; l < m_bead_ctx.natoms - 1; l++) {
         const double direct_link_probability = 1.0 - (exp(-m_thermal_ctx.thermo_beta *
             (m_prefix_pot[l + 1] + m_suffix_pot[l + 1] -
                 m_prefix_pot[m_bead_ctx.natoms])));
@@ -218,10 +195,8 @@ void BosonicExchange::evaluateConnectionProbabilities()
     }
 
     // Corresponds to lines 18-20 in Algorithm 1 in the paper
-    for (int u = 0; u < m_bead_ctx.natoms; u++)
-    {
-        for (int l = u; l < m_bead_ctx.natoms; l++)
-        {
+    for (int u = 0; u < m_bead_ctx.natoms; u++) {
+        for (int l = u; l < m_bead_ctx.natoms; l++) {
             const double close_cycle_probability = 1.0 / (l + 1) *
                 exp(-m_thermal_ctx.thermo_beta * (m_prefix_pot[u] + getEnk(l + 1, l - u + 1) + m_suffix_pot[l + 1]
                     - m_prefix_pot[m_bead_ctx.natoms]));
@@ -230,92 +205,75 @@ void BosonicExchange::evaluateConnectionProbabilities()
     }
 }
 
-void BosonicExchange::springForceLastBead(VecArray& f)
-{
-    for (int l = 0; l < m_bead_ctx.natoms; l++)
-    {
+void FictitiousExchange::springForceLastBead(VecArray& f) {
+    for (int l = 0; l < m_bead_ctx.natoms; l++) {
         std::array<double, NDIM> sums = {};
 
-        for (int next_l = 0; next_l <= l + 1 && next_l < m_bead_ctx.natoms; next_l++)
-        {
+        for (int next_l = 0; next_l <= l + 1 && next_l < m_bead_ctx.natoms; next_l++) {
             std::array<double, NDIM> diff_next;
             getExteriorBeadsSeparation(next_l, l, diff_next);
 
             const double prob = m_connection_probabilities[m_bead_ctx.natoms * l + next_l];
 
-            for (int axis = 0; axis < NDIM; ++axis)
-            {
+            for (int axis = 0; axis < NDIM; ++axis) {
                 sums[axis] += prob * diff_next[axis];
             }
         }
 
-        for (int axis = 0; axis < NDIM; ++axis)
-        {
+        for (int axis = 0; axis < NDIM; ++axis) {
             f(l, axis) = sums[axis] * m_spring_ctx.spring_constant;
         }
     }
 }
 
-void BosonicExchange::springForceFirstBead(VecArray& f)
-{
-    for (int l = 0; l < m_bead_ctx.natoms; l++)
-    {
+void FictitiousExchange::springForceFirstBead(VecArray& f) {
+    for (int l = 0; l < m_bead_ctx.natoms; l++) {
         std::array<double, NDIM> sums = {};
 
-        for (int prev_l = std::max(0, l - 1); prev_l < m_bead_ctx.natoms; prev_l++)
-        {
+        for (int prev_l = std::max(0, l - 1); prev_l < m_bead_ctx.natoms; prev_l++) {
             std::array<double, NDIM> diff_prev;
             getExteriorBeadsSeparation(l, prev_l, diff_prev);
 
             const double prob = m_connection_probabilities[m_bead_ctx.natoms * prev_l + l];
 
-            for (int axis = 0; axis < NDIM; ++axis)
-            {
+            for (int axis = 0; axis < NDIM; ++axis) {
                 sums[axis] -= prob * diff_prev[axis];
             }
         }
 
-        for (int axis = 0; axis < NDIM; ++axis)
-        {
+        for (int axis = 0; axis < NDIM; ++axis) {
             f(l, axis) = sums[axis] * m_spring_ctx.spring_constant;
         }
     }
 }
 
-double BosonicExchange::getDistinctProbability()
-{
+double FictitiousExchange::getDistinctProbability() {
     double cycle_energy_sum = 0.0;
-    for (int m = 1; m < m_bead_ctx.natoms + 1; ++m)
-    {
+    for (int m = 1; m < m_bead_ctx.natoms + 1; ++m) {
         cycle_energy_sum += getEnk(m, 1);
     }
 
     return exp(-m_thermal_ctx.thermo_beta * (cycle_energy_sum - m_prefix_pot[m_bead_ctx.natoms]) - m_log_n_factorial);
 }
 
-double BosonicExchange::getLongestProbability()
-{
+double FictitiousExchange::getLongestProbability() {
     return exp(
         -m_thermal_ctx.thermo_beta * (getEnk(m_bead_ctx.natoms, m_bead_ctx.natoms) - m_prefix_pot[m_bead_ctx.natoms]));
 }
 
-double BosonicExchange::primitiveEnergyEstimator()
-{
+double FictitiousExchange::primitiveEnergyEstimator() {
     std::vector<double> prim_est(m_bead_ctx.natoms + 1);
 
-    for (int m = 1; m < m_bead_ctx.natoms + 1; ++m)
-    {
+    for (int m = 1; m < m_bead_ctx.natoms + 1; ++m) {
         double sig = 0.0;
         // Shift the energies in the exponents to avoid numerical instability (Xiong & Xiong method)
         double e_shift = std::numeric_limits<double>::max();
 
-        for (int k = m; k > 0; k--)
-        {
+        for (int k = m; k > 0; k--) {
             e_shift = std::min(e_shift, getEnk(m, k) + m_prefix_pot[m - k]);
         }
 
-        for (int k = m; k > 0; --k)
-        {
+        for (int k = m; k > 0; --k) {
             const double e_kn_val = getEnk(m, k);
             sig += (prim_est[m - k] - e_kn_val) * exp(
                 -m_thermal_ctx.thermo_beta * (e_kn_val + m_prefix_pot[m - k] - e_shift));
@@ -333,8 +291,7 @@ double BosonicExchange::primitiveEnergyEstimator()
 #endif
 }
 
-double BosonicExchange::getSign()
-{
+double FictitiousExchange::getSign() {
     // sign_ratio[m] stores the ratio W_f(m) / W_b(m) (fermionic sign weight over bosonic weight)
     // This avoids numerical overflow/underflow since sign_ratio is strictly between -1 and 1.
     std::vector<double> sign_ratio(m_bead_ctx.natoms + 1, 0.0);
@@ -347,9 +304,9 @@ double BosonicExchange::getSign()
             const int sign = (k & 1) ? 1 : -1;
             // The exponent is: -beta * (E(m, k) + V(m-k) - V(m))
             // This is strictly well-behaved because V(m) is the exact log-sum-exp of the bosonic partition function
-            const double exponent = -m_thermal_ctx.thermo_beta * 
+            const double exponent = -m_thermal_ctx.thermo_beta *
                 (getEnk(m, k) + m_prefix_pot[m - k] - m_prefix_pot[m]);
-            
+
             sum += sign * exp(exponent) * sign_ratio[m - k];
         }
 
@@ -359,47 +316,6 @@ double BosonicExchange::getSign()
     return sign_ratio[m_bead_ctx.natoms];
 }
 
-void BosonicExchange::printBosonicDebug()
-{
-    if (m_bead_ctx.this_bead == 0)
-    {
-        std::ofstream debug;
-        debug.open(std::format("{}/bosonic_debug.log", Output::FOLDER_NAME), std::ios::out | std::ios::app);
+void FictitiousExchange::printBosonicDebug() {
 
-        //debug << "Step " << sim.getStep() << '\n';
-
-        debug << "Bosonic energies:\n";
-        for (int m = 1; m < m_bead_ctx.natoms + 1; ++m)
-        {
-            debug << "m_prefix_pot[" << m << "] = " << m_prefix_pot[m] << '\n';
-        }
-
-        debug << "----\n";
-
-        debug << "Connection probabilities:\n";
-        for (int l = 0; l < m_bead_ctx.natoms; ++l)
-        {
-            for (int u = 0; u < m_bead_ctx.natoms; ++u)
-            {
-                debug << std::format("P[l={}, u={}] = {}\n", l, u,
-                                     m_connection_probabilities[m_bead_ctx.natoms * l + u]);
-            }
-        }
-
-        debug << "----\n";
-
-        debug << "getEnk(0, 0) = " << getEnk(0, 0) << '\n';
-
-        for (int m = 1; m < m_bead_ctx.natoms + 1; ++m)
-        {
-            for (int k = m; k > 0; --k)
-            {
-                debug << std::format("getEnk(m = {}, k = {}) = {}\n", m, k, getEnk(m, k));
-            }
-        }
-
-        debug << "===========\n";
-
-        debug.close();
-    }
 }

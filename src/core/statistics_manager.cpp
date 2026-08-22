@@ -5,6 +5,7 @@
 #include "bosonic_exchange/factorial_bosonic_exchange.h"
 #else
 #include "bosonic_exchange/quadratic_bosonic_exchange.h"
+#include "bosonic_exchange/fictitious_exchange.h"
 #endif
 
 #include "strategies/forces/distinguishable_spring_force_strategy.h"
@@ -91,6 +92,27 @@ std::shared_ptr<BosonicExchangeBase> StatisticsManager::createBosonicExchangeObj
         x_last_bead = std::shared_ptr<VecArray>(state, &state->coord);
     }
 
+    if (exchange_xi < EPS || std::abs(exchange_xi) > 1.0)
+    {
+        throw std::invalid_argument("Invalid exchange_xi value. Must be in the range [-1, 1] and nonzero.");
+    }
+
+    if (exchange_xi < 1.0) {
+#if FACTORIAL_BOSONIC_ALGORITHM
+        throw std::invalid_argument("FictitiousExchange is only implemented with the quadratic scaling algorithm.");
+#else
+        return std::make_shared<FictitiousExchange>(
+            x_first_bead,
+            x_last_bead,
+            thermal_ctx,
+            spring_ctx,
+            box_ctx,
+            m_bead_ctx,
+            exchange_xi
+        );
+#endif
+    }
+
 #if FACTORIAL_BOSONIC_ALGORITHM
     return std::make_shared<FactorialBosonicExchange>(
         x_first_bead,
@@ -98,8 +120,7 @@ std::shared_ptr<BosonicExchangeBase> StatisticsManager::createBosonicExchangeObj
         thermal_ctx,
         spring_ctx,
         box_ctx,
-        m_bead_ctx,
-        exchange_xi
+        m_bead_ctx
     );
 #else
     return std::make_shared<BosonicExchange>(
@@ -108,8 +129,7 @@ std::shared_ptr<BosonicExchangeBase> StatisticsManager::createBosonicExchangeObj
         thermal_ctx,
         spring_ctx,
         box_ctx,
-        m_bead_ctx,
-        exchange_xi
+        m_bead_ctx
     );
 #endif
 }

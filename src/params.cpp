@@ -191,9 +191,13 @@ void Params::loadSimulationParams(SimulationConfig& config) const {
     if (m_reader.HasValue(Sections::SIMULATION, "exchange_xi")) {
         const double exchange_xi = m_reader.GetReal(Sections::SIMULATION, "exchange_xi", 0.0);
 
-        if (config.bosonic && exchange_xi == 0.0) {
+        if (config.bosonic && exchange_xi < EPS) {
             // Zero exchange_xi implies distinguishable particles, which is inconsistent with bosonic=true
             throw std::invalid_argument("exchange_xi cannot be 0 when bosonic=true");
+        }
+
+        if (std::abs(exchange_xi) > 1.0) {
+            throw std::invalid_argument(std::format("Invalid exchange_xi value ({} is outside of [-1, 1])", exchange_xi));
         }
 
         config.exchange_xi = exchange_xi;
