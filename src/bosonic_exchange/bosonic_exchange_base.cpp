@@ -8,13 +8,15 @@ BosonicExchangeBase::BosonicExchangeBase(
     const ThermalContext& thermal_ctx,
     const SpringContext& spring_ctx,
     const BoxContext& box_ctx,
-    const BeadContext& bead_ctx
+    const BeadContext& bead_ctx,
+    double exchange_xi
 ) : m_coord_first_bead(coord_first_bead),
     m_coord_last_bead(coord_last_bead),
     m_thermal_ctx(thermal_ctx),
     m_spring_ctx(spring_ctx),
     m_box_ctx(box_ctx),
-    m_bead_ctx(bead_ctx)
+    m_bead_ctx(bead_ctx),
+    m_exchange_xi(exchange_xi)
 {
 }
 

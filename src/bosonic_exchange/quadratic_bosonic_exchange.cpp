@@ -11,14 +11,16 @@ BosonicExchange::BosonicExchange(
     const ThermalContext& thermal_ctx,
     const SpringContext& spring_ctx,
     const BoxContext& box_ctx,
-    const BeadContext& bead_ctx
+    const BeadContext& bead_ctx,
+    double exchange_xi
 ) : BosonicExchangeBase(
         coord_first_bead,
         coord_last_bead,
         thermal_ctx,
         spring_ctx,
         box_ctx,
-        bead_ctx),
+        bead_ctx,
+        exchange_xi),
     m_cycle_energies(bead_ctx.natoms * (bead_ctx.natoms + 1) / 2),
     m_prefix_pot(bead_ctx.natoms + 1),
     m_suffix_pot(bead_ctx.natoms + 1),

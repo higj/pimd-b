@@ -45,7 +45,9 @@ struct SimulationConfig {
     long sfreq;         // Save frequency (how often the observables are recorded)
     long steps;         // Total number of MD steps
 
-    bool bosonic;       // Is the simulation bosonic?
+    bool bosonic;        // Is the simulation bosonic?
+    double exchange_xi;  // Exchange parameter (only relevant when bosonic=true)
+
     bool fixcom;        // Fix the center of mass?
     bool pbc;           // Enable periodic boundary conditions?
 

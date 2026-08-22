@@ -37,7 +37,7 @@ Simulation::Simulation(int rank, int nproc, const std::shared_ptr<SimulationConf
     initializeConfigurationDependentContexts(config);
     initializePositions(config);
     initializeMomenta(config);
-    initializeQuantumStatistics(config->bosonic);
+    initializeQuantumStatistics(config->bosonic, config->exchange_xi);
 
     // Initialize RPMD frame selector if RPMD is enabled. This will determine which frame to use for each independent run
     if (m_is_rpmd)
@@ -157,7 +157,7 @@ void Simulation::initializeConfigurationDependentContexts(
     };
 }
 
-void Simulation::initializeQuantumStatistics(bool is_bosonic) const
+void Simulation::initializeQuantumStatistics(bool is_bosonic, double exchange_xi) const
 {
     if (!m_state)
     {
@@ -166,6 +166,7 @@ void Simulation::initializeQuantumStatistics(bool is_bosonic) const
 
     StatisticsManager::getInstance().initializeBosonic(
         is_bosonic,
+        exchange_xi,
         m_bead_ctx,
         m_thermal_ctx,
         m_spring_ctx,

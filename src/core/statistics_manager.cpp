@@ -30,6 +30,7 @@ StatisticsManager& StatisticsManager::getInstance()
 
 void StatisticsManager::initializeBosonic(
     bool is_bosonic,
+    double exchange_xi,
     const BeadContext& bead_ctx,
     const ThermalContext& thermal_ctx,
     const SpringContext& spring_ctx,
@@ -50,7 +51,7 @@ void StatisticsManager::initializeBosonic(
 
     if (is_bosonic_bead)
     {
-        m_bosonic_exchange = createBosonicExchangeObject(thermal_ctx, spring_ctx, box_ctx, state);
+        m_bosonic_exchange = createBosonicExchangeObject(thermal_ctx, spring_ctx, box_ctx, state, exchange_xi);
     }
     else
     {
@@ -70,7 +71,8 @@ std::shared_ptr<BosonicExchangeBase> StatisticsManager::createBosonicExchangeObj
     const ThermalContext& thermal_ctx,
     const SpringContext& spring_ctx,
     const BoxContext& box_ctx,
-    const std::shared_ptr<SystemState>& state
+    const std::shared_ptr<SystemState>& state,
+    double exchange_xi
 )
 {
     std::shared_ptr<VecArray> x_first_bead;
@@ -96,7 +98,8 @@ std::shared_ptr<BosonicExchangeBase> StatisticsManager::createBosonicExchangeObj
         thermal_ctx,
         spring_ctx,
         box_ctx,
-        m_bead_ctx
+        m_bead_ctx,
+        exchange_xi
     );
 #else
     return std::make_shared<BosonicExchange>(
@@ -105,7 +108,8 @@ std::shared_ptr<BosonicExchangeBase> StatisticsManager::createBosonicExchangeObj
         thermal_ctx,
         spring_ctx,
         box_ctx,
-        m_bead_ctx
+        m_bead_ctx,
+        exchange_xi
     );
 #endif
 }

@@ -17,7 +17,6 @@ class BosonicExchange final : public BosonicExchangeBase {
 public:
     /**
      * @brief Construct a new BosonicExchange object.
-     * @param context The context containing system parameters and coordinates.
      */
     explicit BosonicExchange(
         const std::shared_ptr<const VecArray>& coord_first_bead,
@@ -25,7 +24,8 @@ public:
         const ThermalContext& thermal_ctx,
         const SpringContext& spring_ctx,
         const BoxContext& box_ctx,
-        const BeadContext& bead_ctx
+        const BeadContext& bead_ctx,
+        double exchange_xi
     );
 
     /**

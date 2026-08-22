@@ -25,7 +25,8 @@ public:
         const ThermalContext& thermal_ctx,
         const SpringContext& spring_ctx,
         const BoxContext& box_ctx,
-        const BeadContext& bead_ctx
+        const BeadContext& bead_ctx,
+        double exchange_xi
     );
     virtual ~BosonicExchangeBase() = default;
     ///BosonicExchangeBase(const BosonicExchangeBase&) = delete;
@@ -68,6 +69,7 @@ protected:
 
     std::shared_ptr<const VecArray> m_coord_first_bead;
     std::shared_ptr<const VecArray> m_coord_last_bead;
+    double m_exchange_xi;
 
     ThermalContext m_thermal_ctx;
     SpringContext m_spring_ctx;

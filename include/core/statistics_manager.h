@@ -30,6 +30,7 @@ public:
     // This encapsulates all the bosonic logic that was in Simulation::initializeExchange
     void initializeBosonic(
         bool is_bosonic,
+        double exchange_xi,
         const BeadContext& bead_ctx,
         const ThermalContext& thermal_ctx,
         const SpringContext& spring_ctx,
@@ -59,7 +60,8 @@ private:
         const ThermalContext& thermal_ctx,
         const SpringContext& spring_ctx,
         const BoxContext& box_ctx,
-        const std::shared_ptr<SystemState>& state
+        const std::shared_ptr<SystemState>& state,
+        double exchange_xi
     );
 
     // Internal state

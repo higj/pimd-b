@@ -200,8 +200,9 @@ private:
       * Initializes the quantum statistics for the simulation (bosonic or distinguishable).
       *
       * @param is_bosonic Boolean indicating whether the simulation is bosonic or not.
+      * @param exchange_xi Exchange parameter for fictitious particles ("xi").
      */
-    void initializeQuantumStatistics(bool is_bosonic) const;
+    void initializeQuantumStatistics(bool is_bosonic, double exchange_xi) const;
 
     /**
      * Initializes the normal modes based on the input parameters.

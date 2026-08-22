@@ -186,8 +186,31 @@ void Params::loadSimulationParams(SimulationConfig& config) const {
 
     // Bosonic or distinguishable simulation?
     config.bosonic = m_reader.GetBoolean(Sections::SIMULATION, "bosonic", false);
+
+    // Handle exchange_xi parameter with conditional defaults
+    if (m_reader.HasValue(Sections::SIMULATION, "exchange_xi")) {
+        const double exchange_xi = m_reader.GetReal(Sections::SIMULATION, "exchange_xi", 0.0);
+
+        if (config.bosonic && exchange_xi == 0.0) {
+            // Zero exchange_xi implies distinguishable particles, which is inconsistent with bosonic=true
+            throw std::invalid_argument("exchange_xi cannot be 0 when bosonic=true");
+        }
+
+        config.exchange_xi = exchange_xi;
+    } else {
+        // Not explicitly set, apply defaults
+        if (config.bosonic) {
+            // Assume standard bosonic algorithm with xi=1.0 if not specified
+            config.exchange_xi = 1.0;
+        } else {
+            // Assume distinguishable particles with no exchange if not specified
+            config.exchange_xi = 0.0;
+        }
+    }
+
     // Fix the center of mass?
     config.fixcom = m_reader.GetBoolean(Sections::SIMULATION, "fixcom", true);
+
     // Enable periodic boundary conditions?
     config.pbc = m_reader.GetBoolean(Sections::SIMULATION, "pbc", false);
 }
