@@ -326,7 +326,7 @@ double BosonicExchange::primitiveEnergyEstimator()
         prim_est[m] = sig / sig_denom_m;
     }
 
-#if IPI_CONVENTION
+#if TAU_CONVENTION
     return prim_est[m_bead_ctx.natoms] / m_bead_ctx.nbeads;
 #else
     return prim_est[m_bead_ctx.natoms];

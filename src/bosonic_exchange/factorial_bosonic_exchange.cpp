@@ -238,7 +238,7 @@ double FactorialBosonicExchange::primitiveEnergyEstimator()
 
     double bosonic_spring_energy = numerator / denom_weight;
 
-#if IPI_CONVENTION
+#if TAU_CONVENTION
     bosonic_spring_energy /= m_bead_ctx.nbeads;
 #endif
 

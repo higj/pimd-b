@@ -98,8 +98,8 @@ void SystemState::updateNeighboringCoordinates() {
 }
 
 double SystemState::getTotalForce(int ptcl_idx, int axis) const {
-#if IPI_CONVENTION
-    // i-Pi convention; exp[-(beta/P)*H_cl]
+#if TAU_CONVENTION
+    // Tau convention; exp[-(beta/P)*H_cl]
     return spring_forces(ptcl_idx, axis) + physical_forces(ptcl_idx, axis);
 #else
     // Corresponds to Eqn. (12.6.4) from Tuckerman; exp[-beta*H_cl]

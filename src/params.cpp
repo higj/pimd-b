@@ -305,12 +305,12 @@ void Params::loadThermostatParams(SimulationConfig& config) const {
     // Define additional parameters based on rudimentary config parameters
     config.beta = 1.0 / (Constants::kB * config.temperature);
 
-#if IPI_CONVENTION
-    // i-Pi convention [J. Chem. Phys. 133, 124104 (2010)]
+#if TAU_CONVENTION
+    // Tau convention [J. Chem. Phys. 133, 124104 (2010)]
     config.thermo_beta = config.beta / config.nbeads;
     config.omega_p = config.nbeads / (config.beta * Constants::hbar);
 #else
-    // Tuckerman convention
+    // Beta convention
     config.thermo_beta = config.beta;
     config.omega_p = sqrt(config.nbeads) / (config.beta * Constants::hbar);
 #endif

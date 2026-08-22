@@ -11,14 +11,14 @@ void BosonicNormalModesMomentaStrategy::momentaExternalForces(
     const SpringContext& spring_ctx,
     double dt
 ) {
-#if !IPI_CONVENTION
+#if !TAU_CONVENTION
     const int nbeads = state->getNumBeads();
 #endif
 
     for (int ptcl_idx = 0; ptcl_idx < state->getNumAtoms(); ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
             double inner_springs = -spring_ctx.spring_constant * (2 * state->coord(ptcl_idx, axis) - state->prev_coord(ptcl_idx, axis) - state->next_coord(ptcl_idx, axis));
-#if IPI_CONVENTION
+#if TAU_CONVENTION
             state->momenta(ptcl_idx, axis) += 0.5 * dt * (state->physical_forces(ptcl_idx, axis) + state->spring_forces(ptcl_idx, axis) - inner_springs);
 #else
             state->momenta(ptcl_idx, axis) += 0.5 * dt * (state->physical_forces(ptcl_idx, axis) / nbeads + state->spring_forces(ptcl_idx, axis) - inner_springs);

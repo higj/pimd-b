@@ -63,10 +63,10 @@ void ClassicalObservable::calculateKineticEnergy() {
     double dof = NDIM * m_bead_ctx.natoms * m_bead_ctx.nbeads;
     double temperature = 2.0 * kinetic_energy / (dof * Constants::kB);
 
-    // In the i-Pi convention, the ring-polymer simulation is performed at a temperature that is P times higher
+    // In the tau convention, the ring-polymer simulation is performed at a temperature that is P times higher
     // than the actual (quantum) temperature. Therefore, to ensure the quantum temperature is calculated correctly,
     // one must divide the classical temperature by the number of beads.
-#if IPI_CONVENTION
+#if TAU_CONVENTION
     temperature /= m_bead_ctx.nbeads;
 #endif
 

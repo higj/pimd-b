@@ -63,10 +63,10 @@ void GSFActionObservable::calculate()
     }
 
     // Ensure the spring constant is in Tuckerman's convention
-#if IPI_CONVENTION
+#if TAU_CONVENTION
     double sp_constant = m_spring_ctx.spring_constant / m_bead_ctx.nbeads;
 #else
-    double sp_constant = m_context.spring_constant;
+    double sp_constant = m_spring_ctx.spring_constant;
 #endif
 
     const double potential_term = total_potential / (3 * m_bead_ctx.nbeads);

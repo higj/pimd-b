@@ -132,5 +132,5 @@ void SimulationReport::initializeParameterLines(const SimulationConfig& config) 
 void SimulationReport::initializeFeatureLines() {
     m_feature_lines.push_back(formattedReportLine("Minimum image convention", MINIM));
     m_feature_lines.push_back(formattedReportLine("Wrapping of coordinates", WRAP));
-    m_feature_lines.push_back(formattedReportLine("Using i-Pi convention", IPI_CONVENTION));
+    m_feature_lines.push_back(formattedReportLine("Tau convention", TAU_CONVENTION));
 }

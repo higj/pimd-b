@@ -20,10 +20,23 @@ file(GLOB_RECURSE PIMDB_LIBS libs/*.cpp libs/*.h libs/*.c)
 include_directories(include)
 include_directories(libs)
 
+# Define user-configurable options with a default value
+set(NDIM "1" CACHE STRING "Determine the dimension of space")
+option(FACTORIAL_BOSONIC_ALGORITHM "Set to ON to compile with the naive bosonic algorithm" OFF)
+option(TAU_CONVENTION "Set to OFF to switch to beta convention" ON)
+
 # Create the executable
 add_executable(pimdb ${PIMDB_SRC} ${PIMDB_HEADERS} ${PIMDB_LIBS})
-# Configure inih library for longer configuration lines
-target_compile_definitions(pimdb PRIVATE INI_USE_STACK=0 INI_ALLOW_REALLOC=1 INI_MAX_LINE=2048)
+
+# Configure preprocessor macro definitions 
+target_compile_definitions(pimdb PRIVATE 
+    INI_USE_STACK=0 
+    INI_ALLOW_REALLOC=1
+    INI_MAX_LINE=2048
+    NDIM=${NDIM}
+    FACTORIAL_BOSONIC_ALGORITHM=$<BOOL:${FACTORIAL_BOSONIC_ALGORITHM}>
+    TAU_CONVENTION=$<BOOL:${TAU_CONVENTION}>
+)
 
 # MPI
 find_package(MPI REQUIRED)
@@ -84,15 +97,44 @@ if (CMAKE_VERSION VERSION_GREATER 3.12)
   set_property(TARGET pimdb PROPERTY CXX_STANDARD 20)
 endif()
 
+#[[
 # Determine the dimension of space (default = 1)
 if (NOT NDIM)
-    set(NDIM 3)
+    set(NDIM 1)
 endif()
 add_definitions(-D NDIM=${NDIM})
+]]
 
+#[[
 # Determine if we want to compile with the naive (factorially-scaling) bosonic algorithm
 set(FACTORIAL_BOSONIC_ALGORITHM false CACHE BOOL "Set to true to compile with the naive bosonic algorithm")
 
 if (FACTORIAL_BOSONIC_ALGORITHM)
     add_compile_definitions(FACTORIAL_BOSONIC_ALGORITHM)
 endif()
+
+# Determine tau convention (default = true)
+set(TAU_CONVENTION true CACHE BOOL "Set to false to switch to beta convention")
+
+if(TAU_CONVENTION)
+    add_compile_definitions(TAU_CONVENTION)
+endif()
+]]
+
+#[[
+# Determine if we want to compile with the naive (factorially-scaling) bosonic algorithm
+set(FACTORIAL_BOSONIC_ALGORITHM false CACHE BOOL "Set to true to compile with the naive bosonic algorithm")
+if(FACTORIAL_BOSONIC_ALGORITHM)
+    add_compile_definitions(FACTORIAL_BOSONIC_ALGORITHM=1)
+else()
+    add_compile_definitions(FACTORIAL_BOSONIC_ALGORITHM=0)
+endif()
+
+# Determine tau convention (default = true)
+set(TAU_CONVENTION true CACHE BOOL "Set to false to switch to beta convention")
+if(TAU_CONVENTION)
+    add_compile_definitions(TAU_CONVENTION=1)
+else()
+    add_compile_definitions(TAU_CONVENTION=0)
+endif()
+]]

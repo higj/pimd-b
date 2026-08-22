@@ -7,7 +7,7 @@ void DistinguishableNormalModesMomentaStrategy::momentaExternalForces(
     double dt
 )
 {
-#if !IPI_CONVENTION
+#if !TAU_CONVENTION
     const int nbeads = state->getNumBeads();
 #endif
 
@@ -15,7 +15,7 @@ void DistinguishableNormalModesMomentaStrategy::momentaExternalForces(
     {
         for (int axis = 0; axis < NDIM; ++axis)
         {
-#if IPI_CONVENTION
+#if TAU_CONVENTION
             state->momenta(ptcl_idx, axis) += 0.5 * dt * state->physical_forces(ptcl_idx, axis);
 #else
             state->momenta(ptcl_idx, axis) += 0.5 * dt * state->physical_forces(ptcl_idx, axis) / nbeads;

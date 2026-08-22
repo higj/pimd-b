@@ -19,6 +19,11 @@ namespace {
                     printInfo("Program was compiled with naive bosonic algorithm.", info_flag, rank);
                 else
                     printInfo("Program was compiled with quadratic bosonic algorithm.", info_flag, rank);
+            } else if (std::strcmp(arg_arr[i], "--convention") == 0) {
+                if constexpr (TAU_CONVENTION)
+                    printInfo("Program was compiled with tau convention.", info_flag, rank);
+                else
+                    printInfo("Program was compiled with beta convention.", info_flag, rank);
             } else if (std::strcmp(arg_arr[i], "-in") == 0) {
                 // Check if there is another argument after "-in"
                 if (i + 1 < arg_num) {

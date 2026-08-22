@@ -24,18 +24,18 @@
 #define FACTORIAL_BOSONIC_ALGORITHM false  // Enable the old bosonic algorithm that scales as O(N!)?
 #endif
 
-// In the "i-Pi convention" [J. Chem. Phys. 133, 124104 (2010); also J. Chem. Phys. 74, 4078-4095 (1981)], 
-// the Boltzmann exponents have the form exp[-(beta/P)H], where H is the classical Hamiltonian of the 
+// In the "Tau convention" [J. Chem. Phys. 133, 124104 (2010); also J. Chem. Phys. 74, 4078-4095 (1981)], 
+// the Boltzmann exponents have the form exp[-(beta/P)*H_tau], where H_tau is the classical Hamiltonian of the 
 // ring polymers. This results in a canonical distribution at P times the physical temperature.
-// In contrast, "Tuckerman's convention" [J. Chem. Phys. 99, 2796-2808 (1993)] uses weights of the form exp(-beta*H),
+// In contrast, "Beta convention" [J. Chem. Phys. 99, 2796-2808 (1993)] uses weights of the form exp(-beta*H_beta),
 // such that the temperature of the canonical ensemble coincides with the physical temperature.
 // Notably, the classical Hamiltonians of the two conventions differ, with the spring constant
-// in the i-Pi convention being P times larger than that in Tuckerman's convention. Additionally, the i-Pi convention
+// in the tau convention being P times larger than that in beta convention. Additionally, the tau convention
 // lacks a 1/P prefactor in front of the external potential. The Hamiltonians of the two conventions are related through
-// H_tuckerman = H_ipi / P. Note however that the expressions for the various estimators are unaffected by this choice.
-// Setting the following pre-processor directive to false amounts to adopting Tuckerman's convention.
-#ifndef IPI_CONVENTION
-#define IPI_CONVENTION true
+// H_beta = H_tau / P. Note however that the expressions for the various estimators are unaffected by this choice.
+// Setting the following pre-processor directive to false amounts to adopting the beta convention.
+#ifndef TAU_CONVENTION
+#define TAU_CONVENTION true
 #endif
 
 // A small number (but not necessarily the smallest)

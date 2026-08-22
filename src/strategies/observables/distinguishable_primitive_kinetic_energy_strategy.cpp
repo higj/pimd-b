@@ -16,7 +16,7 @@ double DistinguishablePrimitiveKineticEnergyStrategy::calculateSpringContributio
         box_ctx
     );
 
-#if IPI_CONVENTION
+#if TAU_CONVENTION
     spring_energy /= bead_ctx.nbeads;
 #endif
 
