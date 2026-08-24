@@ -9,4 +9,6 @@ namespace AppConfig {
 |__)||\/||  \ __ |__) 
 |   ||  ||__/    |__)
 )";
+
+    constexpr const char* DEFAULT_CONFIG_FILENAME = "config.ini";
 }

@@ -56,7 +56,15 @@ std::string SimulationReport::quantityInUserUnits(
 void SimulationReport::initializeParameterLines(const SimulationConfig& config) {
     // Statistics and algorithm information
     if (config.bosonic) {
-        m_parameter_lines.push_back(formattedReportLine("Statistics", "Bosonic"));
+        if (std::abs(config.exchange_xi) < 1.0) {
+            m_parameter_lines.push_back(
+                formattedReportLine(
+                    "Statistics", std::format("Fictitious (xi={})", config.exchange_xi)
+                )
+            );
+        } else {
+            m_parameter_lines.push_back(formattedReportLine("Statistics", "Bosonic"));
+        }
 
         std::string bosonic_alg_name = "Feldman-Hirshberg";
 #if FACTORIAL_BOSONIC_ALGORITHM

@@ -1,7 +1,9 @@
 #include "bosonic_exchange/fictitious_exchange.h"
+#include "output_paths.h"
 
 #include <array>
 #include <cmath>
+#include <fstream>
 
 FictitiousExchange::FictitiousExchange(
     const std::shared_ptr<const VecArray>& coord_first_bead,
@@ -24,10 +26,11 @@ FictitiousExchange::FictitiousExchange(
     m_prefix_sign(bead_ctx.natoms + 1),
     m_suffix_log_absw(bead_ctx.natoms + 1),
     m_suffix_sign(bead_ctx.natoms + 1),
-    m_connection_factors(bead_ctx.natoms* (bead_ctx.natoms)),
+    m_connection_factors(bead_ctx.natoms * bead_ctx.natoms),
     m_log_n_factorial(std::lgamma(bead_ctx.natoms + 1))
 {
     evaluateBosonicEnergies();
+    //printBosonicDebug();
 }
 
 void FictitiousExchange::evaluateBosonicEnergies() {
@@ -238,8 +241,6 @@ void FictitiousExchange::evaluateSuffixWeight() {
     const double log_abs_xi = std::log(std::abs(m_xi));
     const double sign_xi = (m_xi > 0.0) ? 1.0 : -1.0;
 
-    m_suffix_log_absw.resize(m_bead_ctx.natoms + 1);
-    m_suffix_sign.resize(m_bead_ctx.natoms + 1);
     m_suffix_log_absw[m_bead_ctx.natoms] = 0.0;
     m_suffix_sign[m_bead_ctx.natoms] = 1.0;
 
@@ -497,9 +498,51 @@ double FictitiousExchange::primitiveEnergyEstimator() {
 }
 
 double FictitiousExchange::getSign() {
-    throw std::runtime_error("getSign() is not implemented for FictitiousExchange.");
+    return 0.0;
+    //throw std::runtime_error("getSign() is not implemented for FictitiousExchange.");
 }
 
 void FictitiousExchange::printBosonicDebug() {
+    if (m_bead_ctx.this_bead == 0) {
+        std::ofstream debug;
+        debug.open(std::format("{}/fictitious_debug.log", Output::FOLDER_NAME), std::ios::out | std::ios::app);
 
+        //debug << "Step " << sim.getStep() << '\n';
+
+        debug << "Bosonic exchange parameter xi = " << m_xi << '\n';
+        debug << "Connection factors:\n";
+        for (int l = 0; l < m_bead_ctx.natoms; ++l) {
+            for (int u = 0; u < m_bead_ctx.natoms; ++u) {
+                debug << std::format("G[l={}, u={}] = {}\n", l, u,
+                    m_connection_factors[m_bead_ctx.natoms * l + u]);
+            }
+        }
+
+        debug << "----\n";
+
+        debug << "Prefix weights:\n";
+        for (int m = 0; m < m_bead_ctx.natoms + 1; ++m) {
+            debug << std::format("m_prefix_log_absw[{}] = {}, m_prefix_sign[{}] = {}\n",
+                m, m_prefix_log_absw[m], m, m_prefix_sign[m]);
+        }
+
+        debug << "----\n";
+        debug << "Suffix weights:\n";
+        for (int m = 0; m < m_bead_ctx.natoms + 1; ++m) {
+            debug << std::format("m_suffix_log_absw[{}] = {}, m_suffix_sign[{}] = {}\n",
+                m, m_suffix_log_absw[m], m, m_suffix_sign[m]);
+        }
+
+        debug << "----\n";
+        debug << "Cycle energies:\n";
+        for (int m = 1; m <= m_bead_ctx.natoms; ++m) {
+            for (int k = 1; k <= m; ++k) {
+                debug << std::format("E^[{},{}] = {}\n", m, k, getEnk(m, k));
+            }
+        }
+
+        debug << "===========\n";
+
+        debug.close();
+    }
 }
