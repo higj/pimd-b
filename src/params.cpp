@@ -38,6 +38,15 @@ namespace {
         long& frame,
         XyzFrameSelectionMode& frame_mode
     ) {
+        if (specification.empty()) {
+            throw std::invalid_argument(
+                std::format(
+                    "{} initialization method 'xyz' requires a specification (e.g. filename or format string)", 
+                    label
+                )
+            );
+        }
+
         try {
             // If the user provided a filename format, try to format it using the first bead index
             constexpr int dummy = 0;
@@ -398,14 +407,15 @@ void Params::loadThermostatParams(SimulationConfig& config) const {
  * @param config Config object to load parameters into.
  */
 void Params::loadCoordInitParams(SimulationConfig& config) const {
+    const std::string init_pos = m_reader.Get(Sections::SIMULATION, "initial_position", "random");
+
     std::string init_pos_type, init_pos_specification;
 
-    if (!StringUtils::parseTokenParentheses(
-        m_reader.Get(Sections::SIMULATION, "initial_position", "random"), 
-        init_pos_type,
-        init_pos_specification
-        )) {
-        throw std::invalid_argument("Invalid coordinate initialization method");
+    if (!StringUtils::parseTokenParentheses(init_pos, init_pos_type, init_pos_specification)) 
+    {
+        throw std::invalid_argument(
+            std::format("Invalid coordinate initialization method '{}'", init_pos)
+        );
     }
 
     using namespace std::string_view_literals;
@@ -435,6 +445,15 @@ void Params::loadCoordInitParams(SimulationConfig& config) const {
     ) {
         throw std::invalid_argument(
             "initial_position_frame and initial_position_frame_mode can only be used with initial_position = xyz(...)"
+        );
+    } else if (
+        init_pos_type != "xyz" &&
+        !init_pos_specification.empty()
+        )
+    {
+        throw std::invalid_argument(
+            std::format("Coordinate initialization method '{}' does not accept a specification (got '{}')",
+                init_pos_type, init_pos_specification)
         );
     }
 
@@ -486,6 +505,14 @@ void Params::loadVelocityInitParams(SimulationConfig& config) const {
         m_reader.HasValue(Sections::SIMULATION, "initial_velocity_frame_mode")) {
         throw std::invalid_argument(
             "initial_velocity_frame and initial_velocity_frame_mode can only be used with initial_velocity = xyz(...)"
+        );
+    } else if (
+        init_vel_type != "xyz" &&
+        !init_vel_specification.empty()
+        ) {
+        throw std::invalid_argument(
+            std::format("Velocity initialization method '{}' does not accept a specification (got '{}')",
+                init_vel_type, init_vel_specification)
         );
     }
 
