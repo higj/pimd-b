@@ -25,7 +25,6 @@ namespace StringUtils {
     // Used to parse strings of the format "token(value)"
     bool parseTokenParentheses(const std::string& input, std::string& token, std::string& value) {
         // Define a regular expression for the specified format
-        // @todo Generalize regex to catch cases such as "foo()" and "foo" (without parentheses)	
         // Catch "foo(bar)", "foo()" and "foo"
         const std::regex pattern(R"(\s*(\w+)\((.*)\)\s*|\s*(\w+)\s*)");
 
