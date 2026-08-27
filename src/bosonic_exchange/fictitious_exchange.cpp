@@ -22,22 +22,22 @@ FictitiousExchange::FictitiousExchange(
     bead_ctx),
     m_xi(exchange_xi),
     m_cycle_energies(bead_ctx.natoms* (bead_ctx.natoms + 1) / 2),
-    m_prefix_log_absw(bead_ctx.natoms + 1),
-    m_prefix_sign(bead_ctx.natoms + 1),
-    m_suffix_log_absw(bead_ctx.natoms + 1),
-    m_suffix_sign(bead_ctx.natoms + 1),
-    m_connection_factors(bead_ctx.natoms * bead_ctx.natoms),
-    m_log_n_factorial(std::lgamma(bead_ctx.natoms + 1))
-{
+    m_prefix_pot(bead_ctx.natoms + 1),
+    m_suffix_pot(bead_ctx.natoms + 1),
+    m_connection_probabilities(bead_ctx.natoms * bead_ctx.natoms),
+    m_log_n_factorial(std::lgamma(bead_ctx.natoms + 1)) {
+    if (exchange_xi <= 0.0 || exchange_xi > 1.0)
+    {
+        throw std::invalid_argument("exchange_xi must be positive and less than or equal to 1");
+    }
     evaluateBosonicEnergies();
-    //printBosonicDebug();
 }
 
 void FictitiousExchange::evaluateBosonicEnergies() {
     evaluateCycleEnergies();
-    evaluatePrefixWeight();
-    evaluateSuffixWeight();
-    evaluateConnectionFactors();
+    evaluatePrefixPotential();
+    evaluateSuffixPotential();
+    evaluateConnectionProbabilities();
 }
 
 void FictitiousExchange::prepare() {
@@ -100,273 +100,99 @@ void FictitiousExchange::setEnk(int m, int k, double val) {
     m_cycle_energies[end_of_m - k] = val;
 }
 
-void FictitiousExchange::evaluatePrefixWeight() {
-    const double log_abs_xi = std::log(std::abs(m_xi));
-    const double sign_xi = (m_xi > 0.0) ? 1.0 : -1.0;
+void FictitiousExchange::evaluatePrefixPotential() {
+    m_prefix_pot[0] = 0.0;
+    std::vector<double> subdivision_potentials(m_bead_ctx.natoms);
 
-    m_prefix_log_absw[0] = 0.0;
-    m_prefix_sign[0] = 1.0;
-
-    std::vector<double> log_mag(m_bead_ctx.natoms);
-    std::vector<double> term_sign(m_bead_ctx.natoms);
-
+    // Corresponds to lines 10-11 in Algorithm 1 in the paper ("last_idx" is "v" in the paper)
+    const double log_xi = std::log(m_xi);
     for (int last_idx = 1; last_idx <= m_bead_ctx.natoms; last_idx++) {
-        double shift = -std::numeric_limits<double>::infinity();
+        double e_shift = std::numeric_limits<double>::max();
 
         for (int k = 1; k <= last_idx; k++) {
-            const double prev_log_absw = m_prefix_log_absw[last_idx - k];
-            const double prev_sign = m_prefix_sign[last_idx - k];
-
-            // xi^(k-1) contributes (k-1)*log|xi| in magnitude and sign_xi^(k-1) in sign
-            const double sign_xi_pow = (k % 2 == 1) ? 1.0 : sign_xi; // sign_xi^(k-1)
-
-            log_mag[k - 1] = (k - 1) * log_abs_xi + prev_log_absw
-                - m_thermal_ctx.thermo_beta * getEnk(last_idx, k);
-            term_sign[k - 1] = sign_xi_pow * prev_sign;
-
-            if (term_sign[k - 1] != 0.0)
-                shift = std::max(shift, log_mag[k - 1]);
+            subdivision_potentials[k - 1] = getEnk(last_idx, k) + m_prefix_pot[last_idx - k] - (k - 1) * log_xi / m_thermal_ctx.thermo_beta;
+            e_shift = std::min(e_shift, subdivision_potentials[k - 1]);
         }
 
-        // All contributing terms vanished (rare, but possible): result is exactly zero
-        if (!std::isfinite(shift)) {
-            m_prefix_log_absw[last_idx] = -std::numeric_limits<double>::infinity();
-            m_prefix_sign[last_idx] = 0.0;
-            continue;
-        }
-
-        double signed_sum = 0.0;
+        double sig_denom = 0.0;
         for (int k = 1; k <= last_idx; k++) {
-            if (term_sign[k - 1] == 0.0) continue;
-            signed_sum += term_sign[k - 1] * std::exp(log_mag[k - 1] - shift);
+            sig_denom += std::exp(-m_thermal_ctx.thermo_beta * (subdivision_potentials[k - 1] - e_shift));
         }
 
-        // Divide by N: subtract log(N) in log-space, sign unaffected
-        if (signed_sum == 0.0) {
-            m_prefix_log_absw[last_idx] = -std::numeric_limits<double>::infinity();
-            m_prefix_sign[last_idx] = 0.0;
-        } else {
-            m_prefix_sign[last_idx] = (signed_sum > 0.0) ? 1.0 : -1.0;
-            m_prefix_log_absw[last_idx] = shift + std::log(std::abs(signed_sum))
-                - std::log(static_cast<double>(last_idx));
-        }
+        m_prefix_pot[last_idx] = e_shift - std::log(sig_denom / static_cast<double>(last_idx)) / m_thermal_ctx.thermo_beta;
 
-        if (m_prefix_sign[last_idx] != 0.0 && !std::isfinite(m_prefix_log_absw[last_idx])) {
+        if (!std::isfinite(m_prefix_pot[last_idx])) {
             throw std::overflow_error(
                 std::format(
-                    "Invalid prefix weight calculation at last_idx={}: signed_sum={:.6e}, shift={:.6e}",
-                    last_idx, signed_sum, shift)
+                    "Invalid prefix potential calculation at last_idx={}: sig_denom={:.6e}, e_shift={:.6e}, result={:.6e}",
+                    last_idx, sig_denom, e_shift, m_prefix_pot[last_idx])
             );
         }
     }
 }
 
-/*
-void FictitiousExchange::evaluateSuffixWeight() {
-    const double log_abs_xi = std::log(std::abs(m_xi));
-    const double sign_xi = (m_xi > 0.0) ? 1.0 : -1.0;
-
-    // Store suffix weight components in log/sign form
-    m_suffix_log_absw.resize(m_bead_ctx.natoms + 1);
-    m_suffix_sign.resize(m_bead_ctx.natoms + 1);
-
-    m_suffix_log_absw[m_bead_ctx.natoms] = 0.0;
-    m_suffix_sign[m_bead_ctx.natoms] = 1.0;
-
-    std::vector<double> log_mag(m_bead_ctx.natoms);
-    std::vector<double> term_sign(m_bead_ctx.natoms);
+void FictitiousExchange::evaluateSuffixPotential() {
+    m_suffix_pot[m_bead_ctx.natoms] = 0.0;
+    std::vector<double> subdivision_potentials(m_bead_ctx.natoms);
 
     // Corresponds to lines 14-15 in Algorithm 1 in the paper ("first_idx" is "u" in the paper)
-    for (int first_idx = m_bead_ctx.natoms - 1; first_idx >= 0; first_idx--) {
-        double shift = -std::numeric_limits<double>::infinity();
+    const double log_xi = std::log(m_xi);
+    for (int first_idx = m_bead_ctx.natoms - 1; first_idx > 0; first_idx--) {
+        double e_shift = std::numeric_limits<double>::max();
 
-        // Calculate the cycle energy of the first "ell" particles in the sequence u,...,N
         for (int ell = first_idx; ell < m_bead_ctx.natoms; ell++) {
-            const double prev_log_absw = m_suffix_log_absw[ell + 1];
-            const double prev_sign = m_suffix_sign[ell + 1];
-
-            // xi^(ell-u)/ell contributes (ell-u)*log|xi| - log(ell) in magnitude
-            const double sign_xi_pow = ((ell - first_idx) % 2 == 0) ? 1.0 : sign_xi; // sign_xi^(ell-u)
-
-            log_mag[ell] = (ell - first_idx) * log_abs_xi - std::log(static_cast<double>(ell + 1))
-                + prev_log_absw
-                - m_thermal_ctx.thermo_beta * getEnk(ell + 1, ell - first_idx + 1);
-            term_sign[ell] = sign_xi_pow * prev_sign;
-
-            if (term_sign[ell] != 0.0)
-                shift = std::max(shift, log_mag[ell]);
+            subdivision_potentials[ell] = getEnk(ell + 1, ell - first_idx + 1) + m_suffix_pot[ell + 1] - (ell - first_idx) * log_xi / m_thermal_ctx.thermo_beta;
+            e_shift = std::min(e_shift, subdivision_potentials[ell]);
         }
 
-        // All contributing terms vanished
-        if (!std::isfinite(shift)) {
-            m_suffix_log_absw[first_idx] = -std::numeric_limits<double>::infinity();
-            m_suffix_sign[first_idx] = 0.0;
-            continue;
-        }
-
-        double signed_sum = 0.0;
+        double sig_denom = 0.0;
         for (int ell = first_idx; ell < m_bead_ctx.natoms; ell++) {
-            if (term_sign[ell] == 0.0) continue;
-            signed_sum += term_sign[ell] * std::exp(log_mag[ell] - shift);
+            sig_denom += (1.0 / (ell + 1)) * exp(-m_thermal_ctx.thermo_beta * (subdivision_potentials[ell] - e_shift));
         }
 
-        if (signed_sum == 0.0) {
-            m_suffix_log_absw[first_idx] = -std::numeric_limits<double>::infinity();
-            m_suffix_sign[first_idx] = 0.0;
-        } else {
-            m_suffix_sign[first_idx] = (signed_sum > 0.0) ? 1.0 : -1.0;
-            m_suffix_log_absw[first_idx] = shift + std::log(std::abs(signed_sum));
-        }
+        m_suffix_pot[first_idx] = e_shift - log(sig_denom) / m_thermal_ctx.thermo_beta;
 
-        if (m_suffix_sign[first_idx] != 0.0 && !std::isfinite(m_suffix_log_absw[first_idx])) {
+        if (!std::isfinite(m_suffix_pot[first_idx])) {
             throw std::overflow_error(
                 std::format(
-                    "Invalid suffix weight calculation at first_idx={}: signed_sum={:.6e}, shift={:.6e}",
-                    first_idx, signed_sum, shift)
+                    "Invalid suffix potential calculation at first_idx={}: sig_denom={:.6e}, e_shift={:.6e}, result={:.6e}",
+                    first_idx, sig_denom, e_shift, m_suffix_pot[first_idx])
             );
         }
     }
 
-    // Consistency check: first suffix should match last prefix
-    if (std::abs(m_suffix_log_absw[0] - m_prefix_log_absw[m_bead_ctx.natoms]) > 1e-10) {
-        throw std::logic_error(
-            std::format("Prefix-suffix mismatch: prefix={:.6e}, suffix={:.6e}",
-                m_prefix_log_absw[m_bead_ctx.natoms], m_suffix_log_absw[0])
-        );
-    }
-}
-*/
-
-void FictitiousExchange::evaluateSuffixWeight() {
-    const double log_abs_xi = std::log(std::abs(m_xi));
-    const double sign_xi = (m_xi > 0.0) ? 1.0 : -1.0;
-
-    m_suffix_log_absw[m_bead_ctx.natoms] = 0.0;
-    m_suffix_sign[m_bead_ctx.natoms] = 1.0;
-
-    std::vector<double> log_mag(m_bead_ctx.natoms);
-    std::vector<double> term_sign(m_bead_ctx.natoms);
-
-    for (int first_idx = m_bead_ctx.natoms - 1; first_idx >= 0; first_idx--) {
-        double shift = -std::numeric_limits<double>::infinity();
-
-        for (int ell = first_idx; ell < m_bead_ctx.natoms; ell++) {
-            const double prev_log_absw = m_suffix_log_absw[ell + 1];
-            const double prev_sign = m_suffix_sign[ell + 1];
-            const double sign_xi_pow = ((ell - first_idx) % 2 == 0) ? 1.0 : sign_xi;
-
-            // per-term divisor 1/ell
-            log_mag[ell] = (ell - first_idx) * log_abs_xi - std::log(static_cast<double>(ell + 1))
-                + prev_log_absw
-                - m_thermal_ctx.thermo_beta * getEnk(ell + 1, ell - first_idx + 1);
-            term_sign[ell] = sign_xi_pow * prev_sign;
-
-            if (term_sign[ell] != 0.0)
-                shift = std::max(shift, log_mag[ell]);
-        }
-
-        if (!std::isfinite(shift)) {
-            m_suffix_log_absw[first_idx] = -std::numeric_limits<double>::infinity();
-            m_suffix_sign[first_idx] = 0.0;
-            continue;
-        }
-
-        double signed_sum = 0.0;
-        for (int ell = first_idx; ell < m_bead_ctx.natoms; ell++) {
-            if (term_sign[ell] == 0.0) continue;
-            signed_sum += term_sign[ell] * std::exp(log_mag[ell] - shift);
-        }
-
-        if (signed_sum == 0.0) {
-            m_suffix_log_absw[first_idx] = -std::numeric_limits<double>::infinity();
-            m_suffix_sign[first_idx] = 0.0;
-        } else {
-            m_suffix_sign[first_idx] = (signed_sum > 0.0) ? 1.0 : -1.0;
-            m_suffix_log_absw[first_idx] = shift + std::log(std::abs(signed_sum));
-            // no further division - every term already carries its own 1/ell
-        }
-
-        if (m_suffix_sign[first_idx] != 0.0 && !std::isfinite(m_suffix_log_absw[first_idx])) {
-            throw std::overflow_error(
-                std::format(
-                    "Invalid suffix weight calculation at first_idx={}: signed_sum={:.6e}, shift={:.6e}",
-                    first_idx, signed_sum, shift)
-            );
-        }
-    }
-
-    // Consistency check: sign AND magnitude must agree; guard the -inf - (-inf) = NaN case
-    const bool both_finite = std::isfinite(m_suffix_log_absw[0])
-        && std::isfinite(m_prefix_log_absw[m_bead_ctx.natoms]);
-    const bool magnitude_ok = both_finite &&
-        std::abs(m_suffix_log_absw[0] - m_prefix_log_absw[m_bead_ctx.natoms]) < 1e-10;
-    const bool zero_case_ok = !both_finite
-        && m_suffix_sign[0] == 0.0 && m_prefix_sign[m_bead_ctx.natoms] == 0.0;
-    const bool sign_ok = m_suffix_sign[0] == m_prefix_sign[m_bead_ctx.natoms];
-
-    if (!sign_ok || !(magnitude_ok || zero_case_ok)) {
-        throw std::logic_error(
-            std::format("Prefix-suffix mismatch: prefix=({:.6e},{}), suffix=({:.6e},{})",
-                m_prefix_log_absw[m_bead_ctx.natoms], m_prefix_sign[m_bead_ctx.natoms],
-                m_suffix_log_absw[0], m_suffix_sign[0])
-        );
-    }
+    // The first suffix potential, V^[u=1,N], coincides with the last prefix potential, V^[1,v=N]
+    m_suffix_pot[0] = m_prefix_pot[m_bead_ctx.natoms];
 }
 
 double FictitiousExchange::effectivePotential() {
-    return (-1.0 / m_thermal_ctx.thermo_beta) * m_prefix_log_absw[m_bead_ctx.natoms];
+    return m_prefix_pot[m_bead_ctx.natoms];
 }
 
 double FictitiousExchange::getVn(int n) const {
-    return (-1.0 / m_thermal_ctx.thermo_beta) * m_prefix_log_absw[n];
+    return m_prefix_pot[n];
 }
 
 double FictitiousExchange::getEknSerialOrder(int i) const {
     return m_cycle_energies[i];
 }
 
-void FictitiousExchange::evaluateConnectionFactors() {
-    // NOTE: for xi < 0 these are no longer probabilities (can be negative or >1) -
-    // kept the name/array to minimize churn
-    const int N = m_bead_ctx.natoms;
-    const double beta = m_thermal_ctx.thermo_beta;
-    const double sign_xi = (m_xi > 0.0) ? 1.0 : -1.0;
-    const double log_abs_xi = std::log(std::abs(m_xi));
-
-    const double total_log_absw = m_prefix_log_absw[N];
-    const double total_sign = m_prefix_sign[N];
-
-    if (total_sign == 0.0) {
-        throw std::overflow_error(
-            "evaluateConnectionFactors: total prefix weight is exactly zero, "
-            "connection factors are ill-defined (complete sign cancellation).");
+void FictitiousExchange::evaluateConnectionProbabilities() {
+    // Corresponds to lines 16-17 in Algorithm 1 in the paper
+    for (int l = 0; l < m_bead_ctx.natoms - 1; l++) {
+        const double direct_link_probability = 1.0 - (exp(-m_thermal_ctx.thermo_beta *
+            (m_prefix_pot[l + 1] + m_suffix_pot[l + 1] -
+                m_prefix_pot[m_bead_ctx.natoms])));
+        m_connection_probabilities[m_bead_ctx.natoms * l + (l + 1)] = direct_link_probability;
     }
 
-    // Corresponds to lines 16-17 in Algorithm 1 in the paper - direct continuation, no xi factor
-    // of its own (it's already folded into m_prefix_log_absw[l+1] via the recursion).
-    for (int l = 0; l < N - 1; l++) {
-        const double logmag = m_prefix_log_absw[l + 1] + m_suffix_log_absw[l + 1] - total_log_absw;
-        const double sign = m_prefix_sign[l + 1] * m_suffix_sign[l + 1] * total_sign;
-
-        m_connection_factors[N * l + (l + 1)] = 1.0 - sign * std::exp(logmag);
-    }
-
-    // Corresponds to lines 18-20 in Algorithm 1 in the paper - G(sigma)(l) = u,
-    // cycle length k = l-u+1, carries the xi^{l-u} = xi^{k-1} factor explicitly.
-    for (int u = 0; u < N; u++) {
-        for (int l = u; l < N; l++) {
-            const int k = l - u + 1;
-            const double sign_xi_pow = ((k - 1) % 2 == 0) ? 1.0 : sign_xi;
-
-            const double logmag = m_prefix_log_absw[u]
-                + (k - 1) * log_abs_xi
-                - beta * getEnk(l + 1, k)
-                + m_suffix_log_absw[l + 1]
-                - total_log_absw
-                - std::log(static_cast<double>(l + 1));
-            const double sign = m_prefix_sign[u] * sign_xi_pow * m_suffix_sign[l + 1] * total_sign;
-
-            m_connection_factors[N * l + u] = sign * std::exp(logmag);
+    // Corresponds to lines 18-20 in Algorithm 1 in the paper
+    const double log_xi = std::log(m_xi);
+    for (int u = 0; u < m_bead_ctx.natoms; u++) {
+        for (int l = u; l < m_bead_ctx.natoms; l++) {
+            const double exponent = -m_thermal_ctx.thermo_beta * (m_prefix_pot[u] + getEnk(l + 1, l - u + 1) + m_suffix_pot[l + 1] - m_prefix_pot[m_bead_ctx.natoms]) + (l - u) * log_xi;
+            const double close_cycle_probability = (1.0 / (l + 1)) * exp(exponent);
+            m_connection_probabilities[m_bead_ctx.natoms * l + u] = close_cycle_probability;
         }
     }
 }
@@ -379,7 +205,7 @@ void FictitiousExchange::springForceLastBead(VecArray& f) {
             std::array<double, NDIM> diff_next;
             getExteriorBeadsSeparation(next_l, l, diff_next);
 
-            const double prob = m_connection_factors[m_bead_ctx.natoms * l + next_l];
+            const double prob = m_connection_probabilities[m_bead_ctx.natoms * l + next_l];
 
             for (int axis = 0; axis < NDIM; ++axis) {
                 sums[axis] += prob * diff_next[axis];
@@ -400,7 +226,7 @@ void FictitiousExchange::springForceFirstBead(VecArray& f) {
             std::array<double, NDIM> diff_prev;
             getExteriorBeadsSeparation(l, prev_l, diff_prev);
 
-            const double prob = m_connection_factors[m_bead_ctx.natoms * prev_l + l];
+            const double prob = m_connection_probabilities[m_bead_ctx.natoms * prev_l + l];
 
             for (int axis = 0; axis < NDIM; ++axis) {
                 sums[axis] -= prob * diff_prev[axis];
@@ -415,79 +241,41 @@ void FictitiousExchange::springForceFirstBead(VecArray& f) {
 
 double FictitiousExchange::getDistinctProbability() {
     double cycle_energy_sum = 0.0;
-    for (int m = 1; m <= m_bead_ctx.natoms; ++m) {
+    for (int m = 1; m < m_bead_ctx.natoms + 1; ++m) {
         cycle_energy_sum += getEnk(m, 1);
     }
 
-    const int N = m_bead_ctx.natoms;
-    if (m_prefix_sign[N] == 0.0) {
-        throw std::overflow_error("getDistinctProbability: W(N) vanished exactly.");
-    }
-
-    const double log_val = -m_thermal_ctx.thermo_beta * cycle_energy_sum
-        - m_prefix_log_absw[N] - m_log_n_factorial;
-    return m_prefix_sign[N] * std::exp(log_val);
+    return exp(-m_thermal_ctx.thermo_beta * (cycle_energy_sum - m_prefix_pot[m_bead_ctx.natoms]) - m_log_n_factorial);
 }
 
 double FictitiousExchange::getLongestProbability() {
-    const int N = m_bead_ctx.natoms;
-    if (m_prefix_sign[N] == 0.0) {
-        throw std::overflow_error("getLongestProbability: W(N) vanished exactly.");
-    }
-    const double log_val = -m_thermal_ctx.thermo_beta * getEnk(N, N) - m_prefix_log_absw[N];
-    return m_prefix_sign[N] * std::exp(log_val);
+    const double log_xi = std::log(m_xi);
+    const double exponent = -m_thermal_ctx.thermo_beta * (getEnk(m_bead_ctx.natoms, m_bead_ctx.natoms) - m_prefix_pot[m_bead_ctx.natoms]) + (m_bead_ctx.natoms - 1) * log_xi;
+    return exp(exponent) / m_bead_ctx.natoms;
 }
 
 double FictitiousExchange::primitiveEnergyEstimator() {
-    const double beta = m_thermal_ctx.thermo_beta;
-    const double sign_xi = (m_xi > 0.0) ? 1.0 : -1.0;
-    const double log_abs_xi = std::log(std::abs(m_xi));
+    std::vector<double> prim_est(m_bead_ctx.natoms + 1);
 
-    std::vector<double> prim_est(m_bead_ctx.natoms + 1, 0.0); // prim_est[0] = 0 (base case)
-    std::vector<double> log_mag(m_bead_ctx.natoms);
-    std::vector<double> raw_sign(m_bead_ctx.natoms);
-    std::vector<double> coeff(m_bead_ctx.natoms);
+    const double log_xi = std::log(m_xi);
+    for (int m = 1; m < m_bead_ctx.natoms + 1; ++m) {
+        double sig = 0.0;
+        // Shift the energies in the exponents to avoid numerical instability (Xiong & Xiong method)
+        double e_shift = std::numeric_limits<double>::max();
 
-    for (int m = 1; m <= m_bead_ctx.natoms; ++m) {
-        double shift = -std::numeric_limits<double>::infinity();
+        for (int k = m; k > 0; k--) {
+            e_shift = std::min(e_shift, getEnk(m, k) + m_prefix_pot[m - k] - (k - 1) * log_xi / m_thermal_ctx.thermo_beta);
+        }
 
         for (int k = m; k > 0; --k) {
             const double e_kn_val = getEnk(m, k);
-            const int idx = m - k;
-            const double sign_xi_pow = ((k - 1) % 2 == 0) ? 1.0 : sign_xi;
-
-            log_mag[idx] = (k - 1) * log_abs_xi + m_prefix_log_absw[m - k] - beta * e_kn_val;
-            raw_sign[idx] = sign_xi_pow * m_prefix_sign[m - k];
-            coeff[idx] = prim_est[m - k] - e_kn_val;
-
-            if (raw_sign[idx] != 0.0)
-                shift = std::max(shift, log_mag[idx]);
+            sig += (prim_est[m - k] - e_kn_val) * exp(
+                -m_thermal_ctx.thermo_beta * (e_kn_val + m_prefix_pot[m - k] - (k - 1) * log_xi / m_thermal_ctx.thermo_beta - e_shift));
         }
 
-        if (!std::isfinite(shift)) {
-            throw std::overflow_error(
-                std::format("primitiveEnergyEstimator: all terms vanished at m={}", m));
-        }
+        const double sig_denom_m = m * exp(-m_thermal_ctx.thermo_beta * (m_prefix_pot[m] - e_shift));
 
-        double sig = 0.0;
-        for (int idx = 0; idx < m; ++idx) {
-            if (raw_sign[idx] == 0.0) continue;
-            sig += coeff[idx] * raw_sign[idx] * std::exp(log_mag[idx] - shift);
-        }
-
-        if (m_prefix_sign[m] == 0.0) {
-            throw std::overflow_error(
-                std::format("primitiveEnergyEstimator: W(m) vanished exactly at m={}", m));
-        }
-        const double denom = static_cast<double>(m) * m_prefix_sign[m]
-            * std::exp(m_prefix_log_absw[m] - shift);
-
-        prim_est[m] = sig / denom;
-
-        if (!std::isfinite(prim_est[m])) {
-            throw std::overflow_error(
-                std::format("primitiveEnergyEstimator: non-finite result at m={}", m));
-        }
+        prim_est[m] = sig / sig_denom_m;
     }
 
 #if TAU_CONVENTION
@@ -498,46 +286,58 @@ double FictitiousExchange::primitiveEnergyEstimator() {
 }
 
 double FictitiousExchange::getSign() {
-    return 0.0;
-    //throw std::runtime_error("getSign() is not implemented for FictitiousExchange.");
+    // sign_ratio[m] stores the ratio W_f(m) / W_xi(m) (fermionic sign weight over xi weight)
+    std::vector<double> sign_ratio(m_bead_ctx.natoms + 1, 0.0);
+    sign_ratio[0] = 1.0;
+
+    for (int m = 1; m < m_bead_ctx.natoms + 1; ++m) {
+        double sum = 0.0;
+
+        for (int k = m; k > 0; --k) {
+            const int sign = (k & 1) ? 1 : -1;
+            // The exponent is: -beta * (E(m, k) + V_xi(m-k) - V_xi(m))
+            // This is strictly well-behaved because V(m) is the exact log-sum-exp of the bosonic partition function
+            const double exponent = -m_thermal_ctx.thermo_beta *
+                (getEnk(m, k) + m_prefix_pot[m - k] - m_prefix_pot[m]);
+
+            sum += sign * exp(exponent) * sign_ratio[m - k];
+        }
+
+        sign_ratio[m] = sum / static_cast<double>(m);
+    }
+
+    return sign_ratio[m_bead_ctx.natoms];
 }
 
 void FictitiousExchange::printBosonicDebug() {
     if (m_bead_ctx.this_bead == 0) {
         std::ofstream debug;
-        debug.open(std::format("{}/fictitious_debug.log", Output::FOLDER_NAME), std::ios::out | std::ios::app);
+        debug.open(std::format("{}/bosonic_debug.log", Output::FOLDER_NAME), std::ios::out | std::ios::app);
 
         //debug << "Step " << sim.getStep() << '\n';
 
-        debug << "Bosonic exchange parameter xi = " << m_xi << '\n';
-        debug << "Connection factors:\n";
+        debug << "Bosonic energies:\n";
+        for (int m = 1; m < m_bead_ctx.natoms + 1; ++m) {
+            debug << "m_prefix_pot[" << m << "] = " << m_prefix_pot[m] << '\n';
+        }
+
+        debug << "----\n";
+
+        debug << "Connection probabilities:\n";
         for (int l = 0; l < m_bead_ctx.natoms; ++l) {
             for (int u = 0; u < m_bead_ctx.natoms; ++u) {
-                debug << std::format("G[l={}, u={}] = {}\n", l, u,
-                    m_connection_factors[m_bead_ctx.natoms * l + u]);
+                debug << std::format("P[l={}, u={}] = {}\n", l, u,
+                    m_connection_probabilities[m_bead_ctx.natoms * l + u]);
             }
         }
 
         debug << "----\n";
 
-        debug << "Prefix weights:\n";
-        for (int m = 0; m < m_bead_ctx.natoms + 1; ++m) {
-            debug << std::format("m_prefix_log_absw[{}] = {}, m_prefix_sign[{}] = {}\n",
-                m, m_prefix_log_absw[m], m, m_prefix_sign[m]);
-        }
+        debug << "getEnk(0, 0) = " << getEnk(0, 0) << '\n';
 
-        debug << "----\n";
-        debug << "Suffix weights:\n";
-        for (int m = 0; m < m_bead_ctx.natoms + 1; ++m) {
-            debug << std::format("m_suffix_log_absw[{}] = {}, m_suffix_sign[{}] = {}\n",
-                m, m_suffix_log_absw[m], m, m_suffix_sign[m]);
-        }
-
-        debug << "----\n";
-        debug << "Cycle energies:\n";
-        for (int m = 1; m <= m_bead_ctx.natoms; ++m) {
-            for (int k = 1; k <= m; ++k) {
-                debug << std::format("E^[{},{}] = {}\n", m, k, getEnk(m, k));
+        for (int m = 1; m < m_bead_ctx.natoms + 1; ++m) {
+            for (int k = m; k > 0; --k) {
+                debug << std::format("getEnk(m = {}, k = {}) = {}\n", m, k, getEnk(m, k));
             }
         }
 

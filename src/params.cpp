@@ -205,17 +205,17 @@ void Params::loadSimulationParams(SimulationConfig& config) const {
             throw std::invalid_argument("exchange_xi cannot be 0 when bosonic=true");
         }
 
+        /*
         // Assuming we allow negative exchange_xi values, we only check the absolute value is <= 1.0
         if (std::abs(exchange_xi) > 1.0) {
             throw std::invalid_argument(std::format("Invalid exchange_xi value of '{}'. Must be a nonzero number between -1 and +1.", exchange_xi));
         }
+        */
 
-        /*
-        // If we want to enforce strictly positive exchange_xi values, use the following check instead:
+        // Enforce strictly positive exchange_xi values
         if (std::abs(exchange_xi) > 1.0 || exchange_xi < 0.0) {
             throw std::invalid_argument(std::format("Invalid exchange_xi value of '{}'. Must be strictly positive and less than or equal to 1.", exchange_xi));
         }
-        */
 
         config.exchange_xi = exchange_xi;
     } else {

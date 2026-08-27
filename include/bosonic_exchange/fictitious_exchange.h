@@ -6,7 +6,10 @@
 
 /**
  * @class FictitiousExchange
- * @brief Implements the quadratic-scaling fictitious-particle exchange algorithm for path integral molecular dynamics.
+ * @brief Implements the quadratic-scaling bosonic exchange algorithm for path integral molecular dynamics.
+ *
+ * This class implements the bosonic exchange algorithm by Yotam M. Y. Feldman and Barak Hirshberg (DOI: 10.1063/5.0173749).
+ * It manages the evaluation of bosonic energies, connection probabilities, and related estimators.
  *
  * @see BosonicExchangeBase
  */
@@ -134,31 +137,24 @@ private:
     /**
      * @brief Evaluate connection probabilities.
      */
-    void evaluateConnectionFactors();
+    void evaluateConnectionProbabilities();
 
     /**
-     * @brief Evaluate the prefix (forward) weights W^[1,v]. Assumes that the cycle energies have been computed.
+     * @brief Evaluate the prefix (forward) bosonic potentials V^[1,v], as outlined in Eq. 3 of arXiv:2305.18025.
+     *        Assumes that the cycle energies have been computed.
      */
-    void evaluatePrefixWeight();
+    void evaluatePrefixPotential();
 
     /**
-     * @brief Evaluate the suffix (backward) weights W^[u,N].
-     * Assumes that both the cycle energies and prefix weights have been computed.
+     * @brief Evaluate the suffix (backward) bosonic potentials V^[u,N], as outlined in Eq. 15 of arXiv:2305.18025.
+     *        Assumes that both the cycle energies and prefix potentials have been computed.
      */
-    void evaluateSuffixWeight();
+    void evaluateSuffixPotential();
 
     double m_xi;                                     ///< The fictitious particle parameter xi
     std::vector<double> m_cycle_energies;            ///< Array of cycle energies E(k,N) = E^[N-k+1,N]
-
-    std::vector<double> m_prefix_log_absw;           ///< Logarithm of the absolute value of forward weights W^[1,1], W^[1,2], ..., W^[1,N]
-    std::vector<double> m_prefix_sign;               ///< Sign of forward weights W^[1,1], W^[1,2], ..., W^[1,N]
-
-    std::vector<double> m_suffix_log_absw;           ///< Logarithm of the absolute value of backward weights W^[1,N], W^[2,N], ..., W^[N,N]
-    std::vector<double> m_suffix_sign;               ///< Sign of backward weights W^[1,N], W^[2,N], ..., W^[N,N]
-
-    //std::vector<double> m_prefix_weight;             ///< Forward weights W^[1,1], W^[1,2], ..., W^[1,N]
-    //std::vector<double> m_suffix_pot;                ///< Backward weights W^[1,N], W^[2,N], ..., W^[N,N]
-
-    std::vector<double> m_connection_factors;  ///< Connection probabilities
+    std::vector<double> m_prefix_pot;                ///< Forward potentials V^[1,1], V^[1,2], ..., V^[1,N]
+    std::vector<double> m_suffix_pot;                ///< Backward potentials V^[1,N], V^[2,N], ..., V^[N,N]
+    std::vector<double> m_connection_probabilities;  ///< Connection probabilities
     double m_log_n_factorial;                        ///< Logarithm of N! for normalization
 };
