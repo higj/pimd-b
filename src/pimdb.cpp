@@ -56,6 +56,14 @@ namespace {
         }
     }
 
+    void flushStreams()
+    {
+        std::cout.flush();
+        std::cerr.flush();
+        fflush(stdout);
+        fflush(stderr);
+    }
+
     [[noreturn]] void throwError(
         const std::exception& ex,
         int rank,
@@ -64,10 +72,7 @@ namespace {
         printError(ex.what(), rank, error_type);
         
         // Flush output buffers to ensure the error message is displayed before abortion
-        std::cout.flush();
-        std::cerr.flush();
-        fflush(stdout);
-        fflush(stderr);
+        flushStreams();
         
         MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
         std::exit(EXIT_FAILURE); // Should not reach here
@@ -107,10 +112,7 @@ int main(int argc, char** argv) {
     }
 
     // Flush output buffers to ensure everything is displayed before MPI finalization
-    std::cout.flush();
-    std::cerr.flush();
-    fflush(stdout);
-    fflush(stderr);
+    flushStreams();
 
     MPI_Finalize();
     return EXIT_SUCCESS;
