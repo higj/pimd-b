@@ -170,13 +170,3 @@ void ObservablesLogger::openFileAndWriteHeader(const std::filesystem::path& file
         }
     }
 }
-
-std::filesystem::path ObservablesLogger::outputPathFor(const Observable& observable) const
-{
-    if (!observable.usesCustomFile())
-    {
-        return m_main_output_filename;
-    }
-
-    return m_main_output_filename.parent_path() / observable.outputFilename();
-}

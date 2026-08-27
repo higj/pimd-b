@@ -47,5 +47,4 @@ private:
     void writeTimeStep(long step);
     void writeObservables();
     void openFileAndWriteHeader(const std::filesystem::path& filename);
-    [[nodiscard]] std::filesystem::path outputPathFor(const Observable& observable) const;
 };

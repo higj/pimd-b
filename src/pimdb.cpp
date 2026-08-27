@@ -1,4 +1,4 @@
-﻿#include <cstring>
+#include <cstring>
 #include <iostream>
 #include <string_view>
 
@@ -56,14 +56,21 @@ namespace {
         }
     }
 
-    void throwError(
+    [[noreturn]] void throwError(
         const std::exception& ex,
-        int& error_flag,
         int rank,
         const std::string& error_type
     ) {
         printError(ex.what(), rank, error_type);
-        error_flag = 1;
+        
+        // Flush output buffers to ensure the error message is displayed before abortion
+        std::cout.flush();
+        std::cerr.flush();
+        fflush(stdout);
+        fflush(stderr);
+        
+        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+        std::exit(EXIT_FAILURE); // Should not reach here
     }
 }
 
@@ -74,8 +81,6 @@ int main(int argc, char** argv) {
 
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
-
-    int error_flag = 0;  // 0 = no error, 1 = error occurred
 
     try {
         // Flag to check if the user requested information about the program as opposed to running the simulation
@@ -94,27 +99,18 @@ int main(int argc, char** argv) {
             sim.run();
         }
     } catch (const std::invalid_argument& ex) {
-        throwError(ex, error_flag, rank, ErrorMessage::INVALID_ARG_ERR);
+        throwError(ex, rank, ErrorMessage::INVALID_ARG_ERR);
     } catch (const std::overflow_error& ex) {
-        throwError(ex, error_flag, rank, ErrorMessage::OVERFLOW_ERR);
+        throwError(ex, rank, ErrorMessage::OVERFLOW_ERR);
     } catch (const std::exception& ex) {
-        throwError(ex, error_flag, rank, ErrorMessage::GENERAL_ERR);
+        throwError(ex, rank, ErrorMessage::GENERAL_ERR);
     }
 
-    // Flush output buffers to ensure messages are displayed before MPI operations
+    // Flush output buffers to ensure everything is displayed before MPI finalization
     std::cout.flush();
     std::cerr.flush();
     fflush(stdout);
     fflush(stderr);
-
-    // Broadcast error status to ensure all ranks know about the error
-    int global_error_flag = 0;
-    MPI_Allreduce(&error_flag, &global_error_flag, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-
-    if (global_error_flag != 0) {
-        // Error occurred on one or more ranks - terminate all ranks cleanly
-        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-    }
 
     MPI_Finalize();
     return EXIT_SUCCESS;
