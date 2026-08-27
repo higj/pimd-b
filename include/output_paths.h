@@ -4,16 +4,16 @@
 #include <filesystem>
 
 namespace Output {
-    inline const std::string FOLDER_NAME = "output";
-    inline const std::string MAIN_FILENAME = "simulation.out";
+    inline constexpr std::string_view FOLDER_NAME = "output";
+    inline constexpr std::string_view MAIN_FILENAME = "simulation.out";
 
     /**
      * @brief Generate the file path for the PIMD output file
      * @return File path in the format "output/simulation.out".
      */
-    inline std::filesystem::path getPimdFilename()
+    inline std::filesystem::path getPimdFilename(const std::string_view filename = MAIN_FILENAME)
     {
-        return std::filesystem::path(FOLDER_NAME) / MAIN_FILENAME;
+        return std::filesystem::path(FOLDER_NAME) / filename;
     }
 
     /**

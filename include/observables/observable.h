@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "ordered_map.h"
@@ -10,7 +11,12 @@ public:
     /**
      * @brief Generic observable class constructor
      */
-    explicit Observable(const std::string& name, int out_freq, const std::string& out_unit);
+    explicit Observable(
+        const std::string& name, 
+        int out_freq, 
+        const std::string& out_unit,
+        const std::string& out_filename = ""
+    );
 
     virtual void calculate() = 0;
     virtual ~Observable() = default;
@@ -21,7 +27,7 @@ public:
      *        in the output folder. However, it might be useful to leave
      *        the option to create different folders/files for different observables.
      */
-    static void initializeFolder(const std::string& folder_name);
+    static void initializeFolder(std::string_view folder_name);
 
     /**
      * Initializes observable with the given label.
@@ -49,10 +55,31 @@ public:
      */
     [[nodiscard]] std::string name() const { return m_name; }
 
+    /**
+     * @brief Get the output filename for this observable.
+     * @return The output filename, relative to the active simulation output directory.
+     *         Empty string means use the default main file.
+     */
+    [[nodiscard]] std::string outputFilename() const { return m_out_filename; }
+
+    /**
+     * @brief Select the output filename for this observable.
+     * @param filename A filename relative to the active simulation output directory.
+     *        An empty filename uses the standard Output::MAIN_FILENAME.
+     */
+    void setOutputFilename(const std::string_view filename) { m_out_filename = filename; }
+
+    /**
+     * @brief Check if this observable uses a custom output file.
+     * @return true if a custom output file was specified, false if using default.
+     */
+    [[nodiscard]] bool usesCustomFile() const { return !m_out_filename.empty(); }
+
     tsl::ordered_map<std::string, double> quantities;
 
 protected:
-    std::string m_name;      // Observable name
-    int m_out_freq;          // Frequency at which the observable is recorded
-    std::string m_out_unit;  // Units of the output quantities
+    std::string m_name;          // Observable name
+    int m_out_freq;              // Frequency at which the observable is recorded
+    std::string m_out_unit;      // Units of the output quantities
+    std::string m_out_filename;  // Custom output file (optional, empty = use central logger)
 };

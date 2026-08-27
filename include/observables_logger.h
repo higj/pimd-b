@@ -29,12 +29,23 @@ public:
     void reopenFile(const std::filesystem::path& new_filename);
 
 private:
-    std::ofstream m_file;
+    struct OutputFile {
+        std::filesystem::path filename;
+        std::ofstream stream;
+        std::vector<std::shared_ptr<Observable>> observables;
+    };
+
     int m_this_bead;
     long m_frequency;
     std::vector<std::shared_ptr<Observable>> m_observables;
 
+    std::filesystem::path m_main_output_filename;
+    std::vector<OutputFile> m_output_files;
+    /// Maps each observable (by index into m_observables) to its OutputFile index in m_output_files.
+    std::vector<std::size_t> m_obs_output_file_indices;
+
     void writeTimeStep(long step);
     void writeObservables();
     void openFileAndWriteHeader(const std::filesystem::path& filename);
+    [[nodiscard]] std::filesystem::path outputPathFor(const Observable& observable) const;
 };

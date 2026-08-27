@@ -4,6 +4,17 @@
 
 #include <stdexcept>
 #include <memory>
+#include <string_view>
+
+namespace {
+    // Output destinations are deliberately defined in code, not in the input file.
+    // Leave an entry empty to write that observable to Output::MAIN_FILENAME.
+    constexpr std::string_view ENERGY_OUTPUT_FILENAME;
+    constexpr std::string_view CLASSICAL_OUTPUT_FILENAME;
+    constexpr std::string_view BOSONIC_OUTPUT_FILENAME;
+    constexpr std::string_view GSF_OUTPUT_FILENAME;
+    constexpr std::string_view CENTER_OF_MASS_OUTPUT_FILENAME;
+}
 
 ObservableInitializer::ObservableInitializer(
     const long stride,
@@ -31,7 +42,7 @@ ObservableInitializer::ObservableInitializer(
 
 std::shared_ptr<Observable> ObservableInitializer::createEnergyObservable(const std::string& out_unit) const
 {
-    return std::make_shared<EnergyObservable>(
+    auto observable = std::make_shared<EnergyObservable>(
         std::shared_ptr<const VecArray>(m_state, &m_state->coord),
         std::shared_ptr<const VecArray>(m_state, &m_state->prev_coord),
         std::shared_ptr<const VecArray>(m_state, &m_state->physical_forces),
@@ -43,11 +54,13 @@ std::shared_ptr<Observable> ObservableInitializer::createEnergyObservable(const 
         m_stride,
         out_unit
     );
+    observable->setOutputFilename(ENERGY_OUTPUT_FILENAME);
+    return observable;
 }
 
 std::shared_ptr<Observable> ObservableInitializer::createClassicalObservable(const std::string& out_unit) const
 {
-    return std::make_shared<ClassicalObservable>(
+    auto observable = std::make_shared<ClassicalObservable>(
         std::shared_ptr<const VecArray>(m_state, &m_state->coord),
         std::shared_ptr<const VecArray>(m_state, &m_state->prev_coord),
         m_velocity_context,
@@ -58,6 +71,8 @@ std::shared_ptr<Observable> ObservableInitializer::createClassicalObservable(con
         m_stride,
         out_unit
     );
+    observable->setOutputFilename(CLASSICAL_OUTPUT_FILENAME);
+    return observable;
 }
 
 std::shared_ptr<Observable> ObservableInitializer::createBosonicObservable(const std::string& out_unit) const
@@ -67,15 +82,17 @@ std::shared_ptr<Observable> ObservableInitializer::createBosonicObservable(const
         throw std::runtime_error("Bosonic observables require bosonic simulation mode");
     }
 
-    return std::make_shared<BosonicObservable>(
+    auto observable = std::make_shared<BosonicObservable>(
         m_stride,
         out_unit
     );
+    observable->setOutputFilename(BOSONIC_OUTPUT_FILENAME);
+    return observable;
 }
 
 std::shared_ptr<Observable> ObservableInitializer::createGSFObservable(const std::string& out_unit) const
 {
-    return std::make_shared<GSFActionObservable>(
+    auto observable = std::make_shared<GSFActionObservable>(
         std::shared_ptr<const VecArray>(m_state, &m_state->coord),
         m_force_mgr,
         m_bead_context,
@@ -84,16 +101,20 @@ std::shared_ptr<Observable> ObservableInitializer::createGSFObservable(const std
         m_stride,
         out_unit
     );
+    observable->setOutputFilename(GSF_OUTPUT_FILENAME);
+    return observable;
 }
 
 std::shared_ptr<Observable> ObservableInitializer::createCenterOfMassObservable(const std::string& out_unit) const
 {
-    return std::make_shared<CenterOfMassObservable>(
+    auto observable = std::make_shared<CenterOfMassObservable>(
         std::shared_ptr<const VecArray>(m_state, &m_state->coord),
         m_bead_context,
         m_stride,
         out_unit
     );
+    observable->setOutputFilename(CENTER_OF_MASS_OUTPUT_FILENAME);
+    return observable;
 }
 
 std::vector<ObservableItem> ObservableInitializer::parseObservablesList() const

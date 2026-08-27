@@ -5,6 +5,7 @@
 #include "mpi.h"
 
 #include <format>
+#include <map>
 #include <ranges>
 
 // Constructor opens the file and writes the header
@@ -24,9 +25,15 @@ ObservablesLogger::ObservablesLogger(
 // Destructor closes the file if open
 ObservablesLogger::~ObservablesLogger()
 {
-    if (m_this_bead == 0 && m_file.is_open())
+    if (m_this_bead == 0)
     {
-        m_file.close();
+        for (auto& output_file : m_output_files)
+        {
+            if (output_file.stream.is_open())
+            {
+                output_file.stream.close();
+            }
+        }
     }
 }
 
@@ -39,18 +46,27 @@ void ObservablesLogger::log(long step)
     //{
         writeTimeStep(step);
         writeObservables();
-        if (m_this_bead == 0) m_file << '\n';
+        if (m_this_bead == 0)
+        {
+            for (auto& output_file : m_output_files)
+            {
+                output_file.stream << '\n';
+            }
+        }
     //}
 }
 
 void ObservablesLogger::reopenFile(const std::filesystem::path& new_filename) {
     if (m_this_bead == 0)
     {
-        // Close the current file if it's open
-        if (m_file.is_open())
+        for (auto& output_file : m_output_files)
         {
-            m_file.close();
+            if (output_file.stream.is_open())
+            {
+                output_file.stream.close();
+            }
         }
+        m_output_files.clear();
 
         openFileAndWriteHeader(new_filename);
     }
@@ -58,7 +74,10 @@ void ObservablesLogger::reopenFile(const std::filesystem::path& new_filename) {
 
 void ObservablesLogger::writeTimeStep(long step) {
     if (m_this_bead == 0) {
-        m_file << std::format("{:^16.8e}", static_cast<double>(step));
+        for (auto& output_file : m_output_files)
+        {
+            output_file.stream << std::format("{:^16.8e}", static_cast<double>(step));
+        }
     }
 }
 
@@ -79,9 +98,10 @@ void ObservablesLogger::writeObservables() {
     MPI_Allreduce(local_values.data(), global_values.data(), static_cast<int>(local_values.size()), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
     int idx = 0;
-    for (const auto& observable : m_observables) {
-        for (size_t i = 0; i < observable->quantities.size(); ++i) {
-            double quantity_value = global_values[idx++];
+    for (std::size_t obs_idx = 0; obs_idx < m_observables.size(); ++obs_idx) {
+        const auto& observable = m_observables[obs_idx];
+        for (std::size_t i = 0; i < observable->quantities.size(); ++i) {
+            const double quantity_value = global_values[idx++];
 
             // The simulation should be interrupted if an observable produced an invalid value
             if (!std::isfinite(quantity_value)) {
@@ -91,7 +111,9 @@ void ObservablesLogger::writeObservables() {
             }
 
             if (m_this_bead == 0) {
-                m_file << std::format(" {:^16.8e}", quantity_value);
+                const std::size_t file_idx = m_obs_output_file_indices[obs_idx];
+                m_output_files[file_idx].stream
+                    << std::format(" {:^16.8e}", quantity_value);
             }
         }
     }
@@ -99,28 +121,62 @@ void ObservablesLogger::writeObservables() {
 
 void ObservablesLogger::openFileAndWriteHeader(const std::filesystem::path& filename) {
     if (m_this_bead == 0) {
-        // Construct the full path to the output file
-        //const std::filesystem::path file_path = Output::FOLDER_NAME / filename; // Moved folder specification to Simulation::initializeObservablesLogger
+        std::map<std::filesystem::path, std::size_t> file_indices;
 
-        // Ensure the output directory exists
-        std::filesystem::create_directories(filename.parent_path());
+        m_output_files.clear();
+        m_obs_output_file_indices.clear();
 
-        // Open the file in append mode to avoid overwriting existing data
-        m_file.open(filename, std::ios::out | std::ios::app);
-
-        if (!m_file.is_open()) {
-            throw std::ios_base::failure(std::format("Failed to open {}.", filename.string()));
-        }
-
-        // Write the header
-        m_file << std::format("{:^16s}", "step");
+        m_main_output_filename = filename;
 
         for (const auto& observable : m_observables) {
-            for (const auto& key : observable->quantities | std::views::keys) {
-                m_file << std::vformat(" {:^16s}", std::make_format_args(key));
+            const auto output_path = observable->usesCustomFile()
+                ? filename.parent_path() / observable->outputFilename()
+                : filename;
+
+            const auto [it, inserted] = file_indices.emplace(
+                output_path, m_output_files.size()
+            );
+
+            if (inserted) {
+                m_output_files.push_back(OutputFile{ .filename = output_path });
             }
+
+            const auto file_index = it->second;
+            m_output_files[file_index].observables.push_back(observable);
+            m_obs_output_file_indices.push_back(file_index);
         }
 
-        m_file << '\n';
+        // Custom names are relative to the active output directory; the default
+        // continues to use Simulation's supplied filename (including RPMD paths).
+        for (auto& output_file : m_output_files)
+        {
+            std::filesystem::create_directories(output_file.filename.parent_path());
+            output_file.stream.open(output_file.filename, std::ios::out | std::ios::app);
+
+            if (!output_file.stream.is_open()) {
+                throw std::ios_base::failure(
+                    std::format("Failed to open {}.", output_file.filename.string())
+                );
+            }
+
+            output_file.stream << std::format("{:^16s}", "step");
+            for (const auto& observable : output_file.observables) {
+                for (const auto& key : observable->quantities | std::views::keys) {
+                    output_file.stream << std::vformat(" {:^16s}", std::make_format_args(key));
+                }
+            }
+
+            output_file.stream << '\n';
+        }
     }
+}
+
+std::filesystem::path ObservablesLogger::outputPathFor(const Observable& observable) const
+{
+    if (!observable.usesCustomFile())
+    {
+        return m_main_output_filename;
+    }
+
+    return m_main_output_filename.parent_path() / observable.outputFilename();
 }

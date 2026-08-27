@@ -6,13 +6,14 @@
 Observable::Observable(
     const std::string& name, 
     int out_freq, 
-    const std::string& out_unit
-) : m_name(name), m_out_freq(out_freq), m_out_unit(out_unit)
+    const std::string& out_unit,
+    const std::string& out_filename
+) : m_name(name), m_out_freq(out_freq), m_out_unit(out_unit), m_out_filename(out_filename)
 {
     initializeFolder(Output::FOLDER_NAME);
 }
 
-void Observable::initializeFolder(const std::string& folder_name)
+void Observable::initializeFolder(const std::string_view folder_name)
 {
     std::filesystem::create_directory(folder_name);
 }
