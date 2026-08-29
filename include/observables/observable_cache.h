@@ -11,16 +11,16 @@
  * Owned by ObservablesLogger. Invalidated once per logging step, before
  * any observable's calculate() is called. Observables that share an
  * intermediate computation write to and read from this cache using 
- * agreed-upon string keys.
+ * agreed-upon enum values.
  *
- * All values are stored in internal (unconverted) units. Unit conversion
+ * All quantities are stored in internal (unconverted) units. Unit conversion
  * happens in the observable after the value is retrieved.
  */
 class ObservableCache {
 public:
     void invalidate() { m_values.fill(std::nullopt); }
 
-    std::optional<double> get(CacheKey key) const {
+    [[nodiscard]] std::optional<double> get(CacheKey key) const {
         return m_values[static_cast<std::size_t>(key)];
     }
 
