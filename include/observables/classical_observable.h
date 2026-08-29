@@ -21,9 +21,7 @@ public:
     ClassicalObservable(
         const std::shared_ptr<const VecArray>& coord,
         const std::shared_ptr<const VecArray>& prev_coord,
-        const VelocityContext& vel_ctx,
         const ThermostatContext& thermostat_ctx,
-        const BeadContext& bead_ctx,
         const SpringContext& spring_ctx,
         const BoxContext& box_ctx,
         int out_freq, 
@@ -39,18 +37,11 @@ private:
     std::shared_ptr<const VecArray> m_prev_coord;
     std::unique_ptr<ClassicalSpringEnergyStrategy> m_spring_energy_strategy;
 
-    VelocityContext m_vel_ctx;
     ThermostatContext m_thermostat_ctx;
-    BeadContext m_bead_ctx;
     SpringContext m_spring_ctx;
     BoxContext m_box_ctx;
 
     bool m_is_nose_hoover = false;  // Is the thermostat a Nose-Hoover?
-
-    /**
-     * @brief Calculates the classical kinetic energy of the ring polymers, as well as the temperature of the system.
-     */
-    void calculateKineticEnergy();
 
     /**
      * @brief Calculates the spring energy of the classical ring-polymer system.

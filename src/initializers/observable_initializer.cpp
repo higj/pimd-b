@@ -63,11 +63,33 @@ std::shared_ptr<Observable> ObservableInitializer::createClassicalObservable(con
     auto observable = std::make_shared<ClassicalObservable>(
         std::shared_ptr<const VecArray>(m_state, &m_state->coord),
         std::shared_ptr<const VecArray>(m_state, &m_state->prev_coord),
-        m_velocity_context,
         m_thermostat_context,
-        m_bead_context,
         m_spring_context,
         m_box_context,
+        m_stride,
+        out_unit
+    );
+    observable->setOutputFilename(CLASSICAL_OUTPUT_FILENAME);
+    return observable;
+}
+
+std::shared_ptr<Observable> ObservableInitializer::createClassicalKineticEnergyObservable(const std::string& out_unit) const
+{
+    auto observable = std::make_shared<ClassicalKineticEnergyObservable>(
+        m_velocity_context,
+        m_bead_context,
+        m_stride,
+        out_unit
+    );
+    observable->setOutputFilename(CLASSICAL_OUTPUT_FILENAME);
+    return observable;
+}
+
+std::shared_ptr<Observable> ObservableInitializer::createTemperatureObservable(const std::string& out_unit) const
+{
+    auto observable = std::make_shared<TemperatureObservable>(
+        m_velocity_context,
+        m_bead_context,
         m_stride,
         out_unit
     );
@@ -156,6 +178,12 @@ std::vector<std::shared_ptr<Observable>> ObservableInitializer::createObservable
                 break;
             case ObservableType::CLASSICAL:
                 observables.push_back(createClassicalObservable(item.getEffectiveUnit()));
+                break;
+            case ObservableType::CL_KINETIC_ENERGY:
+                observables.push_back(createClassicalKineticEnergyObservable(item.getEffectiveUnit()));
+                break;
+            case ObservableType::QUANTUM_TEMPERATURE:
+                observables.push_back(createTemperatureObservable(item.getEffectiveUnit()));
                 break;
             case ObservableType::BOSONIC:
                 observables.push_back(createBosonicObservable(item.getEffectiveUnit()));

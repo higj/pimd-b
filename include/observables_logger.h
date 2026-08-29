@@ -1,5 +1,7 @@
 #pragma once
 
+#include "observables/observable_cache.h"
+
 #include <memory>
 #include <vector>
 #include <fstream>
@@ -43,6 +45,8 @@ private:
     std::vector<OutputFile> m_output_files;
     /// Maps each observable (by index into m_observables) to its OutputFile index in m_output_files.
     std::vector<std::size_t> m_obs_output_file_indices;
+
+    ObservableCache m_cache;
 
     void writeTimeStep(long step);
     void writeObservables();

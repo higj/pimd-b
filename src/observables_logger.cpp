@@ -19,6 +19,10 @@ ObservablesLogger::ObservablesLogger(
     m_frequency(frequency),
     m_observables(observables)
 {
+    for (const auto& observable : m_observables) {
+        observable->setCache(&m_cache);
+    }
+
     openFileAndWriteHeader(filename);
 }
 
@@ -43,17 +47,20 @@ void ObservablesLogger::log(long step)
     /// TODO: Better do this check in Simulation::calculateAndLogObservables, before calculating observables 
     ///       (if we won't write them, why bother calculating?)
     //if (step % m_frequency == 0)
-    //{
-        writeTimeStep(step);
-        writeObservables();
-        if (m_this_bead == 0)
+    //{ .. }
+
+    // Wipe the cache at the beginning of each logging step to ensure that observables recalculate their values
+    m_cache.invalidate();
+    // Calculate the values of all observables
+    writeTimeStep(step);
+    writeObservables();
+    if (m_this_bead == 0)
+    {
+        for (auto& output_file : m_output_files)
         {
-            for (auto& output_file : m_output_files)
-            {
-                output_file.stream << '\n';
-            }
+            output_file.stream << '\n';
         }
-    //}
+    }
 }
 
 void ObservablesLogger::reopenFile(const std::filesystem::path& new_filename) {

@@ -6,6 +6,8 @@
 
 #include "ordered_map.h"
 
+class ObservableCache;
+
 class Observable {
 public:
     /**
@@ -75,6 +77,8 @@ public:
      */
     [[nodiscard]] bool usesCustomFile() const { return !m_out_filename.empty(); }
 
+    void setCache(ObservableCache* cache) { m_cache = cache; }
+
     tsl::ordered_map<std::string, double> quantities;
 
 protected:
@@ -82,4 +86,5 @@ protected:
     int m_out_freq;              // Frequency at which the observable is recorded
     std::string m_out_unit;      // Units of the output quantities
     std::string m_out_filename;  // Custom output file (optional, empty = use central logger)
+    ObservableCache* m_cache;    // Non-owning pointer to the observable cache
 };

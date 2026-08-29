@@ -634,6 +634,8 @@ void Params::loadOutputParams(SimulationConfig& config) const {
 void Params::loadObservableParams(SimulationConfig& config) const {
     config.observables_list["energy"] = m_reader.Get(Sections::OBSERVABLES, "energy", "kelvin");
     config.observables_list["classical"] = m_reader.Get(Sections::OBSERVABLES, "classical", "off");
+    config.observables_list["cl_kinetic"] = m_reader.Get(Sections::OBSERVABLES, "cl_kinetic", "off");
+    config.observables_list["temperature"] = m_reader.Get(Sections::OBSERVABLES, "temperature", "off");
     config.observables_list["bosonic"] = m_reader.Get(Sections::OBSERVABLES, "bosonic", "off");
     config.observables_list["gsf"] = m_reader.Get(Sections::OBSERVABLES, "gsf", "off");
     config.observables_list["center_of_mass"] = m_reader.Get(Sections::OBSERVABLES, "center_of_mass", "off");
