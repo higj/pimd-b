@@ -637,7 +637,9 @@ void Params::loadObservableParams(SimulationConfig& config) const {
     config.observables_list["cl_spring"] = m_reader.Get(Sections::OBSERVABLES, "cl_spring", "off");
     config.observables_list["temperature"] = m_reader.Get(Sections::OBSERVABLES, "temperature", "off");
     config.observables_list["nh_energy"] = m_reader.Get(Sections::OBSERVABLES, "nh_energy", "off");
-    config.observables_list["bosonic"] = m_reader.Get(Sections::OBSERVABLES, "bosonic", "off");
+    config.observables_list["prob_dist"] = m_reader.Get(Sections::OBSERVABLES, "prob_dist", "off");
+    config.observables_list["prob_all"] = m_reader.Get(Sections::OBSERVABLES, "prob_all", "off");
+    config.observables_list["sign"] = m_reader.Get(Sections::OBSERVABLES, "sign", "off");
     config.observables_list["gsf"] = m_reader.Get(Sections::OBSERVABLES, "gsf", "off");
     config.observables_list["center_of_mass"] = m_reader.Get(Sections::OBSERVABLES, "center_of_mass", "off");
 }

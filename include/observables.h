@@ -1,7 +1,9 @@
 #pragma once
 
 #include "observables/observable.h"
-#include "observables/bosonic_observable.h"
+#include "observables/bosonic_prob_dist_observable.h"
+#include "observables/bosonic_prob_all_observable.h"
+#include "observables/bosonic_sign_observable.h"
 #include "observables/energy_observable.h"
 #include "observables/classical_kinetic_energy_observable.h"
 #include "observables/classical_spring_energy_observable.h"

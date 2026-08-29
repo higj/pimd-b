@@ -11,7 +11,9 @@ enum class ObservableType : std::uint8_t {
     CL_SPRING_ENERGY,
     QUANTUM_TEMPERATURE,
     NOSE_HOOVER_ENERGY,
-    BOSONIC,
+    BOSONIC_PROB_DIST,
+    BOSONIC_PROB_ALL,
+    BOSONIC_SIGN,
     GSF,
     CENTER_OF_MASS,
     UNKNOWN
@@ -31,7 +33,9 @@ public:
         if (name == "cl_spring") return ObservableType::CL_SPRING_ENERGY;
         if (name == "temperature") return ObservableType::QUANTUM_TEMPERATURE;
         if (name == "nh_energy") return ObservableType::NOSE_HOOVER_ENERGY;
-        if (name == "bosonic") return ObservableType::BOSONIC;
+        if (name == "prob_dist") return ObservableType::BOSONIC_PROB_DIST;
+        if (name == "prob_all") return ObservableType::BOSONIC_PROB_ALL;
+        if (name == "sign") return ObservableType::BOSONIC_SIGN;
         if (name == "gsf") return ObservableType::GSF;
         if (name == "center_of_mass") return ObservableType::CENTER_OF_MASS;
         return ObservableType::UNKNOWN;

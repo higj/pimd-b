@@ -1,4 +1,5 @@
 #include "initializers/observable_initializer.h"
+#include "observables.h"
 #include "core/simulation_config.h"
 #include "core/system_state.h"
 
@@ -106,14 +107,42 @@ std::shared_ptr<Observable> ObservableInitializer::createNoseHooverEnergyObserva
     return observable;
 }
 
-std::shared_ptr<Observable> ObservableInitializer::createBosonicObservable(const std::string& out_unit) const
+std::shared_ptr<Observable> ObservableInitializer::createBosonicProbDistObservable(const std::string& out_unit) const
 {
     if (!m_state->isBosonic())
     {
         throw std::runtime_error("Bosonic observables require bosonic simulation mode");
     }
 
-    auto observable = std::make_shared<BosonicObservable>(
+    auto observable = std::make_shared<BosonicProbDistObservable>(
+        m_stride,
+        out_unit
+    );
+    observable->setOutputFilename(BOSONIC_OUTPUT_FILENAME);
+    return observable;
+}
+
+std::shared_ptr<Observable> ObservableInitializer::createBosonicProbAllObservable(const std::string& out_unit) const
+{
+    if (!m_state->isBosonic())
+    {
+        throw std::runtime_error("Bosonic observables require bosonic simulation mode");
+    }
+    auto observable = std::make_shared<BosonicProbAllObservable>(
+        m_stride,
+        out_unit
+    );
+    observable->setOutputFilename(BOSONIC_OUTPUT_FILENAME);
+    return observable;
+}
+
+std::shared_ptr<Observable> ObservableInitializer::createBosonicSignObservable(const std::string& out_unit) const
+{
+    if (!m_state->isBosonic())
+    {
+        throw std::runtime_error("Bosonic observables require bosonic simulation mode");
+    }
+    auto observable = std::make_shared<BosonicSignObservable>(
         m_stride,
         out_unit
     );
@@ -197,8 +226,14 @@ std::vector<std::shared_ptr<Observable>> ObservableInitializer::createObservable
             case ObservableType::NOSE_HOOVER_ENERGY:
                 observables.push_back(createNoseHooverEnergyObservable(item.getEffectiveUnit()));
                 break;
-            case ObservableType::BOSONIC:
-                observables.push_back(createBosonicObservable(item.getEffectiveUnit()));
+            case ObservableType::BOSONIC_PROB_DIST:
+                observables.push_back(createBosonicProbDistObservable(item.getEffectiveUnit()));
+                break;
+            case ObservableType::BOSONIC_PROB_ALL:
+                observables.push_back(createBosonicProbAllObservable(item.getEffectiveUnit()));
+                break;
+            case ObservableType::BOSONIC_SIGN:
+                observables.push_back(createBosonicSignObservable(item.getEffectiveUnit()));
                 break;
             case ObservableType::GSF:
                 observables.push_back(createGSFObservable(item.getEffectiveUnit()));

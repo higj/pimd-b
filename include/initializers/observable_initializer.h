@@ -1,7 +1,6 @@
 #pragma once
 
 #include "observable_item.h"
-#include "observables.h"
 #include "contexts/bead_context.h"
 #include "contexts/thermal_context.h"
 #include "contexts/spring_context.h"
@@ -13,6 +12,7 @@
 #include <vector>
 #include <string>
 
+class Observable;
 class SystemState;
 class ForceManager;
 class Thermostat;
@@ -46,7 +46,9 @@ private:
     [[nodiscard]] std::shared_ptr<Observable> createClassicalSpringEnergyObservable(const std::string& out_unit) const;
     [[nodiscard]] std::shared_ptr<Observable> createTemperatureObservable(const std::string& out_unit) const;
     [[nodiscard]] std::shared_ptr<Observable> createNoseHooverEnergyObservable(const std::string& out_unit) const;
-    [[nodiscard]] std::shared_ptr<Observable> createBosonicObservable(const std::string& out_unit) const;
+    [[nodiscard]] std::shared_ptr<Observable> createBosonicProbDistObservable(const std::string& out_unit) const;
+    [[nodiscard]] std::shared_ptr<Observable> createBosonicProbAllObservable(const std::string& out_unit) const;
+    [[nodiscard]] std::shared_ptr<Observable> createBosonicSignObservable(const std::string& out_unit) const;
     [[nodiscard]] std::shared_ptr<Observable> createGSFObservable(const std::string& out_unit) const;
     [[nodiscard]] std::shared_ptr<Observable> createCenterOfMassObservable(const std::string& out_unit) const;
 

@@ -8,6 +8,7 @@
 #include "momentum_initializers.h"
 #include "position_initializers.h"
 #include "initializers/thermostat_initializer.h"
+#include "observables.h"
 #include "initializers/observable_initializer.h"
 #include "initializers/dump_initializer.h"
 #include "initializers/rpmd_frame_selector.h"
