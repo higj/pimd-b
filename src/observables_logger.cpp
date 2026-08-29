@@ -145,7 +145,9 @@ void ObservablesLogger::openFileAndWriteHeader(const std::filesystem::path& file
             );
 
             if (inserted) {
-                m_output_files.push_back(OutputFile{ .filename = output_path });
+                m_output_files.push_back(
+                    OutputFile{ .filename = output_path, .stream = {}, .observables = {} }
+                );
             }
 
             const auto file_index = it->second;
