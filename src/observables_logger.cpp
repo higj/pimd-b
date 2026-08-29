@@ -157,25 +157,25 @@ void ObservablesLogger::openFileAndWriteHeader(const std::filesystem::path& file
 
         // Custom names are relative to the active output directory; the default
         // continues to use Simulation's supplied filename (including RPMD paths).
-        for (auto& output_file : m_output_files)
+        for (auto& [out_filename, out_stream, out_observables] : m_output_files)
         {
-            std::filesystem::create_directories(output_file.filename.parent_path());
-            output_file.stream.open(output_file.filename, std::ios::out | std::ios::app);
+            std::filesystem::create_directories(out_filename.parent_path());
+            out_stream.open(out_filename, std::ios::out | std::ios::app);
 
-            if (!output_file.stream.is_open()) {
+            if (!out_stream.is_open()) {
                 throw std::ios_base::failure(
-                    std::format("Failed to open {}.", output_file.filename.string())
+                    std::format("Failed to open {}.", out_filename.string())
                 );
             }
 
-            output_file.stream << std::format("{:^16s}", "step");
-            for (const auto& observable : output_file.observables) {
+            out_stream << std::format("{:^16s}", "step");
+            for (const auto& observable : out_observables) {
                 for (const auto& key : observable->quantities | std::views::keys) {
-                    output_file.stream << std::vformat(" {:^16s}", std::make_format_args(key));
+                    out_stream << std::vformat(" {:^16s}", std::make_format_args(key));
                 }
             }
 
-            output_file.stream << '\n';
+            out_stream << '\n';
         }
     }
 }
