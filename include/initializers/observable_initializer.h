@@ -22,7 +22,7 @@ class ObservableInitializer
 {
 public:
     ObservableInitializer(
-        const long stride,
+        long stride,
         const StringMap& obs_list,
         const std::shared_ptr<SystemState>& state,
         const std::shared_ptr<ForceManager>& force_mgr,
@@ -42,9 +42,10 @@ private:
 
     // Observable creation methods
     [[nodiscard]] std::shared_ptr<Observable> createEnergyObservable(const std::string& out_unit) const;
-    [[nodiscard]] std::shared_ptr<Observable> createClassicalObservable(const std::string& out_unit) const;
     [[nodiscard]] std::shared_ptr<Observable> createClassicalKineticEnergyObservable(const std::string& out_unit) const;
+    [[nodiscard]] std::shared_ptr<Observable> createClassicalSpringEnergyObservable(const std::string& out_unit) const;
     [[nodiscard]] std::shared_ptr<Observable> createTemperatureObservable(const std::string& out_unit) const;
+    [[nodiscard]] std::shared_ptr<Observable> createNoseHooverEnergyObservable(const std::string& out_unit) const;
     [[nodiscard]] std::shared_ptr<Observable> createBosonicObservable(const std::string& out_unit) const;
     [[nodiscard]] std::shared_ptr<Observable> createGSFObservable(const std::string& out_unit) const;
     [[nodiscard]] std::shared_ptr<Observable> createCenterOfMassObservable(const std::string& out_unit) const;

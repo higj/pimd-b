@@ -1,7 +1,7 @@
-#include "common.h"
 #include "observables/shared_computations.h"
 #include "observables/observable_cache.h"
 #include "observables/cache_keys.h"
+#include "common.h"
 
 double SharedComputations::classicalKineticEnergy(
     const VelocityContext& vel_ctx,

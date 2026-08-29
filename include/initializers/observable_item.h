@@ -8,7 +8,9 @@ enum class ObservableType : std::uint8_t {
     ENERGY,
     CLASSICAL,
     CL_KINETIC_ENERGY,
+    CL_SPRING_ENERGY,
     QUANTUM_TEMPERATURE,
+    NOSE_HOOVER_ENERGY,
     BOSONIC,
     GSF,
     CENTER_OF_MASS,
@@ -26,7 +28,9 @@ public:
         if (name == "energy") return ObservableType::ENERGY;
         if (name == "classical") return ObservableType::CLASSICAL;
         if (name == "cl_kinetic") return ObservableType::CL_KINETIC_ENERGY;
+        if (name == "cl_spring") return ObservableType::CL_SPRING_ENERGY;
         if (name == "temperature") return ObservableType::QUANTUM_TEMPERATURE;
+        if (name == "nh_energy") return ObservableType::NOSE_HOOVER_ENERGY;
         if (name == "bosonic") return ObservableType::BOSONIC;
         if (name == "gsf") return ObservableType::GSF;
         if (name == "center_of_mass") return ObservableType::CENTER_OF_MASS;
