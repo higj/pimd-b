@@ -93,14 +93,6 @@ private:
     void performMolecularDynamicsStep() const;
 
     /**
-     * @brief Ensures the observables logger is initialized with the given filename.
-     * Creates it lazily on first call, or reopens with a new filename if already initialized.
-     *
-     * @param filename The name of the file to initialize the observables logger with.
-     */
-    void initializeObservablesLogger(const std::filesystem::path& filename);
-
-    /**
      * @brief Ensures the dump objects are initialized with the given filename.
      *
      * @param base_folder The path to the folder where the dumps will be saved.

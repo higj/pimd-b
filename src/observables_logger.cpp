@@ -10,7 +10,6 @@
 
 // Constructor opens the file and writes the header
 ObservablesLogger::ObservablesLogger(
-    const std::filesystem::path& filename,
     int this_bead,
     long frequency,
     const std::vector<std::shared_ptr<Observable>>& observables
@@ -19,11 +18,17 @@ ObservablesLogger::ObservablesLogger(
     m_frequency(frequency),
     m_observables(observables)
 {
+    // Wire the cache into all observables so they can use it to store intermediate results
     for (const auto& observable : m_observables) {
         observable->setCache(&m_cache);
     }
 
-    openFileAndWriteHeader(filename);
+    // Allocate MPI buffers once - observable list never changes between runs
+    for (const auto& obs : m_observables) {
+        m_total_quantities += static_cast<int>(obs->quantities.size());
+    }
+    m_local_values.resize(m_total_quantities);
+    m_global_values.resize(m_total_quantities);
 }
 
 // Destructor closes the file if open
@@ -39,6 +44,24 @@ ObservablesLogger::~ObservablesLogger()
             }
         }
     }
+}
+
+void ObservablesLogger::openFile(const std::filesystem::path& filename) {
+    if (m_this_bead == 0)
+    {
+        for (auto& output_file : m_output_files)
+        {
+            if (output_file.stream.is_open())
+            {
+                output_file.stream.close();
+            }
+        }
+
+        m_output_files.clear();
+        m_obs_output_file_indices.clear();
+    }
+
+    openFileAndWriteHeader(filename);
 }
 
 // Calculate and log observables data to the file
@@ -64,6 +87,7 @@ void ObservablesLogger::log(const long step)
     }
 }
 
+/*
 void ObservablesLogger::reopenFile(const std::filesystem::path& new_filename) {
     if (m_this_bead == 0)
     {
@@ -79,6 +103,7 @@ void ObservablesLogger::reopenFile(const std::filesystem::path& new_filename) {
         openFileAndWriteHeader(new_filename);
     }
 }
+*/
 
 void ObservablesLogger::writeTimeStep(long step) {
     if (m_this_bead == 0) {
@@ -170,14 +195,6 @@ void ObservablesLogger::writeObservables() {
 }
 
 void ObservablesLogger::openFileAndWriteHeader(const std::filesystem::path& filename) {
-    // Must run on ALL ranks - every rank participates in MPI_Allreduce
-    m_total_quantities = 0;
-    for (const auto& obs : m_observables) {
-        m_total_quantities += static_cast<int>(obs->quantities.size());
-    }
-    m_local_values.resize(m_total_quantities);
-    m_global_values.resize(m_total_quantities);
-
     // Here we just set up the output files and write the headers. Only rank 0 actually opens the files and writes to them
     if (m_this_bead == 0) {
         std::map<std::filesystem::path, std::size_t> file_indices;

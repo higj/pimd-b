@@ -117,6 +117,12 @@ Simulation::Simulation(int rank, int nproc, const std::shared_ptr<SimulationConf
     );
     */
 
+    m_obs_logger = std::make_unique<ObservablesLogger>(
+        m_bead_ctx.this_bead, 
+        config->sfreq, 
+        m_observables  // Observable list is fully built before this point, so we can pass it to the logger
+    );
+
     /// TODO: Deal with dumps and report when RPMD is enabled. Currently, we only support dumps and report for a single run.
     //m_dumps = initializeDumps(config, m_velocity_ctx);
     m_dumps = DumpInitializer(config, m_state, m_velocity_ctx).createDumps();
@@ -547,24 +553,6 @@ void Simulation::performMolecularDynamicsStep() const {
     zeroMomentumIfRequired();
 }
 
-void Simulation::initializeObservablesLogger(const std::filesystem::path& filename) {
-    // If logger is not yet initialized, create it. Otherwise, reopen the file with the new filename.
-    if (!m_obs_logger)
-    {
-        m_obs_logger = std::make_unique<ObservablesLogger>(
-            filename,
-            m_bead_ctx.this_bead,
-            m_sfreq,
-            m_observables
-        );
-    }
-    else
-    {
-        // Logger already exists, so we just reopen the file with the new filename
-        m_obs_logger->reopenFile(filename);
-    }
-}
-
 void Simulation::initializeDumps(const std::filesystem::path& base_folder)
 {
     for (const auto& dump : m_dumps)
@@ -631,8 +619,10 @@ void Simulation::runPathIntegralMolecularDynamics() {
     printStatus("Running the simulation", m_bead_ctx.this_bead);
     const double start_time = getWallTime();
 
-    // Initialize the observables logger for the main simulation output
-    initializeObservablesLogger(Output::getPimdFilename());
+    m_obs_logger->openFile(
+        Output::getPimdFilename()
+    );
+
     initializeDumps(Output::FOLDER_NAME);
 
     // Main loop performing molecular dynamics steps
@@ -709,10 +699,13 @@ void Simulation::runRingPolymerMolecularDynamics() {
         // Positions and momenta are re-initialized, so we need to re-calculate the forces for the current configuration
         initializeForces(m_state, m_force_mgr, m_spring_ctx, m_box_ctx);
 
-        const std::filesystem::path output_filename = Output::getRpmdFilename(run);
-        const std::filesystem::path output_folder = Output::getRpmdFolder(run);
-        initializeObservablesLogger(output_filename);
-        initializeDumps(output_folder);
+        m_obs_logger->openFile(
+            Output::getRpmdFilename(run)
+        );
+
+        initializeDumps(
+            Output::getRpmdFolder(run)
+        );
 
         // Main loop performing molecular dynamics steps for the current RPMD run
         for (long step = 0; step <= m_steps; ++step) {
