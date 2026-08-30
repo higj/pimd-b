@@ -107,7 +107,7 @@ private:
      */
     void initializeDumps(const std::filesystem::path& base_folder);
 
-    void calculateObservables() const;
+    //void calculateObservables() const;
 
     void calculateAndLogObservables(long step) const;
 

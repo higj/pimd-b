@@ -573,15 +573,17 @@ void Simulation::initializeDumps(const std::filesystem::path& base_folder)
     }
 }
 
+/*
 void Simulation::calculateObservables() const {
     for (const auto& observable : m_observables) {
         observable->calculate();
     }
 }
+*/
 
 void Simulation::calculateAndLogObservables(long step) const {
     if (m_obs_logger->isLoggingStep(step)) {
-        calculateObservables();
+        //calculateObservables();
         m_obs_logger->log(step);
         // Resetting the observables is unnecessary since we don't accumulate them across multiple steps.
         // Should one change this, the resetting method can be placed here.

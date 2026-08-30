@@ -41,17 +41,18 @@ ObservablesLogger::~ObservablesLogger()
     }
 }
 
-// Log observables data to the file
-void ObservablesLogger::log(long step)
+// Calculate and log observables data to the file
+void ObservablesLogger::log(const long step)
 {
-    /// TODO: Better do this check in Simulation::calculateAndLogObservables, before calculating observables 
-    ///       (if we won't write them, why bother calculating?)
-    //if (step % m_frequency == 0)
-    //{ .. }
-
     // Wipe the cache at the beginning of each logging step to ensure that observables recalculate their values
     m_cache.invalidate();
-    // Calculate the values of all observables
+
+    // Calculate all observables
+    for (const auto& observable : m_observables) {
+        observable->calculate();
+    }
+
+    // Write the current step and the calculated observables to the output file(s)
     writeTimeStep(step);
     writeObservables();
     if (m_this_bead == 0)
@@ -88,6 +89,7 @@ void ObservablesLogger::writeTimeStep(long step) {
     }
 }
 
+/*
 void ObservablesLogger::writeObservables() {
     std::vector<double> local_values;
     for (const auto& observable : m_observables) {
@@ -125,8 +127,58 @@ void ObservablesLogger::writeObservables() {
         }
     }
 }
+*/
+
+void ObservablesLogger::writeObservables() {
+    if (m_total_quantities == 0) return;
+
+    // Fill pre-allocated send buffer
+    int fill_idx = 0;
+    for (const auto& observable : m_observables) {
+        for (const double& val : observable->quantities | std::views::values) {
+            m_local_values[fill_idx++] = val;
+        }
+    }
+
+    // Sum contributions from all beads into the pre-allocated receive buffer
+    MPI_Allreduce(
+        m_local_values.data(),
+        m_global_values.data(),
+        m_total_quantities,
+        MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD
+    );
+
+    int idx = 0;
+    for (std::size_t obs_idx = 0; obs_idx < m_observables.size(); ++obs_idx) {
+        const auto& observable = m_observables[obs_idx];
+        for (std::size_t q = 0; q < observable->quantities.size(); ++q) {
+            const double quantity_value = m_global_values[idx++];
+
+            if (!std::isfinite(quantity_value)) {
+                throw std::overflow_error(
+                    std::format("Invalid value of observable {}", observable->name())
+                );
+            }
+
+            if (m_this_bead == 0) {
+                const std::size_t file_idx = m_obs_output_file_indices[obs_idx];
+                m_output_files[file_idx].stream
+                    << std::format(" {:^16.8e}", quantity_value);
+            }
+        }
+    }
+}
 
 void ObservablesLogger::openFileAndWriteHeader(const std::filesystem::path& filename) {
+    // Must run on ALL ranks - every rank participates in MPI_Allreduce
+    m_total_quantities = 0;
+    for (const auto& obs : m_observables) {
+        m_total_quantities += static_cast<int>(obs->quantities.size());
+    }
+    m_local_values.resize(m_total_quantities);
+    m_global_values.resize(m_total_quantities);
+
+    // Here we just set up the output files and write the headers. Only rank 0 actually opens the files and writes to them
     if (m_this_bead == 0) {
         std::map<std::filesystem::path, std::size_t> file_indices;
 
@@ -155,10 +207,7 @@ void ObservablesLogger::openFileAndWriteHeader(const std::filesystem::path& file
             m_obs_output_file_indices.push_back(file_index);
         }
 
-        // Custom names are relative to the active output directory; the default
-        // continues to use Simulation's supplied filename (including RPMD paths).
-        for (auto& [out_filename, out_stream, out_observables] : m_output_files)
-        {
+        for (auto& [out_filename, out_stream, out_observables] : m_output_files) {
             std::filesystem::create_directories(out_filename.parent_path());
             out_stream.open(out_filename, std::ios::out | std::ios::app);
 
@@ -174,7 +223,6 @@ void ObservablesLogger::openFileAndWriteHeader(const std::filesystem::path& file
                     out_stream << std::vformat(" {:^16s}", std::make_format_args(key));
                 }
             }
-
             out_stream << '\n';
         }
     }

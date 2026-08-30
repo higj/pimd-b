@@ -19,7 +19,7 @@ public:
     );
     ~ObservablesLogger();
 
-    bool isLoggingStep(long step) const { return step % m_frequency == 0; }
+    bool isLoggingStep(const long step) const { return step % m_frequency == 0; }
 
     void log(long step);
 
@@ -47,6 +47,10 @@ private:
     std::vector<std::size_t> m_obs_output_file_indices;
 
     ObservableCache m_cache;
+
+    std::vector<double> m_local_values;
+    std::vector<double> m_global_values;
+    int m_total_quantities = 0;
 
     void writeTimeStep(long step);
     void writeObservables();
