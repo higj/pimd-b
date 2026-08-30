@@ -194,11 +194,16 @@ double Params::loadQuantity(
  */
 void Params::loadSimulationParams(SimulationConfig& config) const {
     //config.dt = Units::getQuantity("time", m_reader.Get(Sections::SIMULATION, "dt", "1.0 femtosecond"));
+    if (!m_reader.HasValue(Sections::SIMULATION, "dt")) {
+        throw std::invalid_argument(
+            std::format("Missing required parameter 'dt' in [{}] section", Sections::SIMULATION)
+        );
+    }
     const double dt = loadQuantity(
         "time", 
         Sections::SIMULATION, 
         "dt", 
-        "1.0 femtosecond", 
+        "", 
         config.dt, 
         config.units_list
     );
@@ -214,7 +219,9 @@ void Params::loadSimulationParams(SimulationConfig& config) const {
         throw std::invalid_argument(std::format("Invalid threshold ({} must lie in [0, 1])", threshold));
 
     if (!m_reader.HasValue(Sections::SIMULATION, "steps")) {
-        throw std::invalid_argument("Missing required parameter 'steps' in [simulation] section");
+        throw std::invalid_argument(
+            std::format("Missing required parameter 'steps' in [{}] section", Sections::SIMULATION)
+        );
     }
     config.steps = parseLongSci(m_reader.Get(Sections::SIMULATION, "steps", ""), "steps");
     if (config.steps < 1)
@@ -223,7 +230,9 @@ void Params::loadSimulationParams(SimulationConfig& config) const {
     config.threshold = static_cast<long>(threshold * config.steps);  // Threshold in terms of steps
 
     if (!m_reader.HasValue(Sections::SIMULATION, "sfreq")) {
-        throw std::invalid_argument("Missing required parameter 'sfreq' in [simulation] section");
+        throw std::invalid_argument(
+            std::format("Missing required parameter 'sfreq' in [{}] section", Sections::SIMULATION)
+        );
     }
     config.sfreq = parseLongSci(m_reader.Get(Sections::SIMULATION, "sfreq", ""), "sfreq");
     if (config.sfreq < 1) {
@@ -232,7 +241,6 @@ void Params::loadSimulationParams(SimulationConfig& config) const {
     if (config.sfreq > config.steps) {
         throw std::invalid_argument(std::format("Observable recording frequency (sfreq={}) cannot exceed total number of steps (steps={})", config.sfreq, config.steps));
     }
-
 
     config.nbeads = m_reader.GetInteger(Sections::SIMULATION, "nbeads", 4);
     if (config.nbeads < 1)
@@ -293,16 +301,26 @@ void Params::loadSimulationParams(SimulationConfig& config) const {
  * @param config Config object to load parameters into.
  */
 void Params::loadSystemParams(SimulationConfig& config) const {
+    if (!m_reader.HasValue(Sections::SYSTEM, "natoms")) {
+        throw std::invalid_argument(
+            std::format("Missing required parameter 'natoms' in [{}] section", Sections::SYSTEM)
+        );
+    }
     config.natoms = m_reader.GetInteger(Sections::SYSTEM, "natoms", 1);
     if (config.natoms < 1)
         throw std::invalid_argument(std::format("Invalid number of particles (specified {})", config.natoms));
 
     //config.mass = Units::getQuantity("mass", m_reader.Get(Sections::SYSTEM, "mass", "1.0 dalton"));
+    if (!m_reader.HasValue(Sections::SYSTEM, "mass")) {
+        throw std::invalid_argument(
+            std::format("Missing required parameter 'mass' in [{}] section", Sections::SYSTEM)
+        );
+    }
     const double mass = loadQuantity(
         "mass",
         Sections::SYSTEM,
         "mass",
-        "1.0 dalton",
+        "",
         config.mass,
         config.units_list
     );
@@ -311,11 +329,16 @@ void Params::loadSystemParams(SimulationConfig& config) const {
         throw std::invalid_argument(std::format("The provided mass ({0:4.3f}) is unphysical!", mass));
 
     //config.box_size = Units::getQuantity("length", m_reader.Get(Sections::SYSTEM, "size", "1.0 picometer"));
+    if (!m_reader.HasValue(Sections::SYSTEM, "size")) {
+        throw std::invalid_argument(
+            std::format("Missing required parameter 'size' in [{}] section", Sections::SYSTEM)
+        );
+    }
     const double box_size = loadQuantity(
         "length",
         Sections::SYSTEM,
         "size",
-        "1.0 picometer",
+        "",
         config.box_size,
         config.units_list
     );
