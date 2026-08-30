@@ -10,6 +10,47 @@ using Quantity = Units::Quantity;
 
 namespace {
     /**
+     * Returns the long value of a string that may use scientific notation (e.g. "1e6", "2.5e4").
+     * Throws std::invalid_argument / std::range_error on bad input.
+     * Caps at 2^53 = the largest integer exactly representable as double =
+     * which is astronomically large for any simulation parameter.
+     *
+     * @param s The string to parse.
+     * @param param_name The name of the parameter (used in error messages).
+     * @return The parsed long value.
+     */
+    long parseLongSci(const std::string& s, std::string_view param_name) {
+        std::size_t pos = 0;
+        double d;
+        try {
+            d = std::stod(s, &pos);
+        } catch (const std::exception&) {
+            throw std::invalid_argument(
+                std::format("'{}': cannot parse '{}' as a number", param_name, s));
+        }
+
+        if (pos != s.size())
+            throw std::invalid_argument(
+                std::format("'{}': trailing characters in '{}'", param_name, s));
+
+        if (!std::isfinite(d) || d <= 0.0)
+            throw std::range_error(
+                std::format("'{}': must be a positive finite number (got {})", param_name, s));
+
+        if (d != std::floor(d))
+            throw std::invalid_argument(
+                std::format("'{}': must be a whole number (got {})", param_name, s));
+
+        // 2^53: largest integer exactly representable as double, and << LONG_MAX
+        constexpr double MAX_EXACT = 9007199254740992.0;
+        if (d > MAX_EXACT)
+            throw std::range_error(
+                std::format("'{}': value too large (got {})", param_name, s));
+
+        return static_cast<long>(d);
+    }
+
+    /**
      * Shared validation logic for "xyz" / "xyz(format)" style position/velocity initialization.
      * Verifies the (optional) filename format, determines whether on-disk bead numbering starts at
      * 0 or 1, and enforces the mandatory unit and frame-selection parameters.
@@ -172,16 +213,26 @@ void Params::loadSimulationParams(SimulationConfig& config) const {
     if (threshold < 0.0 || threshold > 1.0)
         throw std::invalid_argument(std::format("Invalid threshold ({} must lie in [0, 1])", threshold));
 
-    config.steps = static_cast<long>(std::stod(m_reader.Get(Sections::SIMULATION, "steps", "1e5")));
+    if (!m_reader.HasValue(Sections::SIMULATION, "steps")) {
+        throw std::invalid_argument("Missing required parameter 'steps' in [simulation] section");
+    }
+    config.steps = parseLongSci(m_reader.Get(Sections::SIMULATION, "steps", ""), "steps");
     if (config.steps < 1)
         throw std::invalid_argument(std::format("Invalid number of steps ({}<1)", config.steps));
 
     config.threshold = static_cast<long>(threshold * config.steps);  // Threshold in terms of steps
 
-    //config.sfreq = m_reader.GetLong(Sections::SIMULATION, "sfreq", 1000); /// @todo: Add support for scientific notation
-    config.sfreq = static_cast<long>(std::stod(m_reader.Get(Sections::SIMULATION, "sfreq", "1e3")));
-    if (config.sfreq < 1)
-        throw std::invalid_argument(std::format("Invalid value for observable recording frequency ({}<1)", config.sfreq));
+    if (!m_reader.HasValue(Sections::SIMULATION, "sfreq")) {
+        throw std::invalid_argument("Missing required parameter 'sfreq' in [simulation] section");
+    }
+    config.sfreq = parseLongSci(m_reader.Get(Sections::SIMULATION, "sfreq", ""), "sfreq");
+    if (config.sfreq < 1) {
+        throw std::invalid_argument(std::format("Observable recording frequency must be strictly positive (got {})", config.sfreq));
+    }
+    if (config.sfreq > config.steps) {
+        throw std::invalid_argument(std::format("Observable recording frequency (sfreq={}) cannot exceed total number of steps (steps={})", config.sfreq, config.steps));
+    }
+
 
     config.nbeads = m_reader.GetInteger(Sections::SIMULATION, "nbeads", 4);
     if (config.nbeads < 1)

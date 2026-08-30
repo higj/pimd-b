@@ -30,10 +30,7 @@ public:
     /**
      * @brief Opens (or re-opens) the output file and writes the column headers.
      * Call once before the first step of a PIMD run, or at the start of each
-     * NVE run of an RPMD simulation. All ranks must call this, but only
-     * rank 0 actually opens the file. The MPI buffer sizes are re-confirmed here,
-     * but the resize is a no-op after the first call since the observable list
-     * never changes.
+     * NVE run of an RPMD simulation. Only rank 0 actually opens the file.
      *
      * @param filename The name of the file to open for logging observables. This is relative to the active simulation output directory.
      */
