@@ -575,7 +575,14 @@ void Params::loadExternalPotentialParams(SimulationConfig& config) const {
  */
 void Params::loadInteractionPotentialParams(SimulationConfig& config) const {
     using namespace std::string_view_literals;
-    constexpr auto allowed_int_potential_names = std::array{ "aziz"sv, "free"sv, "harmonic"sv, "anharmonic"sv, "dipole"sv };
+    constexpr auto allowed_int_potential_names = std::array{
+        "aziz"sv,
+        "free"sv,
+        "harmonic"sv,
+        "anharmonic"sv,
+        "double_well"sv,
+        "dipole"sv
+    };
 
     const std::string name = m_reader.GetString(Sections::INT_POTENTIAL, "name", "free");
     if (!StringUtils::labelInArray(name, allowed_int_potential_names))

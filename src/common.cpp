@@ -1,6 +1,6 @@
-#include <iostream>
-
 #include "common.h"
+
+#include <iostream>
 
 void printMsg(const std::string& msg, int this_rank, int out_rank) {
     if (this_rank == out_rank) {
