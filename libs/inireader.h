@@ -14,6 +14,7 @@
 
 #include <map>
 #include <string>
+#include "ordered_map.h"
 
 // Visibility symbols, required for Windows DLLs
 #ifndef INI_API
@@ -93,9 +94,11 @@ public:
 
     INI_API static void LowerString(std::string& str_to_lower);
 
+    INI_API std::vector<std::string> GetSectionKeys(const std::string& section) const;
+
 private:
     int _error;
-    std::map<std::string, std::string> _values;
+    tsl::ordered_map<std::string, std::string> _values;
     static std::string MakeKey(const std::string& section, const std::string& name);
     static int ValueHandler(void* user, const char* section, const char* name,
                             const char* value);

@@ -5,6 +5,7 @@
 #include <format>
 #include <variant>
 #include <cmath>
+#include "ordered_map.h"
 
 #include "units.h"
 
@@ -279,7 +280,7 @@ using IntVecArray = VectorCollection<int, NDIM>;
 using VariantMap = std::unordered_map<std::string, std::variant<int, unsigned int, long, double, bool, std::string>>;
 
 // Define a map of strings
-using StringMap = std::unordered_map<std::string, std::string>;
+using StringMap = tsl::ordered_map<std::string, std::string>;
 
 // Print a general message on "out_rank" (by default, the root rank is 0)
 void printMsg(const std::string& msg, int this_rank, int out_rank = 0);

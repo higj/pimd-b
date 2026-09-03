@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdlib>
+#include <ranges>
 #include "ini.h"
 #include "inireader.h"
 
@@ -97,7 +98,8 @@ bool INIReader::GetBoolean(const std::string& section, const std::string& name, 
 bool INIReader::HasSection(const std::string& section) const
 {
     const std::string key = MakeKey(section, "");
-    auto pos = _values.lower_bound(key);
+    auto pos = std::find_if(_values.begin(), _values.end(),
+        [&key](const auto& kv) { return kv.first >= key; });
     if (pos == _values.end())
         return false;
     // Does the key at the lower_bound pos start with "section"?
@@ -120,6 +122,16 @@ void INIReader::LowerString(std::string& str_to_lower)
                            {
                                return static_cast<unsigned char>(std::tolower(c));
                            });
+}
+
+INI_API std::vector<std::string> INIReader::GetSectionKeys(const std::string& section) const {
+    std::vector<std::string> keys;
+    const std::string prefix = MakeKey(section, ""); // e.g. "observables."
+    for (const auto& k : _values | std::views::keys) {
+        if (k.size() > prefix.size() && k.starts_with(prefix))
+            keys.push_back(k.substr(prefix.size()));
+    }
+    return keys;
 }
 
 std::string INIReader::MakeKey(const std::string& section, const std::string& name)

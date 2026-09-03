@@ -5,6 +5,7 @@
 #include <regex>
 #include <format>
 #include <filesystem>
+#include <unordered_set>
 
 using Quantity = Units::Quantity;
 
@@ -713,16 +714,28 @@ void Params::loadOutputParams(SimulationConfig& config) const {
  * @param config Config object to load parameters into.
  */
 void Params::loadObservableParams(SimulationConfig& config) const {
-    config.observables_list["energy"] = m_reader.Get(Sections::OBSERVABLES, "energy", "kelvin");
-    config.observables_list["cl_kinetic"] = m_reader.Get(Sections::OBSERVABLES, "cl_kinetic", "off");
-    config.observables_list["cl_spring"] = m_reader.Get(Sections::OBSERVABLES, "cl_spring", "off");
-    config.observables_list["temperature"] = m_reader.Get(Sections::OBSERVABLES, "temperature", "off");
-    config.observables_list["nh_energy"] = m_reader.Get(Sections::OBSERVABLES, "nh_energy", "off");
-    config.observables_list["prob_dist"] = m_reader.Get(Sections::OBSERVABLES, "prob_dist", "off");
-    config.observables_list["prob_all"] = m_reader.Get(Sections::OBSERVABLES, "prob_all", "off");
-    config.observables_list["sign"] = m_reader.Get(Sections::OBSERVABLES, "sign", "off");
-    config.observables_list["gsf"] = m_reader.Get(Sections::OBSERVABLES, "gsf", "off");
-    config.observables_list["center_of_mass"] = m_reader.Get(Sections::OBSERVABLES, "center_of_mass", "off");
+    static const std::unordered_set<std::string_view> allowed = {
+        "energy",
+        "cl_kinetic",
+        "cl_spring",
+        "temperature",
+        "nh_energy",
+        "prob_dist",
+        "prob_all",
+        "sign",
+        "gsf",
+        "center_of_mass",
+    };
+
+    for (const auto& key : m_reader.GetSectionKeys(Sections::OBSERVABLES)) {
+        if (allowed.contains(key)) {
+            config.observables_list[key] = m_reader.Get(Sections::OBSERVABLES, key, "off");
+        } else {
+            throw std::runtime_error(
+                std::format("Unknown observable key '{}' in [{}] section", key, Sections::OBSERVABLES)
+            );
+        }
+    }
 }
 
 

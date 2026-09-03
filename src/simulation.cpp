@@ -593,7 +593,7 @@ void Simulation::finalizeSimulation(double start_time) const {
     m_report->writeReport(wall_time);
 }
 
-void Simulation::executeStep(long step) const
+void Simulation::executeStep(const long step) const
 {
     // Observables are only calculated and logged after the thermalization phase is complete.
     // Logging occurs before the molecular dynamics step to ensure that the observables
