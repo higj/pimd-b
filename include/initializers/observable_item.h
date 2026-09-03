@@ -7,6 +7,7 @@
 enum class ObservableType : std::uint8_t {
     PRIM_KE,
     VIRIAL_KE,
+    POT_ENERGY,
     EXT_POT,
     INT_POT,
     CLASSICAL,
@@ -32,6 +33,7 @@ public:
     [[nodiscard]] ObservableType getType() const override {
         if (name == "kinetic") return ObservableType::PRIM_KE;
         if (name == "virial") return ObservableType::VIRIAL_KE;
+        if (name == "potential") return ObservableType::POT_ENERGY;
         if (name == "ext_pot") return ObservableType::EXT_POT;
         if (name == "int_pot") return ObservableType::INT_POT;
         if (name == "classical") return ObservableType::CLASSICAL;

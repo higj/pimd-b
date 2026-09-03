@@ -248,6 +248,9 @@ std::vector<std::shared_ptr<Observable>> ObservableInitializer::createObservable
             case ObservableType::VIRIAL_KE:
                 observables.push_back(createVirialEnergyObservable(item.getEffectiveUnit()));
                 break;
+            case ObservableType::POT_ENERGY:
+                observables.push_back(createPotentialEnergyObservable(item.getEffectiveUnit()));
+                break;
             case ObservableType::EXT_POT:
                 observables.push_back(createExtPotObservable(item.getEffectiveUnit()));
                 break;
