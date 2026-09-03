@@ -41,22 +41,53 @@ ObservableInitializer::ObservableInitializer(
 {
 }
 
-std::shared_ptr<Observable> ObservableInitializer::createEnergyObservable(const std::string& out_unit) const
-{
-    auto observable = std::make_shared<EnergyObservable>(
+std::shared_ptr<Observable> ObservableInitializer::createPrimitiveKineticEnergyObservable(
+    const std::string& out_unit) const {
+    auto obs = std::make_shared<PrimitiveKineticEnergyObservable>(
         std::shared_ptr<const VecArray>(m_state, &m_state->coord),
         std::shared_ptr<const VecArray>(m_state, &m_state->prev_coord),
+        m_bead_context, m_thermal_context, m_spring_context, m_box_context,
+        m_stride, out_unit);
+    obs->setOutputFilename(ENERGY_OUTPUT_FILENAME);
+    return obs;
+}
+
+std::shared_ptr<Observable> ObservableInitializer::createPotentialEnergyObservable(
+    const std::string& out_unit) const {
+    auto obs = std::make_shared<PotentialEnergyObservable>(
+        std::shared_ptr<const VecArray>(m_state, &m_state->coord),
+        m_force_mgr, m_box_context, m_bead_context,
+        m_stride, out_unit);
+    obs->setOutputFilename(ENERGY_OUTPUT_FILENAME);
+    return obs;
+}
+
+std::shared_ptr<Observable> ObservableInitializer::createVirialEnergyObservable(
+    const std::string& out_unit) const {
+    auto obs = std::make_shared<VirialEnergyObservable>(
+        std::shared_ptr<const VecArray>(m_state, &m_state->coord),
         std::shared_ptr<const VecArray>(m_state, &m_state->physical_forces),
-        m_force_mgr,
-        m_bead_context,
-        m_thermal_context,
-        m_spring_context,
-        m_box_context,
-        m_stride,
-        out_unit
-    );
-    observable->setOutputFilename(ENERGY_OUTPUT_FILENAME);
-    return observable;
+        m_bead_context, m_stride, out_unit);
+    obs->setOutputFilename(ENERGY_OUTPUT_FILENAME);
+    return obs;
+}
+
+std::shared_ptr<Observable> ObservableInitializer::createExtPotObservable(
+    const std::string& out_unit) const {
+    auto obs = std::make_shared<ExtPotObservable>(
+        std::shared_ptr<const VecArray>(m_state, &m_state->coord),
+        m_force_mgr, m_bead_context, m_stride, out_unit);
+    obs->setOutputFilename(ENERGY_OUTPUT_FILENAME);
+    return obs;
+}
+
+std::shared_ptr<Observable> ObservableInitializer::createIntPotObservable(
+    const std::string& out_unit) const {
+    auto obs = std::make_shared<IntPotObservable>(
+        std::shared_ptr<const VecArray>(m_state, &m_state->coord),
+        m_force_mgr, m_box_context, m_bead_context, m_stride, out_unit);
+    obs->setOutputFilename(ENERGY_OUTPUT_FILENAME);
+    return obs;
 }
 
 std::shared_ptr<Observable> ObservableInitializer::createClassicalKineticEnergyObservable(const std::string& out_unit) const
@@ -211,9 +242,18 @@ std::vector<std::shared_ptr<Observable>> ObservableInitializer::createObservable
         {
             switch (item.getType())
             {
-            case ObservableType::ENERGY:
-                observables.push_back(createEnergyObservable(item.getEffectiveUnit()));
+            case ObservableType::PRIM_KE:
+                observables.push_back(createPrimitiveKineticEnergyObservable(item.getEffectiveUnit()));
                 break;
+            case ObservableType::VIRIAL_KE:
+                observables.push_back(createVirialEnergyObservable(item.getEffectiveUnit()));
+                break;
+            case ObservableType::EXT_POT:
+                observables.push_back(createExtPotObservable(item.getEffectiveUnit()));
+                break;
+            case ObservableType::INT_POT:
+                 observables.push_back(createIntPotObservable(item.getEffectiveUnit()));
+                 break;
             case ObservableType::CL_KINETIC_ENERGY:
                 observables.push_back(createClassicalKineticEnergyObservable(item.getEffectiveUnit()));
                 break;

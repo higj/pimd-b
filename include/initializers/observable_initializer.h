@@ -41,7 +41,11 @@ private:
     [[nodiscard]] std::vector<ObservableItem> parseObservablesList() const;
 
     // Observable creation methods
-    [[nodiscard]] std::shared_ptr<Observable> createEnergyObservable(const std::string& out_unit) const;
+    [[nodiscard]] std::shared_ptr<Observable> createPrimitiveKineticEnergyObservable(const std::string& out_unit) const;
+    [[nodiscard]] std::shared_ptr<Observable> createPotentialEnergyObservable(const std::string& out_unit) const;
+    [[nodiscard]] std::shared_ptr<Observable> createVirialEnergyObservable(const std::string& out_unit) const;
+    [[nodiscard]] std::shared_ptr<Observable> createExtPotObservable(const std::string& out_unit) const;
+    [[nodiscard]] std::shared_ptr<Observable> createIntPotObservable(const std::string& out_unit) const;
     [[nodiscard]] std::shared_ptr<Observable> createClassicalKineticEnergyObservable(const std::string& out_unit) const;
     [[nodiscard]] std::shared_ptr<Observable> createClassicalSpringEnergyObservable(const std::string& out_unit) const;
     [[nodiscard]] std::shared_ptr<Observable> createTemperatureObservable(const std::string& out_unit) const;

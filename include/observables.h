@@ -1,10 +1,14 @@
 #pragma once
 
 #include "observables/observable.h"
+#include "observables/primitive_kinetic_energy_observable.h"
+#include "observables/potential_energy_observable.h"
+#include "observables/virial_energy_observable.h"
+#include "observables/ext_pot_observable.h"
+#include "observables/int_pot_observable.h"
 #include "observables/bosonic_prob_dist_observable.h"
 #include "observables/bosonic_prob_all_observable.h"
 #include "observables/bosonic_sign_observable.h"
-#include "observables/energy_observable.h"
 #include "observables/classical_kinetic_energy_observable.h"
 #include "observables/classical_spring_energy_observable.h"
 #include "observables/nose_hoover_energy_observable.h"

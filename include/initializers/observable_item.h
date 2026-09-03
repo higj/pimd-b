@@ -5,7 +5,10 @@
 #include <cstdint>
 
 enum class ObservableType : std::uint8_t {
-    ENERGY,
+    PRIM_KE,
+    VIRIAL_KE,
+    EXT_POT,
+    INT_POT,
     CLASSICAL,
     CL_KINETIC_ENERGY,
     CL_SPRING_ENERGY,
@@ -27,7 +30,10 @@ public:
     }
 
     [[nodiscard]] ObservableType getType() const override {
-        if (name == "energy") return ObservableType::ENERGY;
+        if (name == "kinetic") return ObservableType::PRIM_KE;
+        if (name == "virial") return ObservableType::VIRIAL_KE;
+        if (name == "ext_pot") return ObservableType::EXT_POT;
+        if (name == "int_pot") return ObservableType::INT_POT;
         if (name == "classical") return ObservableType::CLASSICAL;
         if (name == "cl_kinetic") return ObservableType::CL_KINETIC_ENERGY;
         if (name == "cl_spring") return ObservableType::CL_SPRING_ENERGY;

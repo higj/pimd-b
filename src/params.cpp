@@ -715,7 +715,11 @@ void Params::loadOutputParams(SimulationConfig& config) const {
  */
 void Params::loadObservableParams(SimulationConfig& config) const {
     static const std::unordered_set<std::string_view> allowed = {
-        "energy",
+        "kinetic",
+        "potential",
+        "virial",
+        "ext_pot",
+        "int_pot",
         "cl_kinetic",
         "cl_spring",
         "temperature",
