@@ -525,7 +525,7 @@ std::vector<std::shared_ptr<Dump>> Simulation::initializeDumps(
 }
 */
 
-double Simulation::getWallTime()
+double Simulation::getWallTime() noexcept
 {
     return MPI_Wtime();
 }

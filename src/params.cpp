@@ -259,6 +259,10 @@ void Params::loadSimulationParams(SimulationConfig& config) const {
 
     // Handle exchange_xi parameter with conditional defaults
     if (m_reader.HasValue(Sections::SIMULATION, "exchange_xi")) {
+        if (!config.bosonic) {
+            throw std::invalid_argument("exchange_xi parameter is only relevant for simulations of indistinguishable particles (bosonic=true)");
+        }
+
         const double exchange_xi = m_reader.GetReal(Sections::SIMULATION, "exchange_xi", 0.0);
 
         if (config.bosonic && std::abs(exchange_xi) < EPS) {

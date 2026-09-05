@@ -66,7 +66,7 @@ private:
      */
     void setStep(long step);
 
-    static double getWallTime();
+    static double getWallTime() noexcept;
 
     void runPathIntegralMolecularDynamics();
 
@@ -271,7 +271,7 @@ private:
      * @param spring_ctx Spring context object containing information about the springs.
      * @param box_ctx Box context object containing information about the simulation box.
      */
-    void initializeForces(
+    static void initializeForces(
         const std::shared_ptr<SystemState>& state,
         const std::shared_ptr<ForceManager>& force_mgr, 
         const SpringContext& spring_ctx, 

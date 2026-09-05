@@ -7,13 +7,13 @@
 #include <memory>
 
 namespace Sections {
-    const std::string SYSTEM = "system";
-    const std::string SIMULATION = "simulation";
-    const std::string ACTION = "action";
-    const std::string EXT_POTENTIAL = "external_potential";
-    const std::string INT_POTENTIAL = "interaction_potential";
-    const std::string DUMP = "dump";
-    const std::string OBSERVABLES = "observables";
+    constexpr const char* SYSTEM = "system";
+    constexpr const char* SIMULATION = "simulation";
+    constexpr const char* ACTION = "action";
+    constexpr const char* EXT_POTENTIAL = "external_potential";
+    constexpr const char* INT_POTENTIAL = "interaction_potential";
+    constexpr const char* DUMP = "dump";
+    constexpr const char* OBSERVABLES = "observables";
 }
 
 class Params {
