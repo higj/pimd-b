@@ -66,28 +66,25 @@ double FactorialBosonicExchange::getMinExteriorSpringEnergy()
     return min_delta;
 }
 
-double FactorialBosonicExchange::effectivePotential()
-{
+double FactorialBosonicExchange::effectivePotential() {
     long permutation_counter = 0;
     double weights_sum = 0.0;
 
-    // Iterate over all permutations and calculate the weights
-    // associated with the exterior beads.
-    do
-    {
+    do {
         permutation_counter++;
         double diff2 = 0.0;
 
-        for (int ptcl_idx = 0; ptcl_idx < m_bead_ctx.natoms; ++ptcl_idx)
-        {
+        for (int ptcl_idx = 0; ptcl_idx < m_bead_ctx.natoms; ++ptcl_idx) {
             diff2 += getExteriorSeparationSquared(ptcl_idx, lastBeadNeighbor(ptcl_idx));
         }
 
-        weights_sum += exp(-m_spring_ctx.beta_half_k * diff2);
-    }
-    while (std::ranges::next_permutation(m_labels).found);
+        weights_sum += exp(-m_thermal_ctx.thermo_beta * (0.5 * m_spring_ctx.spring_constant * diff2 - m_e_shift));
+    } while (std::ranges::next_permutation(m_labels).found);
 
-    return (-1.0 / m_thermal_ctx.thermo_beta) * log(weights_sum / permutation_counter);
+    // Subtracting m_e_shift from the effective potential recovers the original potential,
+    // which is the actual physical quantity of interest. The shift is used for numerical
+    // stability in the exponential calculations.
+    return m_e_shift + (-1.0 / m_thermal_ctx.thermo_beta) * log(weights_sum / permutation_counter);
 }
 
 void FactorialBosonicExchange::springForceLastBead(VecArray& f)
