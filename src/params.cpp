@@ -366,11 +366,19 @@ void Params::loadPropagatorParams(SimulationConfig& config) const {
     constexpr auto allowed_propagators = std::array{ "cartesian"sv, "normal_modes"sv };
     config.propagator_type = m_reader.GetString(Sections::SIMULATION, "propagator", "cartesian");
     // TODO: Slight danger that config.bosonic might not be properly defined at this point
-    if (config.bosonic && config.propagator_type == "normal_modes")
-        throw std::invalid_argument("Normal modes propagation is currently not available for bosons!");
+    if (config.propagator_type == "normal_modes") {
+        if (config.bosonic) {
+            throw std::invalid_argument("Normal modes propagation is currently not available for bosons!");
+        }
 
-    if (!StringUtils::labelInArray(config.propagator_type, allowed_propagators))
+        if (config.nbeads % 2 != 0) {
+            throw std::invalid_argument("Normal modes propagation requires an even number of beads!");
+        }
+    }
+
+    if (!StringUtils::labelInArray(config.propagator_type, allowed_propagators)) {
         throw std::invalid_argument(std::format("The specified time propagator ({}) is not supported!", config.propagator_type));
+    }
 }
 
 /**
