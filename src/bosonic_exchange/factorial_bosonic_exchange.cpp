@@ -92,7 +92,6 @@ double FactorialBosonicExchange::effectivePotential()
 
 void FactorialBosonicExchange::springForceLastBead(VecArray& f)
 {
-    /// TODO: Either reset "f" at the beginning of each MD step, or don't "+=" the force later in this function
     f.reset();
 
     VecArray temp_force(m_bead_ctx.natoms);
@@ -143,7 +142,6 @@ void FactorialBosonicExchange::springForceLastBead(VecArray& f)
 
 void FactorialBosonicExchange::springForceFirstBead(VecArray& f)
 {
-    /// TODO: Either reset "f" at the beginning of each MD step, or don't "+=" the force later in this function
     f.reset();
 
     VecArray temp_force(m_bead_ctx.natoms);
@@ -192,22 +190,89 @@ void FactorialBosonicExchange::springForceFirstBead(VecArray& f)
     }
 }
 
-double FactorialBosonicExchange::getDistinctProbability()
-{
-    /// @todo Currently not implemented
-    return 0.0;
+double FactorialBosonicExchange::getDistinctProbability() {
+    // Identity permutation: each particle's first bead connects to its own last bead
+    double identity_energy = 0.0;
+    for (int l = 0; l < m_bead_ctx.natoms; ++l) {
+        identity_energy += getExteriorSeparationSquared(l, l);
+    }
+    identity_energy *= 0.5 * m_spring_ctx.spring_constant;
+
+    // Sum Boltzmann weights over all permutations (shifted for numerical stability)
+    double weights_sum = 0.0;
+    do {
+        double diff2 = 0.0;
+        for (int l = 0; l < m_bead_ctx.natoms; ++l) {
+            diff2 += getExteriorSeparationSquared(l, lastBeadNeighbor(l));
+        }
+        weights_sum += std::exp(
+            -m_thermal_ctx.thermo_beta * (0.5 * m_spring_ctx.spring_constant * diff2 - m_e_shift)
+        );
+    } while (std::ranges::next_permutation(m_labels).found);
+
+    return std::exp(-m_thermal_ctx.thermo_beta * (identity_energy - m_e_shift)) / weights_sum;
 }
 
-double FactorialBosonicExchange::getLongestProbability()
-{
-    /// @todo Currently not implemented
-    return 0.0;
+double FactorialBosonicExchange::getLongestProbability() {
+    // Canonical N-cycle 0->1->2->...->N-1->0
+    // last bead of particle l connects to first bead of particle (l+1) % N
+    double longest_cycle_energy = 0.0;
+    for (int l = 0; l < m_bead_ctx.natoms; ++l) {
+        longest_cycle_energy += getExteriorSeparationSquared((l + 1) % m_bead_ctx.natoms, l);
+    }
+    longest_cycle_energy *= 0.5 * m_spring_ctx.spring_constant;
+
+    // Sum Boltzmann weights over all permutations (shifted for numerical stability)
+    double weights_sum = 0.0;
+    do {
+        double diff2 = 0.0;
+        for (int l = 0; l < m_bead_ctx.natoms; ++l) {
+            diff2 += getExteriorSeparationSquared(l, lastBeadNeighbor(l));
+        }
+
+        weights_sum += std::exp(
+            -m_thermal_ctx.thermo_beta * (0.5 * m_spring_ctx.spring_constant * diff2 - m_e_shift)
+        );
+    } while (std::ranges::next_permutation(m_labels).found);
+
+    const double log_n_factorial = std::lgamma(m_bead_ctx.natoms + 1);
+    return std::exp(-m_thermal_ctx.thermo_beta * (longest_cycle_energy - m_e_shift) + log_n_factorial) / weights_sum;
 }
 
-double FactorialBosonicExchange::getSign()
-{
-    /// @todo Currently not implemented
-    return 0.0;
+double FactorialBosonicExchange::getSign() {
+    double numerator = 0.0;
+    double denominator = 0.0;
+
+    do {
+        // Boltzmann weight of this permutation (shifted for stability)
+        double diff2 = 0.0;
+        for (int l = 0; l < m_bead_ctx.natoms; ++l) {
+            diff2 += getExteriorSeparationSquared(l, lastBeadNeighbor(l));
+        }
+        const double weight = std::exp(
+            -m_thermal_ctx.thermo_beta * (0.5 * m_spring_ctx.spring_constant * diff2 - m_e_shift)
+        );
+
+        // Count disjoint cycles to determine permutation parity: (-1)^(N - num_cycles)
+        std::vector<bool> visited(m_bead_ctx.natoms, false);
+        int num_cycles = 0;
+        for (int i = 0; i < m_bead_ctx.natoms; ++i) {
+            if (!visited[i]) {
+                ++num_cycles;
+                int j = i;
+                while (!visited[j]) {
+                    visited[j] = true;
+                    j = lastBeadNeighbor(j);
+                }
+            }
+        }
+        const int sign = ((m_bead_ctx.natoms - num_cycles) % 2 == 0) ? 1 : -1;
+
+        numerator += sign * weight;
+        denominator += weight;
+    } while (std::ranges::next_permutation(m_labels).found);
+
+    return numerator / denominator;
 }
 
 double FactorialBosonicExchange::primitiveEnergyEstimator()
