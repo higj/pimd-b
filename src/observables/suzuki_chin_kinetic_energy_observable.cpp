@@ -17,8 +17,9 @@ m_bead_ctx(bead_ctx), m_spring_ctx(spring_ctx), m_alpha(alpha) {
 }
 
 void SuzukiChinKineticEnergyObservable::calculate() {
-    const auto [_, force_sq, __] =
-        SharedComputations::suzukiChinComponents(*m_coord, *m_force_mgr, m_bead_ctx, m_cache);
+    const double force_sq = SharedComputations::suzukiChinComponents(
+        *m_coord, *m_force_mgr, m_bead_ctx, m_cache
+    ).force_squared;
 
 #if TAU_CONVENTION
     const double sp_constant = m_spring_ctx.spring_constant / m_bead_ctx.nbeads;

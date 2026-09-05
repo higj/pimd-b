@@ -15,8 +15,10 @@ m_coord(coord), m_force_mgr(force_mgr), m_bead_ctx(bead_ctx) {
 
 void SuzukiChinVirialEnergyObservable::calculate() {
     if (m_bead_ctx.this_bead % 2 != 0) {  // odd beads only
-        const auto [_, __, virial] =
-            SharedComputations::suzukiChinComponents(*m_coord, *m_force_mgr, m_bead_ctx, m_cache);
+        const double virial = SharedComputations::suzukiChinComponents(
+            *m_coord, *m_force_mgr, m_bead_ctx, m_cache
+        ).virial;
+
         quantities["virial_gsf"] = Units::convertToUser(
             "energy", 
             m_out_unit, 

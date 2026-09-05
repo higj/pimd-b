@@ -15,8 +15,10 @@ m_coord(coord), m_force_mgr(force_mgr), m_bead_ctx(bead_ctx) {
 
 void SuzukiChinEvenPotEnergyObservable::calculate() {
     if (m_bead_ctx.this_bead % 2 == 0) {  // even beads only
-        const auto [total_pot, _, __] =
-            SharedComputations::suzukiChinComponents(*m_coord, *m_force_mgr, m_bead_ctx, m_cache);
+        const double total_pot = SharedComputations::suzukiChinComponents(
+            *m_coord, *m_force_mgr, m_bead_ctx, m_cache
+        ).total_potential;
+
         quantities["even_pot_gsf"] = Units::convertToUser(
             "energy", 
             m_out_unit, 
