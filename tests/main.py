@@ -66,7 +66,7 @@ def run_simulation(executable_dir, input_file):
     
     mpirun_bin_dir = os.environ['OPENMPI_BIN']
     mpi = Path(mpirun_bin_dir) / 'mpirun'
-    mpirun_command = [mpi, '--oversubscribe', '-np', str(nbeads), (executable_dir / 'pimdb').as_posix(), '-partition', f"{nbeads}x1", '-in', input_file.as_posix()]
+    mpirun_command = [mpi, '--oversubscribe', '-np', str(nbeads), (executable_dir / 'pimdb').as_posix(), '-in', input_file.as_posix()]
     
     # Windows version
     #mpirun_command = ['mpiexec', '-n', str(nbeads), (executable_dir / 'pimdb.exe').as_posix(), '-in', input_file.as_posix()]
@@ -91,8 +91,10 @@ def compare_output(actual_output, expected_output):
     data_expected = read_data(expected_output)
     
     # Check if the number of steps match
-    if len(data_actual['step']) != len(data_expected['step']):
-        raise AssertionError("Test failed: Number of steps do not match.")
+    len_actual = len(data_actual['step'])
+    len_expected = len(data_expected['step'])
+    if len_actual != len_expected:
+        raise AssertionError(f"Test failed: Number of steps do not match (expected {len_expected}, got {len_actual}).")
     
     columns = list(data_actual.keys())
     
@@ -102,7 +104,7 @@ def compare_output(actual_output, expected_output):
     for column in columns:
         are_equal, index = compare_arrays(data_actual[column], data_expected[column])
         if not are_equal:
-            raise AssertionError(f"Test failed: '{column}' does not match at step {index}.")
+            raise AssertionError(f"Test failed: '{column}' does not match at step {index}. Your value: {data_actual[column][index]}, Actual value: {data_expected[column][index]}")
         
     return True
 
@@ -162,41 +164,61 @@ def extract_numeric_data(file_path):
 
 
 def test_coordinates(output_folder, test_folder, in_file):
-    test_xyz_files = list(test_folder.glob("*.xyz"))
-            
-    # If the test contains '.xyz' files, compare them.
+    # Matches 'position_' followed by any number of digits and '.xyz'
+    pattern = re.compile(r"^position_\d+\.xyz$")
+
+    # Filter files in test_folder matching the pattern
+    test_xyz_files = [
+        f
+        for f in test_folder.glob("*.xyz")
+        if f.is_file() and pattern.match(f.name)
+    ]
+
+    # If the test contains relevant 'position_XX.xyz' files, compare them.
     # Otherwise, skip this test.
     if test_xyz_files:
         print("Comparing trajectories...")
-        xyz_file_names = [file.name for file in test_xyz_files]  # Expected xyz file names
+        xyz_file_names = [file.name for file in test_xyz_files]
 
-        # Check if the simulation output directory has the same number of xyz files and same filenames
-        out_xyz_files = list(output_folder.glob("*.xyz"))
-                
+        # Filter files in output_folder using the same pattern
+        out_xyz_files = [
+            f
+            for f in output_folder.glob("*.xyz")
+            if f.is_file() and pattern.match(f.name)
+        ]
+
         if len(out_xyz_files) != len(test_xyz_files):
-            raise AssertionError(f"Test failed: number of xyz files found in {output_folder} is incorrect.")
-                
+            raise AssertionError(
+                f"Test failed: number of position xyz files found in {output_folder} is incorrect."
+            )
+
         for xyz_file in out_xyz_files:
             if xyz_file.name not in xyz_file_names:
-                raise AssertionError(f"Test failed: the generated xyz files have incorrect names.")
-                
+                raise AssertionError(
+                    f"Test failed: the generated xyz files have incorrect names."
+                )
+
         natoms = get_number_of_atoms(tests_dir / in_file)
-                
+
         for xyz_file_name in xyz_file_names:
             out_xyz_file = output_folder / xyz_file_name
             test_xyz_file = test_folder / xyz_file_name
-            compare_xyz(actual_xyz_file=out_xyz_file, expected_xyz_file=test_xyz_file, natoms=natoms)
-                    
+            compare_xyz(
+                actual_xyz_file=out_xyz_file,
+                expected_xyz_file=test_xyz_file,
+                natoms=natoms,
+            )
+
         print("Test passed: Trajectories match.")
 
 
 def test_velocities(output_folder, test_folder):
-    # Function to filter files with names in the format "velocity_X.dat"
+    # Function to filter files with names in the format "velocity_X.xyz"
     def is_velocity_file(file):
-        return file.name.startswith("velocity_") and file.name.endswith(".dat") and file.stem.split("_")[1].isdigit()
+        return file.name.startswith("velocity_") and file.name.endswith(".xyz") and file.stem.split("_")[1].isdigit()
 
-    # Check if the test case has at least one file with the format "velocity_X.dat"
-    velocity_files = list(filter(is_velocity_file, test_folder.glob("velocity_*.dat")))
+    # Check if the test case has at least one file with the format "velocity_X.xyz"
+    velocity_files = list(filter(is_velocity_file, test_folder.glob("velocity_*.xyz")))
     
     # If not, quit the test
     if not velocity_files:
@@ -204,13 +226,13 @@ def test_velocities(output_folder, test_folder):
 
     print("Comparing velocities...")
     
-    # Get the names of all 'velocity_X.dat' files in test
+    # Get the names of all 'velocity_X.xyz' files in test
     velocity_file_names = [file.name for file in velocity_files]
 
     # Check if the output directory has the same number of files and same filenames
-    out_velocity_files = list(filter(is_velocity_file, output_folder.glob("velocity_*.dat")))
+    out_velocity_files = list(filter(is_velocity_file, output_folder.glob("velocity_*.xyz")))
     if len(out_velocity_files) != len(velocity_files):
-        raise AssertionError(f"Test failed: Different number of 'velocity_X.dat' files found in {output_folder}")
+        raise AssertionError(f"Test failed: Different number of 'velocity_X.xyz' files found in {output_folder}")
     
     for velocity_file in out_velocity_files:
         if velocity_file.name not in velocity_file_names:

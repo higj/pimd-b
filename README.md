@@ -60,7 +60,7 @@ seed = 12345
 initial_position = random
 propagator = cartesian
 thermostat = langevin
-nmthermostat = true
+nmthermostat = false
 
 [system]
 temperature = 1.0 kelvin
@@ -75,7 +75,7 @@ name = free
 name = harmonic
 omega = 3.0 millielectronvolt
 
-[output]
+[dump]
 positions = false
 velocities = false
 forces = false
@@ -107,13 +107,22 @@ The `initial_position` option allows to specify the method of initialization for
 * `xyz(<filename>.xyz)`: initializes the coordinates based on the provided `.xyz` file. A given particle is initialized at the same location across all imaginary time-slices (beads).
 * `xyz(<filename_format>)`: if the provided filename is a [Python format string](https://docs.python.org/3/library/string.html#formatspec), the indices of the imaginary time-slices (starting with either 0 or 1, automatically detected from the available files) are substituted as the format argument, and the resulting filenames are then used to initialize the coordinates. The formatted string can contain only a single replacement field.
 
+When using the `xyz` option, the user must specify the units of the coordinates using the `initial_position_unit` option. For multi-frame XYZ files, `initial_position_frame` selects the frame to load (default: `0`). `initial_position_frame_mode = index` (default) selects the zero-based frame index. `initial_position_frame_mode = step` instead selects the frame whose required XYZ comment line is exactly `Step <number>`. For example, `initial_position_frame = 10` with `initial_position_frame_mode = step` selects a frame with the comment line `Step 10`.
+
 Similarly, the `initial_velocity` option gives the user the ability to initialize the bead velocities. Currently, the following options are available:
 
 * `random` (default): samples velocities from the Maxwell-Boltzmann distribution at the given temperature of the simulation.
-* `manual`: the velocities are initialized from the files `init/vel_XX.dat` where `XX` symbolizes the two-digit index of the imaginary time-slice, starting from 01.
-* `manual(<filename_format>)`: similar behavior to `xyz(<filename_format>)`.
+* `xyz`: the velocities are initialized from `xyz` files, in the same way as the positions. In particular, the units, the frame and the frame mode are specified using `initial_velocity_unit`, `initial_velocity_frame` and `initial_velocity_frame_mode`, respectively.
 
-The `size` option defines the linear size of the system. Currently, only cube geometry is supported. In the absence of periodic boundary conditions, `size` only affects the way initial positions are generated. However, if periodic boundary conditions are enabled, the system size also affects the cutoff distance for interactions, as well as the estimators. Also, the coordinates may be wrapped in this case, and minimum image convention can potentially be employed, if such functionality is desired.
+The `size` option defines the linear size of the system. Currently, only cube geometry is supported. In the absence of periodic boundary conditions, `size` only affects the way initial positions are generated (when random generation is requested). However, if periodic boundary conditions are enabled, the system size also affects the cutoff distance for interactions, as well as the estimators. Also, the coordinates may be wrapped in this case, and minimum image convention can potentially be employed, if such functionality is desired.
+
+
+### RPMD
+
+To enable the RPMD functionality, the user must set `rpmd = true` in the `[simulation]` section of the configuration file. The following additional options are available in the `[simulation]` section:
+
+* `rpmd_nruns`: specifies the number of NVE runs to perform. The default value is `1`. If set to a value greater than `1`, the program will perform multiple NVE runs, each starting from a different initial configuration taken from the same NVT trajectory provided in the `xyz` files through `initial_position` and `initial_velocity`. The program will attempt to to distribute the starting frames as evenly as possible over the available interval. The output associated with each NVE run will be stored in a separate subdirectory of `output` named `rpmd_0`, `rpmd_1`, etc.
+* `rpmd_nvt_discard_fraction` (number between 0 and 1): specifies the fraction of the NVT trajectory to discard before sampling starts. The default value is `0.0`. For example, if set to `0.1`, the program will discard the first 10% of the available frames in the NVT trajectory before selecting the starting frames for the NVE runs.
 
 ### Propagators
 
@@ -140,15 +149,14 @@ The `thermostat` option allows one to specify the thermostat to be used during t
 The `nmthermostat` flag is used to couple the chosen thermostat to the normal modes instead of the Cartesian coordinates (default is `false`).
 Note that for bosonic PIMD, the thermostat is coupled to the normal modes of the seperated ring polymers (corresponding to the identity permutation, with no exchange).
 
-### States and observables
+### Dumps and observables
 
-In the `[output]` section, users can request the output of various quantities related to the state of the system (such as positions, velocities, etc.) 
-The format for this section is `state_name = state_unit`. The key (`state_name`) must correspond to a name of a supported state. 
-The value (`state_unit`) specifies the unit to which the output must be converted. If set to `false` (or, equivalently, `off`), the state 
-will not be printed. By default, all states are set to `false`. If set to `true` (or, equivalently, `on`), the state will be printed in default (atomic) units, assuming the quantity is not dimensionless. Otherwise, the user 
+In the `[dump]` section, users can request the output of various quantities related to the state of the system (such as positions, velocities, etc.) 
+The format for this section is `dump_name = dump_unit`. The key (`dump_name`) must correspond to a name of a supported dump. 
+The value (`dump_unit`) specifies the unit to which the output must be converted. If set to `false` (or, equivalently, `off`), the quantity will not be dumped. By default, all dumps are set to `false`. If set to `true` (or, equivalently, `on`), the dump will be printed in default (atomic) units, assuming the quantity is not dimensionless. Otherwise, the user 
 must specify the desired unit.
 
-Currently, the following state *types* are supported:
+Currently, the following dump *types* are supported:
 
 * `positions`: Prints the instantaneous coordinates of the beads.
 * `velocities`: Prints the instantaneous velocities of the beads.
@@ -160,7 +168,7 @@ Currently, the following observable *types* are supported:
 
 * `energy`: Calculates the quantum energy of the system using different estimators. Currently, the thermodynamic (primitive), virial, and potential energy estimators are supported.
 * `classical`: Calculates observables related to the classical ring-polymer system, such as the kinetic energy (due to the fictitious momenta), spring energies, and temperature.
-* `bosonic`: Calculates the probabilities of two types of topologies: where all particles are separate and where all particles are connected (dimensionless estimator). Printed *only* in bosonic simulations.
+* `bosonic`: Calculates the sign, as well as the probabilities of two types of topologies: where all particles are separate and where all particles are connected (dimensionless estimator). Printed *only* in bosonic simulations.
 * `gsf`: Calculates observables associated with the action resulting from the generalized Suzuki factorization (GSF). The central quantity is $\ln w_{\mathrm{GSF}}$, where $w_{\mathrm{GSF}}$ is the statistical weight that is used for re-weighting the observables in the GSF scheme (see J. Chem. Phys. 135, 064104 (2011)). In addition, it calculates the potential energy estimator at odd imaginary-time slices, based on the operator method.
 
 Internally, the simulation uses atomic units. However, the input parameters may be provided in the units of your choosing (e.g., electron-volts for energy).
@@ -176,14 +184,23 @@ The following options are available in the `[simulation]` and `[system]` section
 |`threshold`     |  Defines the percentage of steps to throw away for thermalization (float between 0 and 1) |
 |`sfreq`     | Frequency at which the observables are calculated in the production stage |
 |`gamma`    |  Friction coefficient for the Langevin thermostat in units of inverse time (Default: $\frac{1}{100\Delta t}$) |
-| `nchains` | Number of components in each Nose-Hoover chain for Nose-Hoover-type thermostats
+|`nchains` | Number of components in each Nose-Hoover chain for Nose-Hoover-type thermostats
 |`nbeads`     |  Number of imaginary time-slices (beads) |
 |`bosonic`     |  Set to `true`/`false` for bosonic/distinguishable PIMD (Default: `false`) |
 |`pbc`     |  Set to `true` to enable periodic boundary conditions (Default: `false`) |
 |`fixcom`     |  Set to `true` to remove the center of mass motion (Default: `true`) |
 |`seed`     | Random number generator seed (a positive integer below $9 \times 10^8$) |
 |`initial_position`     | Method for generating the initial positions of the beads |
-|`initial_velocity`     | Method for generating the initial velocities of the beads. `random` samples from the Maxwell-Boltzmann distribution. `manual` loads velocities from a provided file. (Default: `random`) |
+|`initial_position_unit`  | Units of the initial positions (when using `xyz`) |
+|`initial_position_frame`  | The exact `xyz` position frame to load (Default: `0`) |
+|`initial_position_frame_mode`  | Zero-based `index` versus literal `step` interpretation of the position frame |
+|`initial_velocity`     | Method for generating the initial velocities of the beads. `random` samples from the Maxwell-Boltzmann distribution. `xyz` loads velocities from a provided `xyz` file. (Default: `random`) |
+|`initial_velocity_unit`  | Units of the initial velocities (when using `xyz`) |
+|`initial_velocity_frame`  | The exact `xyz` velocity frame to load (Default: `0`) |
+|`initial_velocity_frame_mode`  | Zero-based `index` versus literal `step` interpretation of the velocity frame |
+|`rpmd`     |  Set to `true` to enable RPMD functionality (Default: `false`) |
+|`rpmd_nruns`     |  Number of NVE runs to perform (Default: `1`) |
+|`rpmd_nvt_discard_fraction`     |  Fraction of the NVT trajectory to discard before sampling starts (Default: `0.0`) |
 |`temperature`     |  Temperature of the quantum system (units of temperature) |
 |`natoms`     |  Number of particles in the quantum system |
 |`size`     |  Linear size of the system (units of length) |

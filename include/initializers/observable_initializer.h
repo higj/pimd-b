@@ -1,0 +1,77 @@
+#pragma once
+
+#include "observable_item.h"
+#include "contexts/action_context.h"
+#include "contexts/bead_context.h"
+#include "contexts/thermal_context.h"
+#include "contexts/spring_context.h"
+#include "contexts/box_context.h"
+#include "contexts/velocity_context.h"
+#include "contexts/thermostat_context.h"
+
+#include <memory>
+#include <vector>
+#include <string>
+
+class Observable;
+class SystemState;
+class ForceManager;
+class Thermostat;
+struct SimulationConfig;
+
+class ObservableInitializer
+{
+public:
+    ObservableInitializer(
+        long stride,
+        const StringMap& obs_list,
+        const std::shared_ptr<SystemState>& state,
+        const std::shared_ptr<ForceManager>& force_mgr,
+        const ActionContext& action_context,
+        const BeadContext& bead_context,
+        const ThermalContext& thermal_context,
+        const SpringContext& spring_context,
+        const BoxContext& box_context,
+        const VelocityContext& velocity_context,
+        const ThermostatContext& thermostat_context
+    );
+
+    // Main interface method
+    [[nodiscard]] std::vector<std::shared_ptr<Observable>> createObservables() const;
+
+private:
+    [[nodiscard]] std::vector<ObservableItem> parseObservablesList() const;
+
+    // Observable creation methods
+    [[nodiscard]] std::shared_ptr<Observable> createPrimitiveKineticEnergyObservable(const std::string& out_unit) const;
+    [[nodiscard]] std::shared_ptr<Observable> createPotentialEnergyObservable(const std::string& out_unit) const;
+    [[nodiscard]] std::shared_ptr<Observable> createVirialEnergyObservable(const std::string& out_unit) const;
+    [[nodiscard]] std::shared_ptr<Observable> createExtPotObservable(const std::string& out_unit) const;
+    [[nodiscard]] std::shared_ptr<Observable> createIntPotObservable(const std::string& out_unit) const;
+    [[nodiscard]] std::shared_ptr<Observable> createClassicalKineticEnergyObservable(const std::string& out_unit) const;
+    [[nodiscard]] std::shared_ptr<Observable> createClassicalSpringEnergyObservable(const std::string& out_unit) const;
+    [[nodiscard]] std::shared_ptr<Observable> createTemperatureObservable(const std::string& out_unit) const;
+    [[nodiscard]] std::shared_ptr<Observable> createNoseHooverEnergyObservable(const std::string& out_unit) const;
+    [[nodiscard]] std::shared_ptr<Observable> createBosonicProbDistObservable(const std::string& out_unit) const;
+    [[nodiscard]] std::shared_ptr<Observable> createBosonicProbAllObservable(const std::string& out_unit) const;
+    [[nodiscard]] std::shared_ptr<Observable> createBosonicSignObservable(const std::string& out_unit) const;
+    [[nodiscard]] std::shared_ptr<Observable> createSuzukiChinWeightObservable(const std::string& out_unit) const;
+    [[nodiscard]] std::shared_ptr<Observable> createSuzukiChinPotEnergyObservable(const std::string& out_unit) const;
+    [[nodiscard]] std::shared_ptr<Observable> createSuzukiChinEvenPotEnergyObservable(const std::string& out_unit) const;
+    [[nodiscard]] std::shared_ptr<Observable> createSuzukiChinKineticEnergyObservable(const std::string& out_unit) const;
+    [[nodiscard]] std::shared_ptr<Observable> createSuzukiChinVirialEnergyObservable(const std::string& out_unit) const;
+    [[nodiscard]] std::shared_ptr<Observable> createCenterOfMassObservable(const std::string& out_unit) const;
+
+    long m_stride;
+    StringMap m_observables_list;
+    std::shared_ptr<SystemState> m_state;
+    std::shared_ptr<ForceManager> m_force_mgr;
+
+    ActionContext m_action_context;
+    BeadContext m_bead_context;
+    ThermalContext m_thermal_context;
+    SpringContext m_spring_context;
+    BoxContext m_box_context;
+    VelocityContext m_velocity_context;
+    ThermostatContext m_thermostat_context;
+};

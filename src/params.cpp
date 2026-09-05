@@ -1,330 +1,814 @@
 #include "params.h"
+#include "core/potential_config.h"
+#include "../libs/string_utils.h"
 
-#include <sstream>
 #include <regex>
 #include <format>
 #include <filesystem>
+#include <unordered_set>
 
-Params::Params(const std::string& filename, const int& rank) : reader(filename) {
+using Quantity = Units::Quantity;
+
+namespace {
+    /**
+     * Returns the long value of a string that may use scientific notation (e.g. "1e6", "2.5e4").
+     * Throws std::invalid_argument / std::range_error on bad input.
+     * Caps at 2^53 = the largest integer exactly representable as double =
+     * which is astronomically large for any simulation parameter.
+     *
+     * @param s The string to parse.
+     * @param param_name The name of the parameter (used in error messages).
+     * @return The parsed long value.
+     */
+    long parseLongSci(const std::string& s, std::string_view param_name) {
+        std::size_t pos = 0;
+        double d;
+        try {
+            d = std::stod(s, &pos);
+        } catch (const std::exception&) {
+            throw std::invalid_argument(
+                std::format("'{}': cannot parse '{}' as a number", param_name, s));
+        }
+
+        if (pos != s.size())
+            throw std::invalid_argument(
+                std::format("'{}': trailing characters in '{}'", param_name, s));
+
+        if (!std::isfinite(d) || d <= 0.0)
+            throw std::range_error(
+                std::format("'{}': must be a positive finite number (got {})", param_name, s));
+
+        if (d != std::floor(d))
+            throw std::invalid_argument(
+                std::format("'{}': must be a whole number (got {})", param_name, s));
+
+        // 2^53: largest integer exactly representable as double, and << LONG_MAX
+        constexpr double MAX_EXACT = 9007199254740992.0;
+        if (d > MAX_EXACT)
+            throw std::range_error(
+                std::format("'{}': value too large (got {})", param_name, s));
+
+        return static_cast<long>(d);
+    }
+
+    /**
+     * Shared validation logic for "xyz" / "xyz(format)" style position/velocity initialization.
+     * Verifies the (optional) filename format, determines whether on-disk bead numbering starts at
+     * 0 or 1, and enforces the mandatory unit and frame-selection parameters.
+     *
+     * @param reader          The INI reader to pull the unit/frame parameters from.
+     * @param section         Section to read the unit/frame parameters from.
+     * @param label           Human-readable label used in error messages (e.g. "Coordinate", "Velocity").
+     * @param key_prefix      Key prefix shared by the unit/frame parameters (e.g. "initial_position").
+     * @param specification   The filename/format string parsed out of "xyz(...)" syntax (may be empty).
+     * @param[out] index_offset Set to 1 if bead index 0 is missing on disk (numbering starts at 1), else 0.
+     * @param[out] filename     Set to the (unformatted) filename/format string, stored verbatim.
+     * @param[out] unit         Set to the user-specified unit string.
+     * @param[out] frame        Set to the selected frame index.
+     * @param[out] frame_mode   Set to the selected frame-selection mode.
+     */
+    template <typename Reader>
+    void loadXyzInitParams(
+        const Reader& reader,
+        const std::string& section,
+        const std::string& label,
+        const std::string& key_prefix,
+        const std::string& specification,
+        int& index_offset,
+        std::string& filename,
+        std::string& unit,
+        long& frame,
+        XyzFrameSelectionMode& frame_mode
+    ) {
+        if (specification.empty()) {
+            throw std::invalid_argument(
+                std::format(
+                    "{} initialization method 'xyz' requires a specification (e.g. filename or format string)", 
+                    label
+                )
+            );
+        }
+
+        try {
+            // If the user provided a filename format, try to format it using the first bead index
+            constexpr int dummy = 0;
+            const std::string formatted_filename = std::vformat(specification, std::make_format_args(dummy));
+            /// TODO: What if both 0 and 1 don't exist?
+            index_offset = static_cast<int>(!std::filesystem::exists(formatted_filename));
+            filename = specification;
+        } catch (const std::format_error&) {
+            throw std::invalid_argument(
+                std::format("The filename format ({}) for {} initialization is invalid!", specification, label));
+        } catch (...) {
+            throw std::runtime_error(
+                std::format("Filename format ({}) for {} initialization validation failed", specification, label));
+        }
+
+        // If the initialization method is "xyz" but the user didn't provide a unit,
+        // we throw an error instead of using a default (don't be smarter than the user)
+        const std::string unit_key = key_prefix + "_unit";
+        if (!reader.HasValue(section, unit_key)) {
+            throw std::invalid_argument(
+                label + " initialization method is 'xyz' but the units have not been specified (use '" + unit_key + "')");
+        }
+        unit = reader.Get(section, unit_key, "");
+
+        frame = reader.GetLong(section, key_prefix + "_frame", 0);
+        if (frame < 0) {
+            throw std::invalid_argument(key_prefix + "_frame must be non-negative");
+        }
+
+        const std::string frame_mode_str = reader.GetString(section, key_prefix + "_frame_mode", "index");
+        if (frame_mode_str == "index") {
+            frame_mode = XyzFrameSelectionMode::Index;
+        } else if (frame_mode_str == "step") {
+            frame_mode = XyzFrameSelectionMode::Step;
+        } else {
+            throw std::invalid_argument(std::format(
+                "Unsupported {}_frame_mode '{}'; expected 'index' or 'step'", key_prefix, frame_mode_str));
+        }
+    }
+
+}
+
+Params::Params(const std::string& filename, int rank) : m_reader(filename), m_rank(rank) {
     printStatus("Initializing the simulation parameters", rank);
 
-    if (reader.ParseError() < 0)
+    if (m_reader.ParseError() < 0)
         throw std::invalid_argument(std::format("Unable to read the configuration file {}", filename));
-
-    /****** Simulation params ******/
-    sim["dt"] = getQuantity("time", reader.Get(Sections::SIMULATION, "dt", "1.0 femtosecond"));
-    sim["threshold"] = reader.GetReal(Sections::SIMULATION, "threshold", 0.1);
-    sim["gamma"] = reader.GetReal(Sections::SIMULATION, "gamma", -1.0);
-
-    if (std::get<double>(sim["gamma"]) < 0)
-        sim["gamma"] = 1 / (100.0 * std::get<double>(sim["dt"]));
-
-    sim["nchains"] = reader.GetInteger(Sections::SIMULATION, "nchains", 4);
-
-    if (int nchains = std::get<int>(sim["nchains"]); nchains < 1)
-        throw std::invalid_argument(std::format("The specified number of Nose-Hoover chains ({}) is less than one!", nchains));
-
-    sim["steps"] = static_cast<long>(
-        std::stod(reader.Get(Sections::SIMULATION, "steps", "1e5")));  // Scientific notation
-    sim["sfreq"] = reader.GetLong(Sections::SIMULATION, "sfreq", 1000); /// @todo: Add support for scientific notation
-    sim["nbeads"] = reader.GetInteger(Sections::SIMULATION, "nbeads", 4);
-
-    if (int nbeads = std::get<int>(sim["nbeads"]); nbeads < 1)
-        throw std::invalid_argument(std::format("The specified number of beads ({}) is less than one!", nbeads));
-
-    sim["seed"] = static_cast<unsigned int>(std::stod(reader.Get(Sections::SIMULATION, "seed", "1234")));
-
-    /****** Flags ******/
-    // Bosonic or distinguishable simulation?
-    bool bosonic = reader.GetBoolean(Sections::SIMULATION, "bosonic", false);
-    sim["bosonic"] = bosonic;
-    // Fix the center of mass?
-    sim["fixcom"] = reader.GetBoolean(Sections::SIMULATION, "fixcom", true);
-    // Enable periodic boundary conditions?
-    sim["pbc"] = reader.GetBoolean(Sections::SIMULATION, "pbc", false);
-    // Couple thermostat to normal modes?
-    bool nmthermostat = reader.GetBoolean(Sections::SIMULATION, "nmthermostat", false);
-    sim["nmthermostat"] = nmthermostat;
-
-    std::string init_pos_type, init_pos_specification;
-
-    if (!parseTokenParentheses(reader.Get(Sections::SIMULATION, "initial_position", "random"), init_pos_type,
-                               init_pos_specification)) {
-        throw std::invalid_argument("The coordinate initialization method format is invalid!");
-    }
-
-    allowed_coord_init_methods = { "random", "xyz", "grid" }; /// @todo Add "cell" option
-
-    if (!labelInArray(init_pos_type, allowed_coord_init_methods))
-        throw std::invalid_argument(std::format("The specified coordinate initialization method ({}) is not supported!",
-                                                init_pos_type));
-    
-    if (init_pos_type == "xyz") {
-        try {
-            const int dummy = 0;  // Dummy variable for std::make_format_args lvalue reference shenanigans
-            // Try using specification as filename format
-            std::string formatted_filename = std::vformat(init_pos_specification, std::make_format_args(dummy));
-            // If the formatted string remains unchanged, that means it wasn't a format
-            if (formatted_filename != init_pos_specification) {
-                // Ensure the value is being saved as the right type
-                sim["init_pos_first_index"] = static_cast<int>(!std::filesystem::exists(formatted_filename));
-                init_pos_type = "xyz_formatted";
-            }
-        } catch (const std::format_error&) {
-            throw std::invalid_argument(
-                    std::format("The filename format ({}) for coordinate initialization is invalid!",
-                                init_pos_specification)
-                  );
-        } catch (...) {
-            throw std::runtime_error(
-                    std::format("Filename format ({}) for coordinate initialization validation failed",
-                                init_pos_specification)
-                  );
-        }
-    }
-    
-    sim["init_pos_type"] = init_pos_type;
-
-    if (init_pos_type == "xyz") {
-        sim["init_pos_xyz_filename"] = init_pos_specification;
-    } else if (init_pos_type == "xyz_formatted") {
-        sim["init_pos_xyz_filename_format"] = init_pos_specification;
-    }
-
-    // Allowed velocity initialization methods:
-    // "random": samples from Maxwell-Boltzmann distribution
-    // "manual": reads from vel_X.dat files
-    // "manual(format)": reads from format(X) files
-    std::string init_vel_type, init_vel_specification;
-
-    if (!parseTokenParentheses(reader.Get(Sections::SIMULATION, "initial_velocity", "random"), init_vel_type,
-                               init_vel_specification)) {
-        throw std::invalid_argument("The velocity initialization method format is invalid!");
-    }
-    
-    allowed_vel_init_methods = { "random", "manual" };
-
-    if (!labelInArray(init_vel_type, allowed_vel_init_methods))
-        throw std::invalid_argument(std::format("The specified velocity initialization method ({}) is not supported!",
-                                                init_vel_type));
-    
-    if (init_vel_type == "manual" && init_vel_specification != "") {
-        try {
-            const int dummy = 0;  // Dummy variable for std::make_format_args lvalue reference shenanigans
-            // Try using specification as filename format
-            std::string formatted_filename = std::vformat(init_vel_specification, std::make_format_args(dummy));
-            // If the formatted string remains unchanged, that means it wasn't a format
-            if (formatted_filename != init_vel_specification) {
-                // Ensure the value is being saved as the right type
-                sim["init_vel_first_index"] = static_cast<int>(!std::filesystem::exists(formatted_filename));
-                init_vel_type = "manual_formatted";
-            }
-        } catch (const std::format_error&) {
-            throw std::invalid_argument(
-                    std::format("The filename format ({}) for velocity initialization is invalid!",
-                                init_vel_specification)
-                  );
-        } catch (...) {
-            throw std::runtime_error(
-                    std::format("Filename format ({}) for velocity initialization validation failed",
-                                init_vel_specification)
-                  );
-        }
-    }
-
-    sim["init_vel_type"] = init_vel_type;
-
-    if (init_vel_type == "manual_formatted") {
-        sim["init_vel_manual_filename_format"] = init_vel_specification;
-    }
-    
-    // Implemented time propagators:
-    // "cartesian": regular velocity Verlet algorithm, propagating the plain Cartesian coordinates
-    // "normal_modes": a velocity Verlet algorithm that propagates the normal modes
-    allowed_propagators = { "cartesian", "normal_modes" };
-    std::string propagator_type = reader.GetString(Sections::SIMULATION, "propagator", "cartesian");
-    if (bosonic && propagator_type == "normal_modes") {
-        throw std::invalid_argument("Normal modes propogation is currently not available for bosons!");
-    }
-    sim["propagator_type"] = propagator_type;
-    
-    if (!labelInArray(propagator_type, allowed_propagators))
-        throw std::invalid_argument(std::format("The specified time propagator ({}) is not supported!", propagator_type));
-
-    // Implemented thermostats:
-    // "langevin": A langevin themrostat coupled to the Cartesian coordinates
-    // "nose_hoover" A single Nose-Hoover chain coupled to the whole system
-    // "nose_hoover_np" A unique Nose-Hoover chain coupled to each particle
-    // "nose_hoover_np_dim" A unique Nose-Hoover chain coupled to each cartezian coordinate of each particle
-    // "none": No thermostat (NVE simulation)
-    allowed_thermostats = { "langevin", "nose_hoover", "nose_hoover_np", "nose_hoover_np_dim", "none" };
-    std::string thermostat_type = reader.GetString(Sections::SIMULATION, "thermostat", "error");
-    if (thermostat_type == "error") {
-        throw std::invalid_argument("Thermostat must be specified!");
-    }
-    if (nmthermostat && thermostat_type == "none") {
-        throw std::invalid_argument("nmthermostat cannot be used in nve ensemble!");
-    }
-    if ((reader.GetInteger(Sections::SIMULATION, "nchains", -1) != -1) && ((thermostat_type == "none") || (thermostat_type == "langevin"))) {
-        throw std::invalid_argument("nchains can only be used with Nose-Hoover thermostats!");
-    }
-    sim["thermostat_type"] = thermostat_type;
-    
-    if (!labelInArray(thermostat_type, allowed_thermostats))
-        throw std::invalid_argument(std::format("The specified thermostat ({}) is not supported!", propagator_type));
-        
-    /* System params */
-    sys["temperature"] = getQuantity("temperature", reader.Get(Sections::SYSTEM, "temperature", "1.0 kelvin"));
-    if (double temp = std::get<double>(sys["temperature"]); temp <= 0.0) {
-        throw std::invalid_argument(std::format("The specified temperature ({0:4.3f} kelvin) is unphysical!", temp));
-    }
-
-    sys["natoms"] = reader.GetInteger(Sections::SYSTEM, "natoms", 1);
-    if (int natoms = std::get<int>(sys["natoms"]); natoms < 1)
-        throw std::invalid_argument(std::format("The specified number of particles ({}) is smaller than one!", natoms));
-
-    sys["mass"] = getQuantity("mass", reader.Get(Sections::SYSTEM, "mass", "1.0 dalton"));
-    if (double mass = std::get<double>(sys["mass"]); mass <= 0.0)
-        throw std::invalid_argument(std::format("The provided mass ({0:4.3f}) is unphysical!", mass));
-
-    sys["size"] = getQuantity("length", reader.Get(Sections::SYSTEM, "size", "1.0 picometer"));
-    if (double size = std::get<double>(sys["size"]); size <= 0.0)
-        throw std::invalid_argument(std::format("The provided system size ({0:4.3f}) is unphysical!", size));
-
-    allowed_int_potential_names = { "aziz", "free", "harmonic", "dipole" };
-    allowed_ext_potential_names = { "free", "harmonic", "double_well", "cosine" };
-
-    /****** Interaction potential ******/
-
-    std::string interaction_name = reader.GetString(Sections::INT_POTENTIAL, "name", "free");
-
-    if (!labelInArray(interaction_name, allowed_int_potential_names))
-        throw std::invalid_argument(std::format("The specified interaction potential ({}) is not supported!",
-                                                interaction_name));
-
-    interaction_pot["name"] = interaction_name;
-    interaction_pot["cutoff"] = getQuantity("length", reader.Get(Sections::INT_POTENTIAL, "cutoff", "-1.0 angstrom"));
-
-    if (interaction_name == "free") {
-        // In the special case of free particles, the cutoff distance is set to zero
-        interaction_pot["cutoff"] = 0.0;
-    } else if (interaction_name == "harmonic") {
-        // In atomic units, the angular frequency of the oscillator has the same dimensions as the energy
-        interaction_pot["omega"] = getQuantity(
-            "energy", reader.Get(Sections::INT_POTENTIAL, "omega", "1.0 millielectronvolt"));
-    } else if (interaction_name == "double_well") {
-        interaction_pot["strength"] = getQuantity(
-            "energy", reader.Get(Sections::INT_POTENTIAL, "strength", "1.0 millielectronvolt"));
-        interaction_pot["location"] = getQuantity(
-            "length", reader.Get(Sections::INT_POTENTIAL, "location", "1.0 angstrom"));
-    } else if (interaction_name == "dipole") {
-        interaction_pot["strength"] = reader.GetReal(Sections::INT_POTENTIAL, "strength", 1.0);
-    }
-
-    /****** External potential ******/
-
-    std::string external_name = reader.GetString(Sections::EXT_POTENTIAL, "name", "free");
-
-    if (!labelInArray(external_name, allowed_ext_potential_names))
-        throw std::invalid_argument(std::format("The specified external potential ({}) is not supported!",
-                                                external_name));
-
-    external_pot["name"] = external_name;
-
-    if (external_name == "harmonic") {
-        // In atomic units, the angular frequency of the oscillator has the same dimensions as the energy
-        external_pot["omega"] = getQuantity(
-            "energy", reader.Get(Sections::EXT_POTENTIAL, "omega", "1.0 millielectronvolt"));
-    } else if (external_name == "double_well") {
-        external_pot["strength"] = getQuantity(
-            "energy", reader.Get(Sections::EXT_POTENTIAL, "strength", "1.0 millielectronvolt"));
-        external_pot["location"] = getQuantity(
-            "length", reader.Get(Sections::EXT_POTENTIAL, "location", "1.0 angstrom"));
-    } else if (external_name == "cosine") {
-        external_pot["amplitude"] = getQuantity(
-            "energy", reader.Get(Sections::EXT_POTENTIAL, "amplitude", "1.0 millielectronvolt"));
-        external_pot["phase"] = reader.GetReal(Sections::EXT_POTENTIAL, "phase", 1.0);
-    }
-
-    /****** Output ******/
-    states["positions"] = reader.Get(Sections::OUTPUT, "positions", "off");
-    states["velocities"] = reader.Get(Sections::OUTPUT, "velocities", "off");
-    states["forces"] = reader.Get(Sections::OUTPUT, "forces", "off");
-
-    /****** Observables ******/
-
-    observables["energy"] = reader.Get(Sections::OBSERVABLES, "energy", "kelvin");
-    observables["classical"] = reader.Get(Sections::OBSERVABLES, "classical", "off");
-    observables["bosonic"] = reader.Get(Sections::OBSERVABLES, "bosonic", "off");
-    observables["gsf"] = reader.Get(Sections::OBSERVABLES, "gsf", "off");
 }
 
-bool Params::labelInArray(const std::string& label, const StringsList& arr) {
-    return std::ranges::find(arr, label) != arr.end();
+std::shared_ptr<SimulationConfig> Params::load() const {
+    auto config = std::make_shared<SimulationConfig>();
+
+    config->this_bead = m_rank;
+
+    // TODO: Check for unknown headers. Warn the user if any are found.
+
+
+    // NOTE: The calls below have implicit ordering dependencies - reordering them can silently
+    // leave config fields unset or unvalidated. Known dependencies:
+    //   - loadPropagatorParams needs config.bosonic (set by loadSimulationParams)
+    //   - loadThermostatParams needs config.mass (set by loadSystemParams) and config.dt,
+    //     config.nbeads (set by loadSimulationParams)
+    //   - loadExternalPotentialParams / loadInteractionPotentialParams need config.mass and
+    //     config.box_size (set by loadSystemParams)
+    // If you add or reorder a load*Params function, please keep this list in sync.
+    loadSimulationParams(*config);
+    loadSystemParams(*config);
+    loadPropagatorParams(*config);
+    loadActionParams(*config);
+    loadThermostatParams(*config);
+    loadCoordInitParams(*config);
+    loadVelocityInitParams(*config);
+    loadExternalPotentialParams(*config);
+    loadInteractionPotentialParams(*config);
+    loadOutputParams(*config);
+    loadObservableParams(*config);
+    loadRpmdParams(*config);
+
+    return config;
 }
 
-// Splits a string into several strings based on a delimiter
-std::vector<std::string> Params::splitString(const std::string& line, char delimiter) {
-    std::stringstream ss(line);
-    std::vector<std::string> tokens;
-    std::string token;
+double Params::loadQuantity(
+    const std::string& family,
+    const std::string& section,
+    const std::string& key,
+    const std::string& default_value,
+    double& destination,
+    StringMap& units_destination
+) const {
+    const Quantity quantity = Quantity::create(
+        family,
+        m_reader.Get(section, key, default_value)
+    );
 
-    while (std::getline(ss, token, delimiter)) {
-        if (!token.empty())
-            tokens.push_back(token);
-    }
+    destination = quantity.toInternal();
+    units_destination[key] = quantity.unit;
 
-    return tokens;
-}
-
-// Parse a string containing a numerical value and a unit
-std::pair<double, std::string> Params::parseQuantity(const std::string& input) {
-    std::istringstream iss(input);
-    std::string unit;
-
-    // Read the floating-point number and the unit
-    // See: https://en.cppreference.com/w/cpp/io/basic_istream/operator_gtgt
-    if (double value; iss >> value >> std::ws >> unit) {
-        return std::make_pair(value, unit);
-    }
-
-    throw std::invalid_argument("Invalid input format");
+    return quantity.value; // Return the original user-provided value (not converted to internal units)
 }
 
 /**
- * Accepts a string of the format "<number> <unit>" and returns the numerical
- * value of the quantity in internal (atomic) units.
+ * Load basic parameters pertaining to the simulation.
  *
- * @param family The family of units to which the quantity belongs.
- * @param input The string containing the numerical value and the unit.
- * @return The numerical value of the quantity in internal units.
+ * @param config Config object to load parameters into.
  */
-double Params::getQuantity(const std::string& family, const std::string& input) {
-    // Extract numerical value and specified unit
-    auto [value, raw_unit] = parseQuantity(input);
+void Params::loadSimulationParams(SimulationConfig& config) const {
+    //config.dt = Units::getQuantity("time", m_reader.Get(Sections::SIMULATION, "dt", "1.0 femtosecond"));
+    if (!m_reader.HasValue(Sections::SIMULATION, "dt")) {
+        throw std::invalid_argument(
+            std::format("Missing required parameter 'dt' in [{}] section", Sections::SIMULATION)
+        );
+    }
+    const double dt = loadQuantity(
+        "time", 
+        Sections::SIMULATION, 
+        "dt", 
+        "", 
+        config.dt, 
+        config.units_list
+    );
 
-    // Match the provided unit to known units.
-    return Units::convertToInternal(family, raw_unit, value);
-}
+    if (dt <= 0.0)
+        throw std::invalid_argument(std::format("Invalid time-step ({} is not positive)", dt));
 
-// Used to parse strings of the format "token(value)"
-bool Params::parseTokenParentheses(const std::string& input, std::string& token, std::string& value) {
-    // Define a regular expression for the specified format
-    // @todo Generalize regex to catch cases such as "foo()" and "foo" (without parentheses)	
-    // Catch "foo(bar)", "foo()" and "foo"
-    const std::regex pattern(R"(\s*(\w+)\((.*)\)\s*|\s*(\w+)\s*)");
+    // Config's threshold is specified as a fraction of the total number of steps,
+    // so we shall convert it to an absolute number of steps later on.
+    // For now, we just validate that the user-provided threshold is in [0, 1].
+    const double threshold = m_reader.GetReal(Sections::SIMULATION, "threshold", 0.0);
+    if (threshold < 0.0 || threshold > 1.0)
+        throw std::invalid_argument(std::format("Invalid threshold ({} must lie in [0, 1])", threshold));
 
-    // Match the input string against the pattern
-    if (std::smatch matches; std::regex_match(input, matches, pattern)) {
-        // Check if there are matched groups
-        if (matches.size() == 4 && (matches[1].matched || matches[3].matched)) {
-            // Extract token and value from the matched groups
-            token = (matches[1].matched) ? matches[1].str() : matches[3].str();
-            value = matches[2].str();
-            return true;
+    if (!m_reader.HasValue(Sections::SIMULATION, "steps")) {
+        throw std::invalid_argument(
+            std::format("Missing required parameter 'steps' in [{}] section", Sections::SIMULATION)
+        );
+    }
+    config.steps = parseLongSci(m_reader.Get(Sections::SIMULATION, "steps", ""), "steps");
+    if (config.steps < 1)
+        throw std::invalid_argument(std::format("Invalid number of steps ({}<1)", config.steps));
+
+    config.threshold = static_cast<long>(threshold * config.steps);  // Threshold in terms of steps
+
+    if (!m_reader.HasValue(Sections::SIMULATION, "sfreq")) {
+        throw std::invalid_argument(
+            std::format("Missing required parameter 'sfreq' in [{}] section", Sections::SIMULATION)
+        );
+    }
+    config.sfreq = parseLongSci(m_reader.Get(Sections::SIMULATION, "sfreq", ""), "sfreq");
+    if (config.sfreq < 1) {
+        throw std::invalid_argument(std::format("Observable recording frequency must be strictly positive (got {})", config.sfreq));
+    }
+    if (config.sfreq > config.steps) {
+        throw std::invalid_argument(std::format("Observable recording frequency (sfreq={}) cannot exceed total number of steps (steps={})", config.sfreq, config.steps));
+    }
+
+    config.nbeads = m_reader.GetInteger(Sections::SIMULATION, "nbeads", 4);
+    if (config.nbeads < 1)
+        throw std::invalid_argument(std::format("Invalid number of beads ({}<1)", config.nbeads));
+
+    // unsigned int seed = static_cast<unsigned int>(time(nullptr))
+    // TODO: For large seed values, we might be at risk of a silent precision loss through the double round-trip;
+    // GetInteger/GetLong-style integer parsing (or a small helper that accepts scientific notation without going through double) would be safer, and
+    // would match the pattern already used for steps/sfreq.
+    config.seed = static_cast<unsigned int>(std::stod(m_reader.Get(Sections::SIMULATION, "seed", "1234")));
+
+    // Bosonic or distinguishable simulation?
+    config.bosonic = m_reader.GetBoolean(Sections::SIMULATION, "bosonic", false);
+
+    // Handle exchange_xi parameter with conditional defaults
+    if (m_reader.HasValue(Sections::SIMULATION, "exchange_xi")) {
+        if (!config.bosonic) {
+            throw std::invalid_argument("exchange_xi parameter is only relevant for simulations of indistinguishable particles (bosonic=true)");
+        }
+
+        const double exchange_xi = m_reader.GetReal(Sections::SIMULATION, "exchange_xi", 0.0);
+
+        if (config.bosonic && std::abs(exchange_xi) < EPS) {
+            // Zero exchange_xi implies distinguishable particles, which is inconsistent with bosonic=true
+            throw std::invalid_argument("exchange_xi cannot be 0 when bosonic=true");
+        }
+
+        /*
+        // Assuming we allow negative exchange_xi values, we only check the absolute value is <= 1.0
+        if (std::abs(exchange_xi) > 1.0) {
+            throw std::invalid_argument(std::format("Invalid exchange_xi value of '{}'. Must be a nonzero number between -1 and +1.", exchange_xi));
+        }
+        */
+
+        // Enforce strictly positive exchange_xi values
+        if (std::abs(exchange_xi) > 1.0 || exchange_xi < 0.0) {
+            throw std::invalid_argument(std::format("Invalid exchange_xi value of '{}'. Must be strictly positive and less than or equal to 1.", exchange_xi));
+        }
+
+        config.exchange_xi = exchange_xi;
+    } else {
+        // Not explicitly set, apply defaults
+        if (config.bosonic) {
+            // Assume standard bosonic algorithm with xi=1.0 if not specified
+            config.exchange_xi = 1.0;
+        } else {
+            // Assume distinguishable particles with no exchange if not specified
+            config.exchange_xi = 0.0;
         }
     }
 
-    // If no match is found or the match does not have the expected groups, return false
-    return false;
+    // Fix the center of mass?
+    config.fixcom = m_reader.GetBoolean(Sections::SIMULATION, "fixcom", true);
+
+    // Enable periodic boundary conditions?
+    config.pbc = m_reader.GetBoolean(Sections::SIMULATION, "pbc", false);
+}
+
+/**
+ * Load basic parameters pertaining to the classical ring-polymer system.
+ *
+ * @param config Config object to load parameters into.
+ */
+void Params::loadSystemParams(SimulationConfig& config) const {
+    if (!m_reader.HasValue(Sections::SYSTEM, "natoms")) {
+        throw std::invalid_argument(
+            std::format("Missing required parameter 'natoms' in [{}] section", Sections::SYSTEM)
+        );
+    }
+    config.natoms = m_reader.GetInteger(Sections::SYSTEM, "natoms", 1);
+    if (config.natoms < 1)
+        throw std::invalid_argument(std::format("Invalid number of particles (specified {})", config.natoms));
+
+    //config.mass = Units::getQuantity("mass", m_reader.Get(Sections::SYSTEM, "mass", "1.0 dalton"));
+    if (!m_reader.HasValue(Sections::SYSTEM, "mass")) {
+        throw std::invalid_argument(
+            std::format("Missing required parameter 'mass' in [{}] section", Sections::SYSTEM)
+        );
+    }
+    const double mass = loadQuantity(
+        "mass",
+        Sections::SYSTEM,
+        "mass",
+        "",
+        config.mass,
+        config.units_list
+    );
+
+    if (mass <= 0.0)
+        throw std::invalid_argument(std::format("The provided mass ({0:4.3f}) is unphysical!", mass));
+
+    //config.box_size = Units::getQuantity("length", m_reader.Get(Sections::SYSTEM, "size", "1.0 picometer"));
+    if (!m_reader.HasValue(Sections::SYSTEM, "size")) {
+        throw std::invalid_argument(
+            std::format("Missing required parameter 'size' in [{}] section", Sections::SYSTEM)
+        );
+    }
+    const double box_size = loadQuantity(
+        "length",
+        Sections::SYSTEM,
+        "size",
+        "",
+        config.box_size,
+        config.units_list
+    );
+
+    if (box_size <= 0.0)
+        throw std::invalid_argument(std::format("The provided system size ({0:4.3f}) is unphysical!", box_size));
+}
+
+/**
+ * Load basic parameters pertaining to the time propagation scheme.
+ *
+ * @param config Config object to load parameters into.
+ */
+void Params::loadPropagatorParams(SimulationConfig& config) const {
+    // Implemented time propagators:
+    //  "cartesian": regular velocity Verlet algorithm, propagating the plain Cartesian coordinates
+    //  "normal_modes": a velocity Verlet algorithm that propagates the normal modes
+    using namespace std::string_view_literals;
+    constexpr auto allowed_propagators = std::array{ "cartesian"sv, "normal_modes"sv };
+    config.propagator_type = m_reader.GetString(Sections::SIMULATION, "propagator", "cartesian");
+    // TODO: Slight danger that config.bosonic might not be properly defined at this point
+    if (config.propagator_type == "normal_modes") {
+        if (config.bosonic) {
+            throw std::invalid_argument("Normal modes propagation is currently not available for bosons!");
+        }
+
+        if (config.nbeads % 2 != 0) {
+            throw std::invalid_argument("Normal modes propagation requires an even number of beads!");
+        }
+    }
+
+    if (!StringUtils::labelInArray(config.propagator_type, allowed_propagators)) {
+        throw std::invalid_argument(std::format("The specified time propagator ({}) is not supported!", config.propagator_type));
+    }
+}
+
+/**
+ * Load parameters pertaining to the action (e.g., Suzuki-Chin alpha parameter).
+ * 
+ * @param config Config object to load parameters into.
+ */
+void Params::loadActionParams(SimulationConfig& config) const {
+    const double gsf_alpha = m_reader.GetReal(Sections::ACTION, "gsf_alpha", 0.0);
+    if (gsf_alpha < 0.0 || gsf_alpha > 1.0) {
+        throw std::invalid_argument(std::format("Invalid Suzuki-Chin alpha parameter '{}' (must lie in [0, 1])", gsf_alpha));
+    }
+    config.gsf_alpha = gsf_alpha;
+}
+
+/**
+ * Load parameters pertaining to the thermostat.
+ *
+ * @param config Config object to load parameters into.
+ */
+void Params::loadThermostatParams(SimulationConfig& config) const {
+    // Setup allowed thermostats with documentation
+    using namespace std::string_view_literals;
+    constexpr auto allowed_thermostats = std::array{
+        "langevin"sv,            // A Langevin thermostat coupled to the Cartesian coordinates
+        "nose_hoover"sv,         // A single Nose-Hoover chain coupled to the whole system
+        "nose_hoover_np"sv,      // A unique Nose-Hoover chain coupled to each particle
+        "nose_hoover_np_dim"sv,  // A unique Nose-Hoover chain coupled to each Cartesian coordinate of each particle
+        "none"sv                 // No thermostat (NVE simulation)
+    };
+
+    /// TODO: Perhaps move config.rpmd_config.enabled initialization to here.
+    ///       Pros: We can allow the user to not specify the thermostat type
+    ///       when RPMD is enabled (set it to "none" automatically.)
+    ///       Cons: Moves RPMD-specific logic into a thermostat-specific function, which may not be ideal.
+    ///       Also, it may be better to require the user to explicitly specify the thermostat type even when RPMD is
+    ///       enabled, for clarity.
+
+    // Read and validate thermostat type first (this drives other validations)
+    config.thermostat.type = m_reader.GetString(Sections::SIMULATION, "thermostat", "error");
+    if (config.thermostat.type == "error") {
+        throw std::invalid_argument("Thermostat must be specified!");
+    }
+    if (!StringUtils::labelInArray(config.thermostat.type, allowed_thermostats)) {
+        throw std::invalid_argument(std::format("Unsupported thermostat type ({})", config.thermostat.type));
+    }
+
+    // Validate temperature. When no thermostat is used, temperature value may still be used for initializing velocities
+    //config.temperature = Units::getQuantity("temperature", m_reader.Get(Sections::SYSTEM, "temperature", "1.0 kelvin"));
+    const double temperature = loadQuantity(
+        "temperature",
+        Sections::SYSTEM,
+        "temperature",
+        "1.0 kelvin",
+        config.temperature,
+        config.units_list
+    );
+
+    if (temperature <= 0) {
+        throw std::invalid_argument(
+            std::format(
+                "The specified temperature ({0:4.3f} {1}) is not positive", 
+                temperature,
+                config.units_list["temperature"]
+            )
+        );
+    }
+
+    // Define additional parameters based on rudimentary config parameters
+    config.beta = 1.0 / (Constants::kB * config.temperature);
+
+#if TAU_CONVENTION
+    // Tau convention [J. Chem. Phys. 133, 124104 (2010)]
+    config.thermo_beta = config.beta / config.nbeads;
+    config.omega_p = config.nbeads / (config.beta * Constants::hbar);
+#else
+    // Beta convention
+    config.thermo_beta = config.beta;
+    config.omega_p = sqrt(config.nbeads) / (config.beta * Constants::hbar);
+#endif
+
+    config.spring_constant = config.mass * config.omega_p * config.omega_p;
+    config.beta_half_k = config.thermo_beta * 0.5 * config.spring_constant;
+
+    // Determine if this is a Nose-Hoover type thermostat
+    const bool is_nose_hoover = config.thermostat.type.find("nose_hoover") != std::string::npos;
+    config.thermostat.is_nose_hoover = is_nose_hoover;
+
+    // Handle nchains parameter (only for Nose-Hoover thermostats)
+    if (m_reader.HasValue(Sections::SIMULATION, "nchains") && !is_nose_hoover) {
+        throw std::invalid_argument("nchains can only be used with Nose-Hoover thermostats!");
+    }
+
+    // Only set nchains for Nose-Hoover thermostats
+    if (is_nose_hoover) {
+        int nchains = m_reader.GetInteger(Sections::SIMULATION, "nchains", 4);
+        if (nchains < 1) {
+            throw std::invalid_argument(std::format("Invalid number of Nose-Hoover chains ({}<1)", nchains));
+        }
+        config.thermostat.nchains = nchains;
+    }
+
+    // Handle normal mode thermostat coupling
+    bool nmthermostat = m_reader.GetBoolean(Sections::SIMULATION, "nmthermostat", false);
+    if (nmthermostat && config.thermostat.type == "none") {
+        throw std::invalid_argument("nmthermostat cannot be used in NVE ensemble!");
+    }
+
+    // Only set nmthermostat if we're using a thermostat
+    config.thermostat.couple_to_nm = nmthermostat;
+
+    // Handle gamma parameter (only relevant for Langevin thermostat)
+    if (config.thermostat.type == "langevin") {
+        const bool gamma_specified = m_reader.HasValue(Sections::SIMULATION, "gamma");
+        double gamma;
+
+        if (gamma_specified) {
+            // User specified gamma, validate it's positive
+            gamma = m_reader.GetReal(Sections::SIMULATION, "gamma", 0.0);
+            if (gamma <= 0.0) {
+                throw std::invalid_argument(std::format("Invalid gamma value ({0:g}), must be positive", gamma));
+            }
+        } else {
+            // Set default for Langevin thermostat when not specified by user
+            gamma = 1 / (100.0 * config.dt);
+        }
+
+        config.thermostat.gamma = gamma;
+    }
+}
+
+/**
+ * Load parameters pertaining to the coordinate initialization.
+ *
+ * @param config Config object to load parameters into.
+ */
+void Params::loadCoordInitParams(SimulationConfig& config) const {
+    const std::string init_pos = m_reader.Get(Sections::SIMULATION, "initial_position", "random");
+
+    std::string init_pos_type, init_pos_specification;
+
+    if (!StringUtils::parseTokenParentheses(init_pos, init_pos_type, init_pos_specification)) 
+    {
+        throw std::invalid_argument(
+            std::format("Invalid coordinate initialization method '{}'", init_pos)
+        );
+    }
+
+    using namespace std::string_view_literals;
+    constexpr auto allowed_coord_init_methods = std::array{ "random"sv, "xyz"sv, "grid"sv }; /// TODO: Use cell instead of grid?
+
+    if (!StringUtils::labelInArray(init_pos_type, allowed_coord_init_methods))
+        throw std::invalid_argument(std::format("The specified coordinate initialization method ({}) is not supported!",
+            init_pos_type));
+
+    if (init_pos_type == "xyz") {
+        /// TODO: Check correctness of the unit (perhaps create a universal function for this, and do this in other places as well)
+        loadXyzInitParams(
+            m_reader,
+            Sections::SIMULATION,
+            "Coordinate",
+            "initial_position",
+            init_pos_specification,
+            config.init_pos_index_offset,
+            config.init_pos_filename,
+            config.init_pos_unit,
+            config.init_pos_frame,
+            config.init_pos_frame_mode
+        );
+    } else if (
+        m_reader.HasValue(Sections::SIMULATION, "initial_position_frame") ||
+        m_reader.HasValue(Sections::SIMULATION, "initial_position_frame_mode")
+    ) {
+        throw std::invalid_argument(
+            "initial_position_frame and initial_position_frame_mode can only be used with initial_position = xyz(...)"
+        );
+    } else if (
+        init_pos_type != "xyz" &&
+        !init_pos_specification.empty()
+        )
+    {
+        throw std::invalid_argument(
+            std::format("Coordinate initialization method '{}' does not accept a specification (got '{}')",
+                init_pos_type, init_pos_specification)
+        );
+    }
+
+    config.init_pos_type = init_pos_type;
+}
+
+/**
+ * Load parameters pertaining to the velocity initialization.
+ *
+ * @param config Config object to load parameters into.
+ */
+void Params::loadVelocityInitParams(SimulationConfig& config) const {
+    // Allowed velocity initialization methods:
+    //  "random": samples from Maxwell-Boltzmann distribution
+    //  "xyz": reads from strict XYZ format files
+    //  "xyz(format)": reads from XYZ format with per-bead files
+    std::string init_vel_type, init_vel_specification;
+
+    if (!StringUtils::parseTokenParentheses(
+        m_reader.Get(Sections::SIMULATION, "initial_velocity", "random"), 
+        init_vel_type,
+        init_vel_specification
+        )) {
+        throw std::invalid_argument("Invalid velocity initialization method");
+    }
+
+    using namespace std::string_view_literals;
+    constexpr auto allowed_vel_init_methods = std::array{ "random"sv, "xyz"sv };
+
+    if (!StringUtils::labelInArray(init_vel_type, allowed_vel_init_methods))
+        throw std::invalid_argument(std::format("The specified velocity initialization method ({}) is not supported!",
+            init_vel_type));
+
+    if (init_vel_type == "xyz") {
+        loadXyzInitParams(
+            m_reader,
+            Sections::SIMULATION,
+            "Velocity",
+            "initial_velocity",
+            init_vel_specification,
+            config.init_vel_index_offset,
+            config.init_vel_filename,
+            config.init_vel_unit,
+            config.init_vel_frame,
+            config.init_vel_frame_mode
+        );
+    } else if (
+        m_reader.HasValue(Sections::SIMULATION, "initial_velocity_frame") ||
+        m_reader.HasValue(Sections::SIMULATION, "initial_velocity_frame_mode")) {
+        throw std::invalid_argument(
+            "initial_velocity_frame and initial_velocity_frame_mode can only be used with initial_velocity = xyz(...)"
+        );
+    } else if (
+        init_vel_type != "xyz" &&
+        !init_vel_specification.empty()
+        ) {
+        throw std::invalid_argument(
+            std::format("Velocity initialization method '{}' does not accept a specification (got '{}')",
+                init_vel_type, init_vel_specification)
+        );
+    }
+
+    /// TODO: Local init_vel_type isn't really necessary
+    config.init_vel_type = init_vel_type;
+}
+
+/**
+ * Load parameters pertaining to the external potential.
+ *
+ * @param config Config object to load parameters into.
+ */
+void Params::loadExternalPotentialParams(SimulationConfig& config) const {
+    using namespace std::string_view_literals;
+    constexpr auto allowed_ext_potential_names = std::array{"free"sv, "harmonic"sv, "anharmonic"sv, "double_well"sv, "cosine"sv};
+
+    const std::string name = m_reader.GetString(Sections::EXT_POTENTIAL, "name", "free");
+    if (!StringUtils::labelInArray(name, allowed_ext_potential_names))
+        throw std::invalid_argument(std::format("The specified external potential ({}) is not supported!", name));
+
+    if (name == "harmonic") {
+        // In atomic units, the angular frequency of the oscillator has the same dimensions as the energy
+        const double omega = Units::getQuantity(
+            "energy", m_reader.Get(Sections::EXT_POTENTIAL, "omega", "1.0 millielectronvolt"));
+        config.ext_potential_cfg = PotentialConfig{name, HarmonicPotentialParams{config.mass, omega}};
+    } else if (name == "anharmonic") {
+        const double omega = Units::getQuantity(
+            "energy", m_reader.Get(Sections::EXT_POTENTIAL, "omega", "1.0 millielectronvolt"));
+        const double cubic_const = m_reader.GetReal(Sections::EXT_POTENTIAL, "cubic_const", 0.0);
+        const double quart_const = m_reader.GetReal(Sections::EXT_POTENTIAL, "quart_const", 0.0);
+        config.ext_potential_cfg = PotentialConfig{name, AnharmonicPotentialParams{config.mass, omega, cubic_const, quart_const}};
+    } else if (name == "double_well") {
+        const double strength = Units::getQuantity(
+            "energy", m_reader.Get(Sections::EXT_POTENTIAL, "strength", "1.0 millielectronvolt"));
+        const double location = Units::getQuantity(
+            "length", m_reader.Get(Sections::EXT_POTENTIAL, "location", "1.0 angstrom"));
+        config.ext_potential_cfg = PotentialConfig{name, DoubleWellPotentialParams{config.mass, strength, location}};
+    } else if (name == "cosine") {
+        const double amplitude = Units::getQuantity(
+            "energy", m_reader.Get(Sections::EXT_POTENTIAL, "amplitude", "1.0 millielectronvolt"));
+        const double phase = m_reader.GetReal(Sections::EXT_POTENTIAL, "phase", 0.0);
+        config.ext_potential_cfg = PotentialConfig{name, CosinePotentialParams{amplitude, config.box_size, phase}};
+    } else {
+        config.ext_potential_cfg = PotentialConfig{};  // defaults to "free"
+    }
+}
+
+/**
+ * Load parameters pertaining to the interaction potential.
+ *
+ * @param config Config object to load parameters into.
+ */
+void Params::loadInteractionPotentialParams(SimulationConfig& config) const {
+    using namespace std::string_view_literals;
+    constexpr auto allowed_int_potential_names = std::array{
+        "aziz"sv,
+        "free"sv,
+        "harmonic"sv,
+        "anharmonic"sv,
+        "double_well"sv,
+        "dipole"sv
+    };
+
+    const std::string name = m_reader.GetString(Sections::INT_POTENTIAL, "name", "free");
+    if (!StringUtils::labelInArray(name, allowed_int_potential_names))
+        throw std::invalid_argument(std::format("The specified interaction potential ({}) is not supported!", name));
+
+    // In the special case of free particles the cutoff is forced to zero (no pairwise loops).
+    // For all other potentials the user-supplied cutoff is used (negative = no cutoff).
+    const double cutoff = (name == "free")
+        ? 0.0
+        : Units::getQuantity("length", m_reader.Get(Sections::INT_POTENTIAL, "cutoff", "-1.0 angstrom"));
+
+    if (name == "free") {
+        config.int_potential_cfg = PotentialConfig{name, FreePotentialParams{}, cutoff};
+    } else if (name == "harmonic") {
+        const double omega = Units::getQuantity(
+            "energy", m_reader.Get(Sections::INT_POTENTIAL, "omega", "1.0 millielectronvolt"));
+        config.int_potential_cfg = PotentialConfig{name, HarmonicPotentialParams{config.mass, omega}, cutoff};
+    } else if (name == "anharmonic") {
+        const double omega = Units::getQuantity(
+            "energy", m_reader.Get(Sections::INT_POTENTIAL, "omega", "1.0 millielectronvolt"));
+        const double cubic_const = m_reader.GetReal(Sections::INT_POTENTIAL, "cubic_const", 0.0);
+        const double quart_const = m_reader.GetReal(Sections::INT_POTENTIAL, "quart_const", 0.0);
+        config.int_potential_cfg = PotentialConfig{name, AnharmonicPotentialParams{config.mass, omega, cubic_const, quart_const}, cutoff};
+    } else if (name == "double_well") {
+        const double strength = Units::getQuantity(
+            "energy", m_reader.Get(Sections::INT_POTENTIAL, "strength", "1.0 millielectronvolt"));
+        const double location = Units::getQuantity(
+            "length", m_reader.Get(Sections::INT_POTENTIAL, "location", "1.0 angstrom"));
+        config.int_potential_cfg = PotentialConfig{name, DoubleWellPotentialParams{config.mass, strength, location}, cutoff};
+    } else if (name == "dipole") {
+        const double strength = m_reader.GetReal(Sections::INT_POTENTIAL, "strength", 1.0);
+        config.int_potential_cfg = PotentialConfig{name, DipolePotentialParams{strength}, cutoff};
+    } else if (name == "aziz") {
+        config.int_potential_cfg = PotentialConfig{name, AzizPotentialParams{}, cutoff};
+    } else {
+        config.int_potential_cfg = PotentialConfig{name, FreePotentialParams{}, cutoff};
+    }
+}
+
+/**
+ * Load parameters pertaining to the output (dumps).
+ *
+ * @param config Config object to load parameters into.
+ */
+void Params::loadOutputParams(SimulationConfig& config) const {
+    config.dumps_list["positions"] = m_reader.Get(Sections::DUMP, "positions", "off");
+    config.dumps_list["velocities"] = m_reader.Get(Sections::DUMP, "velocities", "off");
+    config.dumps_list["forces"] = m_reader.Get(Sections::DUMP, "forces", "off");
+}
+
+/**
+ * Load parameters pertaining to the observables.
+ *
+ * @param config Config object to load parameters into.
+ */
+void Params::loadObservableParams(SimulationConfig& config) const {
+    static const std::unordered_set<std::string_view> allowed = {
+        "kinetic",
+        "potential",
+        "virial",
+        "ext_pot",
+        "int_pot",
+        "cl_kinetic",
+        "cl_spring",
+        "temperature",
+        "nh_energy",
+        "prob_dist",
+        "prob_all",
+        "sign",
+        "w_gsf",
+        "pot_gsf",
+        "even_pot_gsf",
+        "kin_gsf",
+        "virial_gsf",
+        "center_of_mass",
+    };
+
+    for (const auto& key : m_reader.GetSectionKeys(Sections::OBSERVABLES)) {
+        if (allowed.contains(key)) {
+            config.observables_list[key] = m_reader.Get(Sections::OBSERVABLES, key, "off");
+        } else {
+            throw std::runtime_error(
+                std::format("Unknown observable key '{}' in [{}] section", key, Sections::OBSERVABLES)
+            );
+        }
+    }
+}
+
+
+void Params::loadRpmdParams(SimulationConfig& config) const {
+    config.rpmd_config.enabled = m_reader.GetBoolean(Sections::SIMULATION, "rpmd", false);
+
+    if (config.rpmd_config.enabled) {
+        if (config.thermostat.type != "none") {
+            throw std::invalid_argument(
+                std::format(
+                    "RPMD mode requires 'thermostat = none' but got '{}'", 
+                    config.thermostat.type
+                )
+            );
+        }
+
+        if (
+            m_reader.HasValue(Sections::SIMULATION, "initial_position_frame") ||
+            m_reader.HasValue(Sections::SIMULATION, "initial_position_frame_mode") ||
+            m_reader.HasValue(Sections::SIMULATION, "initial_velocity_frame") ||
+            m_reader.HasValue(Sections::SIMULATION, "initial_velocity_frame_mode")
+            )
+        {
+            throw std::invalid_argument(
+                "RPMD cannot be used simultaneously with 'initial_position_frame', 'initial_position_frame_mode', "
+                "'initial_velocity_frame', or 'initial_velocity_frame_mode' parameters."
+            );
+        }
+
+        config.rpmd_config.num_runs = m_reader.GetInteger(Sections::SIMULATION, "rpmd_nruns", 1);
+        if (config.rpmd_config.num_runs < 1)
+            throw std::invalid_argument("rpmd_nruns must be at least 1");
+
+        config.rpmd_config.nvt_discard_frac = m_reader.GetReal(Sections::SIMULATION, "rpmd_nvt_discard_fraction", 0.0);
+        if (config.rpmd_config.nvt_discard_frac < 0 || config.rpmd_config.nvt_discard_frac >= 1)
+            throw std::invalid_argument("rpmd_nvt_discard_fraction must be non-negative and less than 1");
+
+        /*config.rpmd_config.xyz_path = m_reader.Get(Sections::SIMULATION, "rpmd_xyz_path", "");
+        if (config.rpmd_config.xyz_path.empty())
+            throw std::invalid_argument("rpmd_xyz_path must be specified when RPMD is enabled");*/
+    }
 }
