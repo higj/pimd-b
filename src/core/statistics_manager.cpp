@@ -92,9 +92,9 @@ std::shared_ptr<BosonicExchangeBase> StatisticsManager::createBosonicExchangeObj
         x_last_bead = std::shared_ptr<VecArray>(state, &state->coord);
     }
 
-    if (exchange_xi < EPS || std::abs(exchange_xi) > 1.0)
+    if (std::abs(exchange_xi) < EPS || std::abs(exchange_xi) > 1.0)
     {
-        throw std::invalid_argument("Invalid exchange_xi value. Must be in the range [-1, 1] and nonzero.");
+        throw std::invalid_argument("Invalid exchange_xi value. Must be strictly positive and less than or equal to 1.");
     }
 
     if (exchange_xi < 1.0) {

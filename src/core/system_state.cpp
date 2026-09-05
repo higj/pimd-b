@@ -19,33 +19,29 @@ SystemState::SystemState(int rank, int nproc, int natoms, int nbeads, bool fixco
 }
 
 void SystemState::zeroMomentum() {
-    VecArray momentum_cm;           // Resulting center of mass momentum vector
-    VecArray momentum_cm_per_bead;  // Contribution of the current time-slice to the center of mass momentum vector
-
-    //const int natoms = momenta.len();
+    Vec momentum_cm_per_bead{};  // Contribution of the current time-slice to the center of mass momentum vector
+    Vec momentum_cm{};           // Resulting center of mass momentum vector, zero-initialised
 
     for (int ptcl_idx = 0; ptcl_idx < m_natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
-            momentum_cm_per_bead(0, axis) += momenta(ptcl_idx, axis);
+            momentum_cm_per_bead[axis] += momenta(ptcl_idx, axis);
         }
     }
 
     for (int axis = 0; axis < NDIM; ++axis) {
-        momentum_cm_per_bead(0, axis) /= (m_natoms * m_nbeads);
+        momentum_cm_per_bead[axis] /= (m_natoms * m_nbeads);
     }
 
     MPI_Allreduce(
-        momentum_cm_per_bead.data(), 
-        momentum_cm.data(), 
-        momentum_cm.size(), 
-        MPI_DOUBLE, 
-        MPI_SUM,
-        MPI_COMM_WORLD
+        momentum_cm_per_bead.data(),
+        momentum_cm.data(),
+        NDIM,
+        MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD
     );
 
     for (int ptcl_idx = 0; ptcl_idx < m_natoms; ++ptcl_idx) {
         for (int axis = 0; axis < NDIM; ++axis) {
-            momenta(ptcl_idx, axis) -= momentum_cm(0, axis);
+            momenta(ptcl_idx, axis) -= momentum_cm[axis];
         }
     }
 }
