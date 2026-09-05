@@ -7,7 +7,8 @@
 #include <memory>
 #include <string_view>
 
-namespace {
+namespace
+{
     // Output destinations are deliberately defined in code, not in the input file.
     // Leave an entry empty to write that observable to Output::MAIN_FILENAME.
     constexpr std::string_view ENERGY_OUTPUT_FILENAME;
@@ -44,7 +45,8 @@ ObservableInitializer::ObservableInitializer(
 }
 
 std::shared_ptr<Observable> ObservableInitializer::createPrimitiveKineticEnergyObservable(
-    const std::string& out_unit) const {
+    const std::string& out_unit) const
+{
     auto obs = std::make_shared<PrimitiveKineticEnergyObservable>(
         std::shared_ptr<const VecArray>(m_state, &m_state->coord),
         std::shared_ptr<const VecArray>(m_state, &m_state->prev_coord),
@@ -55,7 +57,8 @@ std::shared_ptr<Observable> ObservableInitializer::createPrimitiveKineticEnergyO
 }
 
 std::shared_ptr<Observable> ObservableInitializer::createPotentialEnergyObservable(
-    const std::string& out_unit) const {
+    const std::string& out_unit) const
+{
     auto obs = std::make_shared<PotentialEnergyObservable>(
         std::shared_ptr<const VecArray>(m_state, &m_state->coord),
         m_force_mgr, m_box_context, m_bead_context,
@@ -65,7 +68,8 @@ std::shared_ptr<Observable> ObservableInitializer::createPotentialEnergyObservab
 }
 
 std::shared_ptr<Observable> ObservableInitializer::createVirialEnergyObservable(
-    const std::string& out_unit) const {
+    const std::string& out_unit) const
+{
     auto obs = std::make_shared<VirialEnergyObservable>(
         std::shared_ptr<const VecArray>(m_state, &m_state->coord),
         std::shared_ptr<const VecArray>(m_state, &m_state->physical_forces),
@@ -75,7 +79,8 @@ std::shared_ptr<Observable> ObservableInitializer::createVirialEnergyObservable(
 }
 
 std::shared_ptr<Observable> ObservableInitializer::createExtPotObservable(
-    const std::string& out_unit) const {
+    const std::string& out_unit) const
+{
     auto obs = std::make_shared<ExtPotObservable>(
         std::shared_ptr<const VecArray>(m_state, &m_state->coord),
         m_force_mgr, m_bead_context, m_stride, out_unit);
@@ -84,7 +89,8 @@ std::shared_ptr<Observable> ObservableInitializer::createExtPotObservable(
 }
 
 std::shared_ptr<Observable> ObservableInitializer::createIntPotObservable(
-    const std::string& out_unit) const {
+    const std::string& out_unit) const
+{
     auto obs = std::make_shared<IntPotObservable>(
         std::shared_ptr<const VecArray>(m_state, &m_state->coord),
         m_force_mgr, m_box_context, m_bead_context, m_stride, out_unit);
@@ -92,7 +98,8 @@ std::shared_ptr<Observable> ObservableInitializer::createIntPotObservable(
     return obs;
 }
 
-std::shared_ptr<Observable> ObservableInitializer::createClassicalKineticEnergyObservable(const std::string& out_unit) const
+std::shared_ptr<Observable> ObservableInitializer::createClassicalKineticEnergyObservable(
+    const std::string& out_unit) const
 {
     auto observable = std::make_shared<ClassicalKineticEnergyObservable>(
         m_velocity_context,
@@ -104,7 +111,8 @@ std::shared_ptr<Observable> ObservableInitializer::createClassicalKineticEnergyO
     return observable;
 }
 
-std::shared_ptr<Observable> ObservableInitializer::createClassicalSpringEnergyObservable(const std::string& out_unit) const
+std::shared_ptr<Observable> ObservableInitializer::createClassicalSpringEnergyObservable(
+    const std::string& out_unit) const
 {
     auto observable = std::make_shared<ClassicalSpringEnergyObservable>(
         std::shared_ptr<const VecArray>(m_state, &m_state->coord),
@@ -130,7 +138,8 @@ std::shared_ptr<Observable> ObservableInitializer::createTemperatureObservable(c
     return observable;
 }
 
-std::shared_ptr<Observable> ObservableInitializer::createNoseHooverEnergyObservable(const std::string& out_unit) const {
+std::shared_ptr<Observable> ObservableInitializer::createNoseHooverEnergyObservable(const std::string& out_unit) const
+{
     auto observable = std::make_shared<NoseHooverEnergyObservable>(
         m_thermostat_context,
         m_stride,
@@ -184,7 +193,8 @@ std::shared_ptr<Observable> ObservableInitializer::createBosonicSignObservable(c
 }
 
 std::shared_ptr<Observable> ObservableInitializer::createSuzukiChinWeightObservable(
-    const std::string& out_unit) const {
+    const std::string& out_unit) const
+{
     auto obs = std::make_shared<SuzukiChinWeightObservable>(
         std::shared_ptr<const VecArray>(m_state, &m_state->coord),
         m_force_mgr, m_bead_context, m_box_context, m_thermal_context, m_spring_context,
@@ -194,7 +204,8 @@ std::shared_ptr<Observable> ObservableInitializer::createSuzukiChinWeightObserva
 }
 
 std::shared_ptr<Observable> ObservableInitializer::createSuzukiChinPotEnergyObservable(
-    const std::string& out_unit) const {
+    const std::string& out_unit) const
+{
     auto obs = std::make_shared<SuzukiChinPotEnergyObservable>(
         std::shared_ptr<const VecArray>(m_state, &m_state->coord),
         m_force_mgr, m_bead_context, m_box_context, m_stride, out_unit);
@@ -203,7 +214,8 @@ std::shared_ptr<Observable> ObservableInitializer::createSuzukiChinPotEnergyObse
 }
 
 std::shared_ptr<Observable> ObservableInitializer::createSuzukiChinEvenPotEnergyObservable(
-    const std::string& out_unit) const {
+    const std::string& out_unit) const
+{
     auto obs = std::make_shared<SuzukiChinEvenPotEnergyObservable>(
         std::shared_ptr<const VecArray>(m_state, &m_state->coord),
         m_force_mgr, m_bead_context, m_box_context, m_stride, out_unit);
@@ -212,7 +224,8 @@ std::shared_ptr<Observable> ObservableInitializer::createSuzukiChinEvenPotEnergy
 }
 
 std::shared_ptr<Observable> ObservableInitializer::createSuzukiChinKineticEnergyObservable(
-    const std::string& out_unit) const {
+    const std::string& out_unit) const
+{
     auto obs = std::make_shared<SuzukiChinKineticEnergyObservable>(
         std::shared_ptr<const VecArray>(m_state, &m_state->coord),
         m_force_mgr, m_bead_context, m_box_context, m_spring_context,
@@ -222,7 +235,8 @@ std::shared_ptr<Observable> ObservableInitializer::createSuzukiChinKineticEnergy
 }
 
 std::shared_ptr<Observable> ObservableInitializer::createSuzukiChinVirialEnergyObservable(
-    const std::string& out_unit) const {
+    const std::string& out_unit) const
+{
     auto obs = std::make_shared<SuzukiChinVirialEnergyObservable>(
         std::shared_ptr<const VecArray>(m_state, &m_state->coord),
         m_force_mgr, m_bead_context, m_box_context, m_stride, out_unit);
@@ -289,8 +303,8 @@ std::vector<std::shared_ptr<Observable>> ObservableInitializer::createObservable
                 observables.push_back(createExtPotObservable(item.getEffectiveUnit()));
                 break;
             case ObservableType::INT_POT:
-                 observables.push_back(createIntPotObservable(item.getEffectiveUnit()));
-                 break;
+                observables.push_back(createIntPotObservable(item.getEffectiveUnit()));
+                break;
             case ObservableType::CL_KINETIC_ENERGY:
                 observables.push_back(createClassicalKineticEnergyObservable(item.getEffectiveUnit()));
                 break;
