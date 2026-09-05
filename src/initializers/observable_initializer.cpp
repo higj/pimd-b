@@ -187,7 +187,7 @@ std::shared_ptr<Observable> ObservableInitializer::createSuzukiChinWeightObserva
     const std::string& out_unit) const {
     auto obs = std::make_shared<SuzukiChinWeightObservable>(
         std::shared_ptr<const VecArray>(m_state, &m_state->coord),
-        m_force_mgr, m_bead_context, m_thermal_context, m_spring_context,
+        m_force_mgr, m_bead_context, m_box_context, m_thermal_context, m_spring_context,
         m_action_context.gsf_alpha, m_stride, out_unit);
     obs->setOutputFilename(GSF_OUTPUT_FILENAME);
     return obs;
@@ -197,7 +197,7 @@ std::shared_ptr<Observable> ObservableInitializer::createSuzukiChinPotEnergyObse
     const std::string& out_unit) const {
     auto obs = std::make_shared<SuzukiChinPotEnergyObservable>(
         std::shared_ptr<const VecArray>(m_state, &m_state->coord),
-        m_force_mgr, m_bead_context, m_stride, out_unit);
+        m_force_mgr, m_bead_context, m_box_context, m_stride, out_unit);
     obs->setOutputFilename(GSF_OUTPUT_FILENAME);
     return obs;
 }
@@ -206,7 +206,7 @@ std::shared_ptr<Observable> ObservableInitializer::createSuzukiChinEvenPotEnergy
     const std::string& out_unit) const {
     auto obs = std::make_shared<SuzukiChinEvenPotEnergyObservable>(
         std::shared_ptr<const VecArray>(m_state, &m_state->coord),
-        m_force_mgr, m_bead_context, m_stride, out_unit);
+        m_force_mgr, m_bead_context, m_box_context, m_stride, out_unit);
     obs->setOutputFilename(GSF_OUTPUT_FILENAME);
     return obs;
 }
@@ -215,7 +215,7 @@ std::shared_ptr<Observable> ObservableInitializer::createSuzukiChinKineticEnergy
     const std::string& out_unit) const {
     auto obs = std::make_shared<SuzukiChinKineticEnergyObservable>(
         std::shared_ptr<const VecArray>(m_state, &m_state->coord),
-        m_force_mgr, m_bead_context, m_spring_context,
+        m_force_mgr, m_bead_context, m_box_context, m_spring_context,
         m_action_context.gsf_alpha, m_stride, out_unit);
     obs->setOutputFilename(GSF_OUTPUT_FILENAME);
     return obs;
@@ -225,7 +225,7 @@ std::shared_ptr<Observable> ObservableInitializer::createSuzukiChinVirialEnergyO
     const std::string& out_unit) const {
     auto obs = std::make_shared<SuzukiChinVirialEnergyObservable>(
         std::shared_ptr<const VecArray>(m_state, &m_state->coord),
-        m_force_mgr, m_bead_context, m_stride, out_unit);
+        m_force_mgr, m_bead_context, m_box_context, m_stride, out_unit);
     obs->setOutputFilename(GSF_OUTPUT_FILENAME);
     return obs;
 }
