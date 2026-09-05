@@ -71,6 +71,7 @@ namespace SharedComputations {
         const VecArray& coord,
         const ForceManager& force_mgr,
         const BeadContext& bead_ctx,
+        const BoxContext& box_ctx,
         ObservableCache* cache
     );
 

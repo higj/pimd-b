@@ -1,6 +1,7 @@
 #pragma once
 #include "observables/observable.h"
 #include "contexts/bead_context.h"
+#include "contexts/box_context.h"
 #include "contexts/spring_context.h"
 #include "common.h"
 #include <memory>
@@ -13,6 +14,7 @@ public:
         const std::shared_ptr<const VecArray>& coord,
         const std::shared_ptr<const ForceManager>& force_mgr,
         const BeadContext& bead_ctx,
+        const BoxContext& box_ctx,
         const SpringContext& spring_ctx,
         double alpha,
         int out_freq,
@@ -25,6 +27,7 @@ private:
     std::shared_ptr<const VecArray>     m_coord;
     std::shared_ptr<const ForceManager> m_force_mgr;
     BeadContext  m_bead_ctx;
+    BoxContext   m_box_ctx;
     SpringContext m_spring_ctx;
     double        m_alpha;
 };
