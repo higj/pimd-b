@@ -2,6 +2,7 @@
 
 #include "contexts/rpmd_context.h"
 #include "contexts/thermal_context.h"
+#include "contexts/action_context.h"
 #include "contexts/bead_context.h"
 #include "contexts/spring_context.h"
 #include "contexts/box_context.h"

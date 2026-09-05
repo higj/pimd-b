@@ -102,6 +102,7 @@ Simulation::Simulation(int rank, int nproc, const std::shared_ptr<SimulationConf
         config->observables_list,
         m_state,
         m_force_mgr,
+        m_action_ctx,
         m_bead_ctx,
         m_thermal_ctx,
         m_spring_ctx,
@@ -155,6 +156,10 @@ void Simulation::initializeConfigurationDependentContexts(
     m_box_ctx = BoxContext{
         .box_size = config->box_size,
         .pbc = config->pbc
+    };
+
+    m_action_ctx = ActionContext{
+        .gsf_alpha = config->gsf_alpha
     };
 
     m_bead_ctx = BeadContext{

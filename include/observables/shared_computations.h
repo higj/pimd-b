@@ -53,4 +53,25 @@ namespace SharedComputations {
         ObservableCache* cache
     );
 
+    struct SuzukiChinComponents {
+        double total_potential;
+        double force_squared;
+        double virial;
+    };
+
+    /**
+     * @brief Computes (or retrieves from cache) the three raw intermediate values
+     * shared by all Suzuki-Chin observables.
+     *
+     * Runs the O(N^2) pair loop - evaluating both V and gradV per pair - exactly once
+     * per step. All three results are populated atomically; any observable that calls
+     * this function after the first will get a full cache hit.
+     */
+    SuzukiChinComponents suzukiChinComponents(
+        const VecArray& coord,
+        const ForceManager& force_mgr,
+        const BeadContext& bead_ctx,
+        ObservableCache* cache
+    );
+
 } // namespace SharedComputations

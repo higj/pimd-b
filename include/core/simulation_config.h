@@ -85,6 +85,9 @@ struct SimulationConfig {
     // RPMD-related parameters
     RpmdConfig rpmd_config;
 
+    // Action parameters
+    double gsf_alpha; // Suzuki-Chin alpha parameter
+
     unsigned int seed;  // Seed for random number generation
     int this_bead;      // Current process id ("rank" of MPI_Comm_rank)
 };

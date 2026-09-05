@@ -171,6 +171,7 @@ private:
     ThermalContext m_thermal_ctx;
     SpringContext m_spring_ctx;
     BoxContext m_box_ctx;
+    ActionContext m_action_ctx;
     BeadContext m_bead_ctx;
     NormalModesContext m_nm_ctx;
     ThermostatContext m_thermostat_ctx;

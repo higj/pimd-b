@@ -22,6 +22,7 @@ ObservableInitializer::ObservableInitializer(
     const StringMap& obs_list,
     const std::shared_ptr<SystemState>& state,
     const std::shared_ptr<ForceManager>& force_mgr,
+    const ActionContext& action_context,
     const BeadContext& bead_context,
     const ThermalContext& thermal_context,
     const SpringContext& spring_context,
@@ -32,6 +33,7 @@ ObservableInitializer::ObservableInitializer(
     m_observables_list(std::move(obs_list)),
     m_state(state),
     m_force_mgr(force_mgr),
+    m_action_context(action_context),
     m_bead_context(bead_context),
     m_thermal_context(thermal_context),
     m_spring_context(spring_context),
@@ -181,19 +183,51 @@ std::shared_ptr<Observable> ObservableInitializer::createBosonicSignObservable(c
     return observable;
 }
 
-std::shared_ptr<Observable> ObservableInitializer::createGSFObservable(const std::string& out_unit) const
-{
-    auto observable = std::make_shared<GSFActionObservable>(
+std::shared_ptr<Observable> ObservableInitializer::createSuzukiChinWeightObservable(
+    const std::string& out_unit) const {
+    auto obs = std::make_shared<SuzukiChinWeightObservable>(
         std::shared_ptr<const VecArray>(m_state, &m_state->coord),
-        m_force_mgr,
-        m_bead_context,
-        m_thermal_context,
-        m_spring_context,
-        m_stride,
-        out_unit
-    );
-    observable->setOutputFilename(GSF_OUTPUT_FILENAME);
-    return observable;
+        m_force_mgr, m_bead_context, m_thermal_context, m_spring_context,
+        m_action_context.gsf_alpha, m_stride, out_unit);
+    obs->setOutputFilename(GSF_OUTPUT_FILENAME);
+    return obs;
+}
+
+std::shared_ptr<Observable> ObservableInitializer::createSuzukiChinPotEnergyObservable(
+    const std::string& out_unit) const {
+    auto obs = std::make_shared<SuzukiChinPotEnergyObservable>(
+        std::shared_ptr<const VecArray>(m_state, &m_state->coord),
+        m_force_mgr, m_bead_context, m_stride, out_unit);
+    obs->setOutputFilename(GSF_OUTPUT_FILENAME);
+    return obs;
+}
+
+std::shared_ptr<Observable> ObservableInitializer::createSuzukiChinEvenPotEnergyObservable(
+    const std::string& out_unit) const {
+    auto obs = std::make_shared<SuzukiChinEvenPotEnergyObservable>(
+        std::shared_ptr<const VecArray>(m_state, &m_state->coord),
+        m_force_mgr, m_bead_context, m_stride, out_unit);
+    obs->setOutputFilename(GSF_OUTPUT_FILENAME);
+    return obs;
+}
+
+std::shared_ptr<Observable> ObservableInitializer::createSuzukiChinKineticEnergyObservable(
+    const std::string& out_unit) const {
+    auto obs = std::make_shared<SuzukiChinKineticEnergyObservable>(
+        std::shared_ptr<const VecArray>(m_state, &m_state->coord),
+        m_force_mgr, m_bead_context, m_spring_context,
+        m_action_context.gsf_alpha, m_stride, out_unit);
+    obs->setOutputFilename(GSF_OUTPUT_FILENAME);
+    return obs;
+}
+
+std::shared_ptr<Observable> ObservableInitializer::createSuzukiChinVirialEnergyObservable(
+    const std::string& out_unit) const {
+    auto obs = std::make_shared<SuzukiChinVirialEnergyObservable>(
+        std::shared_ptr<const VecArray>(m_state, &m_state->coord),
+        m_force_mgr, m_bead_context, m_stride, out_unit);
+    obs->setOutputFilename(GSF_OUTPUT_FILENAME);
+    return obs;
 }
 
 std::shared_ptr<Observable> ObservableInitializer::createCenterOfMassObservable(const std::string& out_unit) const
@@ -278,8 +312,20 @@ std::vector<std::shared_ptr<Observable>> ObservableInitializer::createObservable
             case ObservableType::BOSONIC_SIGN:
                 observables.push_back(createBosonicSignObservable(item.getEffectiveUnit()));
                 break;
-            case ObservableType::GSF:
-                observables.push_back(createGSFObservable(item.getEffectiveUnit()));
+            case ObservableType::SC_WEIGHT:
+                observables.push_back(createSuzukiChinWeightObservable(item.getEffectiveUnit()));
+                break;
+            case ObservableType::SC_POT_ENERGY:
+                observables.push_back(createSuzukiChinPotEnergyObservable(item.getEffectiveUnit()));
+                break;
+            case ObservableType::SC_EVEN_POT_ENERGY:
+                observables.push_back(createSuzukiChinEvenPotEnergyObservable(item.getEffectiveUnit()));
+                break;
+            case ObservableType::SC_KINETIC_ENERGY:
+                observables.push_back(createSuzukiChinKineticEnergyObservable(item.getEffectiveUnit()));
+                break;
+            case ObservableType::SC_VIRIAL_ENERGY:
+                observables.push_back(createSuzukiChinVirialEnergyObservable(item.getEffectiveUnit()));
                 break;
             case ObservableType::CENTER_OF_MASS:
                 observables.push_back(createCenterOfMassObservable(item.getEffectiveUnit()));

@@ -157,6 +157,7 @@ std::shared_ptr<SimulationConfig> Params::load() const {
     loadSimulationParams(*config);
     loadSystemParams(*config);
     loadPropagatorParams(*config);
+    loadActionParams(*config);
     loadThermostatParams(*config);
     loadCoordInitParams(*config);
     loadVelocityInitParams(*config);
@@ -366,6 +367,19 @@ void Params::loadPropagatorParams(SimulationConfig& config) const {
 
     if (!StringUtils::labelInArray(config.propagator_type, allowed_propagators))
         throw std::invalid_argument(std::format("The specified time propagator ({}) is not supported!", config.propagator_type));
+}
+
+/**
+ * Load parameters pertaining to the action (e.g., Suzuki-Chin alpha parameter).
+ * 
+ * @param config Config object to load parameters into.
+ */
+void Params::loadActionParams(SimulationConfig& config) const {
+    const double gsf_alpha = m_reader.GetReal(Sections::ACTION, "gsf_alpha", 0.0);
+    if (gsf_alpha < 0.0 || gsf_alpha > 1.0) {
+        throw std::invalid_argument(std::format("Invalid Suzuki-Chin alpha parameter '{}' (must lie in [0, 1])", gsf_alpha));
+    }
+    config.gsf_alpha = gsf_alpha;
 }
 
 /**
@@ -727,7 +741,11 @@ void Params::loadObservableParams(SimulationConfig& config) const {
         "prob_dist",
         "prob_all",
         "sign",
-        "gsf",
+        "w_gsf",
+        "pot_gsf",
+        "even_pot_gsf",
+        "kin_gsf",
+        "virial_gsf",
         "center_of_mass",
     };
 

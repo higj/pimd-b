@@ -1,6 +1,7 @@
 #pragma once
 
 #include "observable_item.h"
+#include "contexts/action_context.h"
 #include "contexts/bead_context.h"
 #include "contexts/thermal_context.h"
 #include "contexts/spring_context.h"
@@ -26,6 +27,7 @@ public:
         const StringMap& obs_list,
         const std::shared_ptr<SystemState>& state,
         const std::shared_ptr<ForceManager>& force_mgr,
+        const ActionContext& action_context,
         const BeadContext& bead_context,
         const ThermalContext& thermal_context,
         const SpringContext& spring_context,
@@ -53,7 +55,11 @@ private:
     [[nodiscard]] std::shared_ptr<Observable> createBosonicProbDistObservable(const std::string& out_unit) const;
     [[nodiscard]] std::shared_ptr<Observable> createBosonicProbAllObservable(const std::string& out_unit) const;
     [[nodiscard]] std::shared_ptr<Observable> createBosonicSignObservable(const std::string& out_unit) const;
-    [[nodiscard]] std::shared_ptr<Observable> createGSFObservable(const std::string& out_unit) const;
+    [[nodiscard]] std::shared_ptr<Observable> createSuzukiChinWeightObservable(const std::string& out_unit) const;
+    [[nodiscard]] std::shared_ptr<Observable> createSuzukiChinPotEnergyObservable(const std::string& out_unit) const;
+    [[nodiscard]] std::shared_ptr<Observable> createSuzukiChinEvenPotEnergyObservable(const std::string& out_unit) const;
+    [[nodiscard]] std::shared_ptr<Observable> createSuzukiChinKineticEnergyObservable(const std::string& out_unit) const;
+    [[nodiscard]] std::shared_ptr<Observable> createSuzukiChinVirialEnergyObservable(const std::string& out_unit) const;
     [[nodiscard]] std::shared_ptr<Observable> createCenterOfMassObservable(const std::string& out_unit) const;
 
     long m_stride;
@@ -61,6 +67,7 @@ private:
     std::shared_ptr<SystemState> m_state;
     std::shared_ptr<ForceManager> m_force_mgr;
 
+    ActionContext m_action_context;
     BeadContext m_bead_context;
     ThermalContext m_thermal_context;
     SpringContext m_spring_context;

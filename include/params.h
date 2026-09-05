@@ -9,6 +9,7 @@
 namespace Sections {
     const std::string SYSTEM = "system";
     const std::string SIMULATION = "simulation";
+    const std::string ACTION = "action";
     const std::string EXT_POTENTIAL = "external_potential";
     const std::string INT_POTENTIAL = "interaction_potential";
     const std::string DUMP = "dump";
@@ -34,6 +35,7 @@ private:
     void loadSimulationParams(SimulationConfig& config) const;
     void loadSystemParams(SimulationConfig& config) const;
     void loadPropagatorParams(SimulationConfig& config) const;
+    void loadActionParams(SimulationConfig& config) const;
     void loadThermostatParams(SimulationConfig& config) const;
     void loadCoordInitParams(SimulationConfig& config) const;
     void loadVelocityInitParams(SimulationConfig& config) const;

@@ -89,3 +89,76 @@ double SharedComputations::virialRaw(
     if (cache) cache->put(CacheKey::VIRIAL_RAW, result);
     return result;
 }
+
+SharedComputations::SuzukiChinComponents SharedComputations::suzukiChinComponents(
+    const VecArray& coord,
+    const ForceManager& force_mgr,
+    const BeadContext& bead_ctx,
+    ObservableCache* cache
+) {
+    // Cache hit: all three values are always stored together, so checking one is enough.
+    if (cache) {
+        if (const auto cached_pot = cache->get(CacheKey::SC_TOTAL_POTENTIAL)) {
+            return {
+                .total_potential = *cached_pot,
+                .force_squared = *cache->get(CacheKey::SC_FORCE_SQUARED),
+                .virial = *cache->get(CacheKey::SC_VIRIAL)
+            };
+        }
+    }
+
+    // External potential and its gradients
+    double total_potential = force_mgr.ext_potential->V(coord);
+    VecArray gradients(bead_ctx.natoms);
+    gradients = force_mgr.ext_potential->gradV(coord);
+
+    // External potential contribution to virial: sum_i coord_i * gradV_ext_i
+    double virial = 0.0;
+    if (!force_mgr.ext_potential->isFree()) {
+        for (int ptcl_idx = 0; ptcl_idx < bead_ctx.natoms; ++ptcl_idx) {
+            for (int axis = 0; axis < NDIM; ++axis) {
+                virial += coord(ptcl_idx, axis) * gradients(ptcl_idx, axis);
+            }
+        }
+    }
+
+    // Interaction potential pair loop: V, gradV, and virial contribution
+    if (force_mgr.cutoff != 0.0 && !force_mgr.int_potential->isFree()) {
+        for (int i = 0; i < bead_ctx.natoms; ++i) {
+            for (int j = i + 1; j < bead_ctx.natoms; ++j) {
+                // TODO: apply minimum image (same as in GSFActionObservable)
+                Vec diff = coord.getSeparationArray(i, j);
+                if (const double dist = norm(diff); dist < force_mgr.cutoff || force_mgr.cutoff < 0.0) {
+                    total_potential += force_mgr.int_potential->V(diff);
+                    Vec int_grad = force_mgr.int_potential->gradV(diff);
+                    for (int axis = 0; axis < NDIM; ++axis) {
+                        gradients(i, axis) += int_grad[axis];
+                        gradients(j, axis) -= int_grad[axis];
+                        virial += coord(i, axis) * int_grad[axis];  // r_i * gradV(r_ij)
+                        virial -= coord(j, axis) * int_grad[axis];  // r_j * gradV(r_ij)
+                    }
+                }
+            }
+        }
+    }
+
+    // Gradients squared
+    double force_squared = 0.0;
+    for (int ptcl_idx = 0; ptcl_idx < bead_ctx.natoms; ++ptcl_idx) {
+        for (int axis = 0; axis < NDIM; ++axis) {
+            force_squared += gradients(ptcl_idx, axis) * gradients(ptcl_idx, axis);
+        }
+    }
+
+    if (cache) {
+        cache->put(CacheKey::SC_TOTAL_POTENTIAL, total_potential);
+        cache->put(CacheKey::SC_FORCE_SQUARED, force_squared);
+        cache->put(CacheKey::SC_VIRIAL, virial);
+    }
+
+    return {
+        .total_potential = total_potential,
+        .force_squared = force_squared,
+        .virial = virial
+    };
+}

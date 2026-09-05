@@ -18,7 +18,11 @@ enum class ObservableType : std::uint8_t {
     BOSONIC_PROB_DIST,
     BOSONIC_PROB_ALL,
     BOSONIC_SIGN,
-    GSF,
+    SC_WEIGHT,             // "sc_weight" or "w_gsf"  - Suzuki-Chin log weight
+    SC_POT_ENERGY,         // "sc_pot"                - odd-bead potential estimator
+    SC_EVEN_POT_ENERGY,    // "sc_even_pot"           - even-bead potential estimator
+    SC_KINETIC_ENERGY,     // "sc_kinetic"            - force-squared kinetic correction
+    SC_VIRIAL_ENERGY,      // "sc_virial"             - GSF virial estimator
     CENTER_OF_MASS,
     UNKNOWN
 };
@@ -44,7 +48,11 @@ public:
         if (name == "prob_dist") return ObservableType::BOSONIC_PROB_DIST;
         if (name == "prob_all") return ObservableType::BOSONIC_PROB_ALL;
         if (name == "sign") return ObservableType::BOSONIC_SIGN;
-        if (name == "gsf") return ObservableType::GSF;
+        if (name == "w_gsf") return ObservableType::SC_WEIGHT;
+        if (name == "pot_gsf") return ObservableType::SC_POT_ENERGY;
+        if (name == "even_pot_gsf") return ObservableType::SC_EVEN_POT_ENERGY;
+        if (name == "kin_gsf") return ObservableType::SC_KINETIC_ENERGY;
+        if (name == "virial_gsf") return ObservableType::SC_VIRIAL_ENERGY;
         if (name == "center_of_mass") return ObservableType::CENTER_OF_MASS;
         return ObservableType::UNKNOWN;
     }
