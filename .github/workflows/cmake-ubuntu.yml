@@ -45,7 +45,6 @@ jobs:
         key: ${{runner.os}}-openmpi-${{env.OPENMPI_VER}}
 
     - name: Configure OpenMPI 
-      # Set environment variables related to OpenMPI
       run: |
         export PATH=${PATH}:/home/${USER}/.openmpi/bin/
         export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/home/${USER}/.openmpi/lib/
@@ -59,8 +58,15 @@ jobs:
         include:
           - alg_type_name: naive-bosonic
             alg_type_val: 1
+            use_hdf5: OFF
           - alg_type_name: new-bosonic
             alg_type_val: 0
+            use_hdf5: OFF
+          # HDF5 build: verifies the HDF5 code path compiles and links correctly.
+          # Regression tests are skipped because reference outputs are in text format.
+          - alg_type_name: new-bosonic-hdf5
+            alg_type_val: 0
+            use_hdf5: ON
 
     env:
       build_folder_name: build-${{matrix.alg_type_name}}
@@ -68,26 +74,44 @@ jobs:
     steps:
       - uses: actions/checkout@v4
   
-      - name: Restore cached dependencies
+      - name: Restore cached OpenMPI
         id: cache-dependencies-restore
         uses: actions/cache/restore@v4
         with:
           path: /home/runner/.openmpi
           key: ${{runner.os}}-openmpi-${{env.OPENMPI_VER}}
 
+      # HDF5 is a standard Ubuntu package — no need to build from source or cache it.
+      - name: Install HDF5
+        if: matrix.use_hdf5 == 'ON'
+        run: sudo apt-get install -y libhdf5-dev
+
       - name: Configure CMake
-        run: cmake -B ${{github.workspace}}/${{env.build_folder_name}} -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DNDIM=${{env.NDIM}} -DFACTORIAL_BOSONIC_ALGORITHM=${{matrix.alg_type_val}} -DCMAKE_CXX_COMPILER=g++-13 -DCMAKE_C_COMPILER=gcc-13 -DMPI_HOME=/home/${USER}/.openmpi
+        run: |
+          cmake -B ${{github.workspace}}/${{env.build_folder_name}} \
+            -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} \
+            -DNDIM=${{env.NDIM}} \
+            -DFACTORIAL_BOSONIC_ALGORITHM=${{matrix.alg_type_val}} \
+            -DCMAKE_CXX_COMPILER=g++-13 \
+            -DCMAKE_C_COMPILER=gcc-13 \
+            -DMPI_HOME=/home/${USER}/.openmpi \
+            -DUSE_HDF5=${{matrix.use_hdf5}}
 
       - name: Build
         run: cmake --build ${{github.workspace}}/${{env.build_folder_name}} --config ${{env.BUILD_TYPE}} -j 4
 
       - uses: actions/setup-python@v5
+        if: matrix.use_hdf5 != 'ON'
         with:
           python-version: '3.10'
           cache: 'pip'
-      - run: pip install -r ${{github.workspace}}/tests/requirements.txt
+
+      - name: Install Python test dependencies
+        if: matrix.use_hdf5 != 'ON'
+        run: pip install -r ${{github.workspace}}/tests/requirements.txt
 
       - name: Run regression tests
+        if: matrix.use_hdf5 != 'ON'
         run: |
           export OPENMPI_BIN=/home/${USER}/.openmpi/bin/
           if [ "${{ matrix.alg_type_val }}" = "1" ]; then
