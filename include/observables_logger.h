@@ -7,6 +7,10 @@
 #include <fstream>
 #include <filesystem>
 
+#ifdef USE_HDF5
+#include "hdf5_utils.h"
+#endif
+
 class Observable;
 
 class ObservablesLogger {

@@ -24,9 +24,17 @@ include_directories(libs)
 set(NDIM "1" CACHE STRING "Determine the dimension of space")
 option(FACTORIAL_BOSONIC_ALGORITHM "Set to ON to compile with the naive bosonic algorithm" OFF)
 option(TAU_CONVENTION "Set to OFF to switch to beta convention" ON)
+option(USE_HDF5 "Use HDF5 output format instead of plain text" OFF)
 
 # Create the executable
 add_executable(pimdb ${PIMDB_SRC} ${PIMDB_HEADERS} ${PIMDB_LIBS})
+
+if(USE_HDF5)
+    find_package(HDF5 REQUIRED COMPONENTS C)
+    target_link_libraries(pimdb ${HDF5_C_LIBRARIES})
+    target_include_directories(pimdb PRIVATE ${HDF5_C_INCLUDE_DIRS})
+    message(STATUS "HDF5 output enabled: ${HDF5_C_LIBRARIES}")
+endif()
 
 # Configure preprocessor macro definitions 
 target_compile_definitions(pimdb PRIVATE 
@@ -36,6 +44,7 @@ target_compile_definitions(pimdb PRIVATE
     NDIM=${NDIM}
     FACTORIAL_BOSONIC_ALGORITHM=$<BOOL:${FACTORIAL_BOSONIC_ALGORITHM}>
     TAU_CONVENTION=$<BOOL:${TAU_CONVENTION}>
+    USE_HDF5=$<BOOL:${USE_HDF5}>
 )
 
 # MPI
