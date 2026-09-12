@@ -129,7 +129,7 @@ void ObservablesLogger::writeTimeStep(long step)
 
 #ifdef USE_HDF5
     for (const auto& h5_f : m_h5_obs_files) {
-        H5Utils::append_int(h5_f.step_ds, h5_f.row_count, static_cast<int>(step));
+        H5Utils::append_int64(h5_f.step_ds, h5_f.row_count, static_cast<int>(step));
     }
 #else
     for (auto& output_file : m_output_files) {
@@ -218,7 +218,7 @@ void ObservablesLogger::openFileAndWriteHeader(const std::filesystem::path& file
                 throw std::ios_base::failure("Failed to create HDF5 file: " + h5_path.string());
             }
 
-            h5_f.step_ds = H5Utils::make_1d(h5_f.file_id, "step", H5T_NATIVE_INT);
+            h5_f.step_ds = H5Utils::make_1d(h5_f.file_id, "step", H5T_NATIVE_INT64);
             m_h5_obs_files.push_back(std::move(h5_f));
         }
 
