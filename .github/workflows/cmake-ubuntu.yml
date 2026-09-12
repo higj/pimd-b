@@ -58,15 +58,15 @@ jobs:
         include:
           - alg_type_name: naive-bosonic
             alg_type_val: 1
-            use_hdf5: OFF
+            use_hdf5: "OFF"
           - alg_type_name: new-bosonic
             alg_type_val: 0
-            use_hdf5: OFF
+            use_hdf5: "OFF"
           # HDF5 build: verifies the HDF5 code path compiles and links correctly.
           # Regression tests are skipped because reference outputs are in text format.
           - alg_type_name: new-bosonic-hdf5
             alg_type_val: 0
-            use_hdf5: ON
+            use_hdf5: "ON"
 
     env:
       build_folder_name: build-${{matrix.alg_type_name}}
