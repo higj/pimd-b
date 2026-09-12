@@ -69,14 +69,31 @@ private:
         std::vector<std::shared_ptr<Observable>> observables;
     };
 
+#ifdef USE_HDF5
+    struct H5ObsFile {
+        hid_t file_id = H5I_INVALID_HID;
+        hid_t step_ds = H5I_INVALID_HID;
+        std::vector<hid_t> col_datasets;  // one per observable quantity, in write order
+        hsize_t row_count = 0;
+    };
+#endif
+
     int m_this_bead;
     long m_frequency;
     std::vector<std::shared_ptr<Observable>> m_observables;
 
-    std::filesystem::path m_main_output_filename;
-    std::vector<OutputFile> m_output_files;
+    // Text-mode state
+    std::filesystem::path     m_main_output_filename;
+    std::vector<OutputFile>   m_output_files;
     /// Maps each observable (by index into m_observables) to its OutputFile index in m_output_files.
-    std::vector<std::size_t> m_obs_output_file_indices;
+    std::vector<std::size_t>  m_obs_output_file_indices;
+
+    // HDF5-mode state
+#ifdef USE_HDF5
+    std::vector<H5ObsFile>   m_h5_obs_files;
+    std::vector<std::size_t> m_h5_obs_file_indices;  // obs_idx -> H5ObsFile index
+    std::vector<std::size_t> m_h5_obs_col_offsets;   // obs_idx -> first col index in its file
+#endif
 
     ObservableCache m_cache;
 
