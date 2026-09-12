@@ -29,13 +29,6 @@ option(USE_HDF5 "Use HDF5 output format instead of plain text" OFF)
 # Create the executable
 add_executable(pimdb ${PIMDB_SRC} ${PIMDB_HEADERS} ${PIMDB_LIBS})
 
-if(USE_HDF5)
-    find_package(HDF5 REQUIRED COMPONENTS C)
-    target_link_libraries(pimdb ${HDF5_C_LIBRARIES})
-    target_include_directories(pimdb PRIVATE ${HDF5_C_INCLUDE_DIRS})
-    message(STATUS "HDF5 output enabled: ${HDF5_C_LIBRARIES}")
-endif()
-
 # Configure preprocessor macro definitions 
 target_compile_definitions(pimdb PRIVATE 
     INI_USE_STACK=0 
@@ -44,8 +37,15 @@ target_compile_definitions(pimdb PRIVATE
     NDIM=${NDIM}
     FACTORIAL_BOSONIC_ALGORITHM=$<BOOL:${FACTORIAL_BOSONIC_ALGORITHM}>
     TAU_CONVENTION=$<BOOL:${TAU_CONVENTION}>
-    USE_HDF5=$<BOOL:${USE_HDF5}>
 )
+
+if(USE_HDF5)
+    find_package(HDF5 REQUIRED COMPONENTS C)
+    target_compile_definitions(pimdb PRIVATE USE_HDF5)  # defined = enabled, absent = disabled
+    target_link_libraries(pimdb ${HDF5_C_LIBRARIES})
+    target_include_directories(pimdb PRIVATE ${HDF5_C_INCLUDE_DIRS})
+    message(STATUS "HDF5 output enabled: ${HDF5_C_LIBRARIES}")
+endif()
 
 # MPI
 find_package(MPI REQUIRED)
