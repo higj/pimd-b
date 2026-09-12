@@ -83,8 +83,10 @@ jobs:
 
       # HDF5 is a standard Ubuntu package — no need to build from source or cache it.
       - name: Install HDF5
-        if: matrix.use_hdf5 == 'ON'
-        run: sudo apt-get install -y libhdf5-dev
+        if: matrix.use_hdf5 == 1
+        run: |
+          sudo apt-get install -y libhdf5-serial-dev
+          echo "PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/hdf5/serial/pkgconfig" >> $GITHUB_ENV
 
       - name: Configure CMake
         run: |
@@ -101,17 +103,17 @@ jobs:
         run: cmake --build ${{github.workspace}}/${{env.build_folder_name}} --config ${{env.BUILD_TYPE}} -j 4
 
       - uses: actions/setup-python@v5
-        if: matrix.use_hdf5 != 'ON'
+        if: matrix.use_hdf5 != 1
         with:
           python-version: '3.10'
           cache: 'pip'
 
       - name: Install Python test dependencies
-        if: matrix.use_hdf5 != 'ON'
+        if: matrix.use_hdf5 != 1
         run: pip install -r ${{github.workspace}}/tests/requirements.txt
 
       - name: Run regression tests
-        if: matrix.use_hdf5 != 'ON'
+        if: matrix.use_hdf5 != 1
         run: |
           export OPENMPI_BIN=/home/${USER}/.openmpi/bin/
           if [ "${{ matrix.alg_type_val }}" = "1" ]; then
