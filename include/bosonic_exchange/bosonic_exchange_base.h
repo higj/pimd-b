@@ -1,8 +1,12 @@
 #pragma once
 
 #include "common.h"
+#include "contexts/box_context.h"
+#include "contexts/thermal_context.h"
+#include "contexts/spring_context.h"
+#include "contexts/bead_context.h"
 
-class Simulation; // Forward declaration
+#include <memory>
 
 /**
  * @class BosonicExchangeBase
@@ -15,40 +19,58 @@ class Simulation; // Forward declaration
  */
 class BosonicExchangeBase {
 public:
-    BosonicExchangeBase(const Simulation& _sim);
+    explicit BosonicExchangeBase(
+        const std::shared_ptr<const VecArray>& coord_first_bead,
+        const std::shared_ptr<const VecArray>& coord_last_bead,
+        const ThermalContext& thermal_ctx,
+        const SpringContext& spring_ctx,
+        const BoxContext& box_ctx,
+        const BeadContext& bead_ctx
+    );
     virtual ~BosonicExchangeBase() = default;
-    BosonicExchangeBase(const BosonicExchangeBase&) = delete;
-    BosonicExchangeBase& operator=(const BosonicExchangeBase&) = delete;
+    ///BosonicExchangeBase(const BosonicExchangeBase&) = delete;
+    ///BosonicExchangeBase& operator=(const BosonicExchangeBase&) = delete;
 
-    void exteriorSpringForce(dVec& f);
+    void exteriorSpringForce(VecArray& f);
 
     virtual void prepare() = 0;
     virtual double effectivePotential() = 0;
-    virtual double primEstimator() = 0;
+    virtual double primitiveEnergyEstimator() = 0;
 
     virtual double getDistinctProbability() = 0;
     virtual double getLongestProbability() = 0;
+    virtual double getSign() = 0;
 
     virtual void printBosonicDebug() = 0;
 
 protected:
-    void assignFirstLast(dVec& x_first_bead, dVec& x_last_bead) const;
-    void getBeadsSeparation(const dVec& x1, int l1, const dVec& x2, int l2, double diff[NDIM]) const;
-    [[nodiscard]] double getBeadsSeparationSquared(const dVec& x1, int l1, const dVec& x2, int l2) const;
+    /**
+     * Calculates the vector distance between two beads of an exterior spring (first minus last).
+     *
+     * @param first_idx Particle index of the bead at the first imaginary time-slice.
+     * @param last_idx Particle index of the bead at the last imaginary time-slice.
+     * @param diff Output array to store the distance vector.
+     */
+    void getExteriorBeadsSeparation(int first_idx, int last_idx, std::array<double, NDIM>& diff) const;
+
+    /**
+     * Calculates the distance squared between two beads of an exterior spring.
+     *
+     * @param first_idx Particle index of the bead at the first imaginary time-slice.
+     * @param last_idx Particle index of the bead at the last imaginary time-slice.
+     * @return Distance squared between the two beads.
+     */
+    [[nodiscard]] double getExteriorSeparationSquared(int first_idx, int last_idx) const;
 
     // Pure virtual functions (must be implemented by derived classes)
-    virtual void springForceFirstBead(dVec& f) = 0;
-    virtual void springForceLastBead(dVec& f) = 0;
+    virtual void springForceFirstBead(VecArray& f) = 0;
+    virtual void springForceLastBead(VecArray& f) = 0;
 
-    const Simulation& sim; // Reference to the simulation object
+    std::shared_ptr<const VecArray> m_coord_first_bead;
+    std::shared_ptr<const VecArray> m_coord_last_bead;
 
-    const int nbosons;
-    const int nbeads;
-
-    double spring_constant;
-    double beta;
-
-    const dVec& x;
-    const dVec& x_prev;
-    const dVec& x_next;
+    ThermalContext m_thermal_ctx;
+    SpringContext m_spring_ctx;
+    BoxContext m_box_ctx;
+    BeadContext m_bead_ctx;
 };

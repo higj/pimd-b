@@ -1,18 +1,16 @@
 #pragma once
 
 #include <vector>
+#include <array>
 #include <format>
 #include <variant>
 #include <cmath>
+#include "ordered_map.h"
 
 #include "units.h"
 
 #ifndef NDIM
 #define NDIM 1                       // Number of spatial dimensions
-#endif
-
-#ifndef PROGRESS
-#define PROGRESS false               // Display progress bar?
 #endif
 
 #ifndef MINIM
@@ -27,48 +25,22 @@
 #define FACTORIAL_BOSONIC_ALGORITHM false  // Enable the old bosonic algorithm that scales as O(N!)?
 #endif
 
-// In the "i-Pi convention" [J. Chem. Phys. 133, 124104 (2010); also J. Chem. Phys. 74, 4078-4095 (1981)], 
-// the Boltzmann exponents have the form exp[-(beta/P)H], where H is the classical Hamiltonian of the 
+// In the "Tau convention" [J. Chem. Phys. 133, 124104 (2010); also J. Chem. Phys. 74, 4078-4095 (1981)], 
+// the Boltzmann exponents have the form exp[-(beta/P)*H_tau], where H_tau is the classical Hamiltonian of the 
 // ring polymers. This results in a canonical distribution at P times the physical temperature.
-// In contrast, "Tuckerman's convention" [J. Chem. Phys. 99, 2796-2808 (1993)] uses weights of the form exp(-beta*H),
+// In contrast, "Beta convention" [J. Chem. Phys. 99, 2796-2808 (1993)] uses weights of the form exp(-beta*H_beta),
 // such that the temperature of the canonical ensemble coincides with the physical temperature.
 // Notably, the classical Hamiltonians of the two conventions differ, with the spring constant
-// in the i-Pi convention being P times larger than that in Tuckerman's convention. Additionally, the i-Pi convention
+// in the tau convention being P times larger than that in beta convention. Additionally, the tau convention
 // lacks a 1/P prefactor in front of the external potential. The Hamiltonians of the two conventions are related through
-// H_tuckerman = H_ipi / P. Note however that the expressions for the various estimators are unaffected by this choice.
-// Setting the following pre-processor directive to false amounts to adopting Tuckerman's convention.
-#ifndef IPI_CONVENTION
-#define IPI_CONVENTION true
+// H_beta = H_tau / P. Note however that the expressions for the various estimators are unaffected by this choice.
+// Setting the following pre-processor directive to false amounts to adopting the beta convention.
+#ifndef TAU_CONVENTION
+#define TAU_CONVENTION true
 #endif
 
 // A small number (but not necessarily the smallest)
 constexpr auto EPS = 1.0E-7;
-
-// Progress bar parameters
-constexpr int PBWIDTH = 30;
-constexpr std::string_view PBSTR = "||||||||||||||||||||||||||||||";
-
-inline const std::string LOGO = R"(
- __       __      __  
-|__)||\/||  \ __ |__) 
-|   ||  ||__/    |__)
-)";
-
-namespace ErrorMessage {
-    const std::string GENERAL_ERR = "Error";
-    const std::string OVERFLOW_ERR = "Overflow error";
-    const std::string INVALID_ARG_ERR = "Invalid argument error";
-}
-
-namespace Output {
-    const std::string FOLDER_NAME = "output";
-    const std::string MAIN_FILENAME = "simulation.out";
-}
-
-template <typename T, typename... VariantParams>
-void getVariant(const std::variant<VariantParams...>& v, T& value) {
-    value = std::get<T>(v);
-}
 
 /**
  * A class to store an array of vectors of dimension "dim".
@@ -77,20 +49,24 @@ void getVariant(const std::variant<VariantParams...>& v, T& value) {
  * @tparam dim Dimension of the vectors.
  */
 template <typename T, int dim>
-class VectorArray {
+class VectorCollection {
 public:
-    VectorArray() : m_rows(1), m_arr(m_rows * dim, T()) {}
-    explicit VectorArray(const int rows) : m_rows(rows), m_arr(rows * dim, T()) {}
+    VectorCollection() : m_rows(1), m_arr(m_rows * dim, T()) {}
+    explicit VectorCollection(const int rows) : m_rows(rows), m_arr(rows * dim, T()) {}
 
     /**
      * Retrieve the flattened (absolute) index of the "axis" component of the ith vector.
+     * Uses a Structure of Arrays (SoA) memory layout (e.g., [X0, X1... Y0, Y1...]) 
+     * instead of an Array of Structures (AoS) layout ([X0, Y0, Z0, X1, Y1, Z1...]).
+     * This layout allows the compiler to easily auto-vectorize loops (SIMD) 
+     * when computing pairwise forces over coordinates.
      *
      * @param i Vector index.
      * @param axis Axis index.
      * @return Index of the element in the underlying one-dimensional array.
      */
     [[nodiscard]] int index(int i, int axis) const {
-        return i * dim + axis;
+        return axis * m_rows + i;
     }
 
     /**
@@ -192,8 +168,8 @@ public:
      * @param other Vector array to be added.
      * @return New vector resulting from the addition.
      */
-    VectorArray<T, dim> operator+(const VectorArray<T, dim>& other) const {
-        VectorArray<T, dim> result(*this);  // Create a copy of the current VectorArray
+    VectorCollection<T, dim> operator+(const VectorCollection<T, dim>& other) const {
+        VectorCollection<T, dim> result(*this);  // Create a copy of the current VectorCollection
 
         // Perform element-wise addition
         for (int i = 0; i < size(); ++i) {
@@ -209,8 +185,8 @@ public:
      * @param rhs_scalar Scalar value to multiply the vector by.
      * @return Copy of the vector multiplied by the scalar.
      */
-    VectorArray<T, dim> operator*(const T& rhs_scalar) const {
-        VectorArray<T, dim> result(*this);  // Create a copy of the current VectorArray
+    VectorCollection<T, dim> operator*(const T& rhs_scalar) const {
+        VectorCollection<T, dim> result(*this);  // Create a copy of the current VectorCollection
 
         // Perform scalar multiplication for each element
         for (int i = 0; i < size(); ++i) {
@@ -226,11 +202,51 @@ public:
      * @param scalar Scalar value to multiply the vector by.
      * @return Reference to the modified vector.
      */
-    VectorArray& operator*=(const T& scalar) {
+    VectorCollection& operator*=(const T& scalar) {
         for (int i = 0; i < size(); ++i) {
             m_arr[i] *= scalar;
         }
         return *this;
+    }
+
+    /**
+     * Calculate the difference between two vectors in the array (v_i-v_j).
+     *
+     * @param i First vector index.
+     * @param j Second vector index.
+     * @return VectorCollection containing the difference between the two vectors.
+     */
+    VectorCollection<T, dim> getSeparation(int i, int j) const {
+        VectorCollection<T, dim> sep;
+
+        for (int axis = 0; axis < dim; ++axis) {
+            sep(0, axis) = (*this)(i, axis) - (*this)(j, axis);
+        }
+
+        return sep;
+    }
+
+    /**
+     * Calculate the difference between two vectors in the array (v_i-v_j).
+     * Returns a lightweight std::array to avoid heap allocations in inner loops.
+     *
+     * @param i First vector index.
+     * @param j Second vector index.
+     * @return std::array containing the difference between the two vectors.
+     */
+    std::array<T, dim> getSeparationArray(int i, int j) const {
+        std::array<T, dim> sep{};
+        for (int axis = 0; axis < dim; ++axis) {
+            sep[axis] = (*this)(i, axis) - (*this)(j, axis);
+        }
+        return sep;
+    }
+
+    /**
+     * Reset all values in the vector array to zero (or default value of type T).
+     */
+    void reset() {
+        std::fill(m_arr.begin(), m_arr.end(), T());
     }
 
 private:
@@ -240,71 +256,43 @@ private:
 
 // Use a non-member operator overload for the right-hand side case
 template <typename T, int dim>
-VectorArray<T, dim> operator*(const T& lhs_scalar, VectorArray<T, dim> rhs_vec) {
+VectorCollection<T, dim> operator*(const T& lhs_scalar, VectorCollection<T, dim> rhs_vec) {
     return rhs_vec * lhs_scalar;
 }
 
 // Define an array of vectors of doubles of dimension NDIM
-using dVec = VectorArray<double, NDIM>;
+using VecArray = VectorCollection<double, NDIM>;
+
+// Define a lightweight array for single-particle / pairwise vectors of dimension NDIM
+using Vec = std::array<double, NDIM>;
+
+// Helper function to calculate the norm of an Vec
+inline double norm(const Vec& v) {
+    double sum = 0.0;
+    for (double val : v) sum += val * val;
+    return std::sqrt(sum);
+}
 
 // Define an array of vectors of integers of dimension NDIM
-using iVec = VectorArray<int, NDIM>;
+using IntVecArray = VectorCollection<int, NDIM>;
 
 // Define a map of variant types
 using VariantMap = std::unordered_map<std::string, std::variant<int, unsigned int, long, double, bool, std::string>>;
 
 // Define a map of strings
-using StringMap = std::unordered_map<std::string, std::string>;
-
-// Define a list of strings
-using StringsList = std::vector<std::string>;
+using StringMap = tsl::ordered_map<std::string, std::string>;
 
 // Print a general message on "out_rank" (by default, the root rank is 0)
 void printMsg(const std::string& msg, int this_rank, int out_rank = 0);
 
+// Print a warning message on "out_rank" (by default, the root rank is 0)
+void printWarning(const std::string& msg, int this_rank, int out_rank = 0);
+
 // Print an info message on "out_rank" (by default, the root rank is 0)
-void printInfo(const std::string& info, bool& info_flag, int this_rank, int out_rank = 0);
+//void printInfo(const std::string& info, bool& info_flag, int this_rank, int out_rank = 0);
 
 // Print a status message on "out_rank" (by default, the root rank is 0)
 void printStatus(const std::string& status, int this_rank, int out_rank = 0);
 
 // Print an error message on "out_rank" (by default, the root rank is 0)
 void printError(const std::string& msg, int this_rank, const std::string& err_type = std::string(), int out_rank = 0);
-
-// Print a progress bar
-void printProgress(int this_step, int total_steps, int this_rank, int out_rank = 0);
-
-// To handle periodic boundary conditions, we employ the Class C storage
-// concept [Z. Phys. Chem. 227 (2013) 345-352], allowing atoms to move
-// outside the primary simulation box. That is, the coordinates are not folded
-// into the simulation box. Instead, we account for the PBC when calculating the
-// distances between particles (or any spatial vector differences).
-// This is done using Algorithm C4. It calculates the remainder of dx
-// on the interval [-L/2, L/2].
-void applyMinimumImage(double& dx, double L);
-//void applyMinimumImage(dVec& dx_arr, double L);
-
-void periodicWrap(double& x, double L);
-//void periodicWrap(dVec& pos_arr, double L);
-
-/**
- * Load particle positions from an .xyz file to the destination vector.
- *
- * @param xyz_filename Name of the .xyz file.
- * @param destination Vector to store the particle positions.
- */
-void loadTrajectories(const std::string& xyz_filename, dVec& destination);
-
-/**
- * Load particle velocities from a file to the destination momenta vector.
- *
- * @param vel_filename Name of the file containing the velocities.
- * @param mass Mass of the particles.
- * @param destination Vector to store the momenta.
- */
-void loadMomenta(const std::string& vel_filename, double mass, dVec& destination);
-
-template <typename T>
-std::string formattedReportLine(const std::string& property_name, const T& value) {
-    return std::format("{:<40}\t:\t{}\n", property_name, value);
-}

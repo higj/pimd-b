@@ -13,8 +13,9 @@ RanMars::RanMars(int seed) : u(nullptr)
     int ij, kl, i, j, k, l, ii, jj, m;
     double s, t;
 
-    if (seed <= 0 || seed > 900000000)
+    if (seed <= 0 || seed > 900000000) {
         throw std::invalid_argument("Invalid seed for Marsaglia random # generator");
+    }
 
     save = 0;
     u = new double[97 + 1];
@@ -130,8 +131,8 @@ void RanMars::get_state(double* state)
 void RanMars::set_state(double* state)
 {
     for (int i = 0; i < 98; ++i) u[i] = state[i];
-    i97 = state[98];
-    j97 = state[99];
+    i97 = static_cast<int>(state[98]);
+    j97 = static_cast<int>(state[99]);
     c = state[100];
     cd = state[101];
     cm = state[102];

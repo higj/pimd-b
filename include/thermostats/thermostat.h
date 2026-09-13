@@ -1,19 +1,28 @@
 #pragma once
 
-#include <vector>
-#include <memory>
+#include "contexts/thermal_context.h"
+#include "contexts/normal_modes_context.h"
 
-class Simulation;
+class SystemState;
 class Coupling;
 
-class Thermostat {
+class Thermostat
+{
 public:
-    explicit Thermostat(Simulation& _sim, bool normal_modes);
-    virtual ~Thermostat() = default;
-    void step();
+    explicit Thermostat(
+        const ThermalContext& thermal_ctx,
+        const NormalModesContext& nm_ctx,
+        const std::shared_ptr<SystemState>& state
+    );
+    virtual ~Thermostat();
+
+    virtual void step();
     virtual void momentaUpdate();
     virtual double getAdditionToH();
+
 protected:
-    Simulation& sim;   // Reference to the simulation object
-    std::unique_ptr<Coupling> coupling;
+    ThermalContext m_thermal_ctx;
+    NormalModesContext m_nm_ctx;
+    std::shared_ptr<SystemState> m_state;
+    std::unique_ptr<Coupling> m_coupling;
 };
