@@ -40,7 +40,7 @@ public:
         const std::string& data_unit,
         const std::string& unit_family,
         long init_frame,
-        XyzFrameSelectionMode init_frame_mode,
+        FrameSelectionMode init_frame_mode,
         VecArray& destination,
         const double prefactor = 1.0
     );

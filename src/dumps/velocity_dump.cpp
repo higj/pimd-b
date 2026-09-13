@@ -10,9 +10,12 @@ VelocityDump::VelocityDump(const VelocityContext& dump_context, int this_bead, i
 #ifdef USE_HDF5
 void VelocityDump::h5CreateDatasets() {
     m_h5_step_ds = H5Utils::make_1d(m_h5file_id, "step", H5T_NATIVE_INT64);
-    m_h5_vel_ds = H5Utils::make_frame_ds(m_h5file_id, "velocities",
+    m_h5_vel_ds = H5Utils::make_frame_ds(
+        m_h5file_id, 
+        "velocities",
         static_cast<hsize_t>(m_natoms),
-        static_cast<hsize_t>(NDIM));
+        3
+    );
 }
 #endif
 
@@ -32,13 +35,11 @@ void VelocityDump::output(int step)
     }
 #endif
 
-    std::vector<double> buf(m_natoms * NDIM);
-    for (int ptcl_idx = 0; ptcl_idx < m_natoms; ++ptcl_idx)
-    {
-        for (int axis = 0; axis < NDIM; ++axis)
-        {
-            buf[ptcl_idx * NDIM + axis] = Units::convertToUser(
-                "velocity", 
+    std::vector<double> buf(m_natoms * 3, 0.0);  // always 3 columns, zero-padded
+    for (int ptcl_idx = 0; ptcl_idx < m_natoms; ++ptcl_idx) {
+        for (int axis = 0; axis < NDIM; ++axis) {
+            buf[ptcl_idx * 3 + axis] = Units::convertToUser(
+                "velocity",
                 m_out_unit,
                 (*m_context.momenta)(ptcl_idx, axis) / m_context.mass
             );
@@ -49,7 +50,7 @@ void VelocityDump::output(int step)
         m_h5_vel_ds, frame,
         buf.data(),
         static_cast<hsize_t>(m_natoms),
-        static_cast<hsize_t>(NDIM)
+        3
     );
 #else
     m_out_file << std::format("{}\n", m_natoms);

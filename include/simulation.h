@@ -9,7 +9,7 @@
 #include <filesystem>
 
 class RpmdFrameSelector;
-enum class XyzFrameSelectionMode;
+enum class FrameSelectionMode;
 struct SimulationConfig;
 class SystemState;
 class RandomGenerators;

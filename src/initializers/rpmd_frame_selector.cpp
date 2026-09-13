@@ -1,5 +1,8 @@
 #include "initializers/rpmd_frame_selector.h"
 #include "core/simulation_config.h"
+#ifdef USE_HDF5
+#include "initializers/h5_data_loader.h"
+#endif
 
 #include <fstream>
 #include <sstream>
@@ -17,6 +20,8 @@ RpmdFrameSelector::RpmdFrameSelector(const std::shared_ptr<SimulationConfig>& co
         throw std::invalid_argument("RPMD frame selector requires RPMD to be enabled");
     }
 
+    /*
+    /// Old code (before HDF5 support) that only allowed XYZ files for RPMD frame selection
     if (config->init_pos_type != "xyz" || config->init_vel_type != "xyz") {
         throw std::invalid_argument("RPMD frame selector requires both position and velocity initialization files to be 'xyz'");
     }
@@ -27,6 +32,33 @@ RpmdFrameSelector::RpmdFrameSelector(const std::shared_ptr<SimulationConfig>& co
 
     // Query XYZ file for total frame count
     m_num_frames = countFramesInXyzFile(filename, first_idx);
+    */
+
+    const bool pos_is_xyz = (config->init_pos_type == "xyz");
+    const bool pos_is_h5 = (config->init_pos_type == "hdf5");
+
+    if (!pos_is_xyz && !pos_is_h5) {
+        throw std::invalid_argument(
+            "RPMD frame selector requires init_pos_type to be 'xyz' or 'hdf5'; got '"
+            + config->init_pos_type + "'");
+    }
+
+    // Frame count is read from the position file only (vel file must match).
+    const std::string& filename = config->init_pos_filename;
+    const int first_idx = config->this_bead + config->init_pos_index_offset;
+
+#ifdef USE_HDF5
+    if (pos_is_h5) {
+        const std::string actual_filename =
+            std::vformat(filename, std::make_format_args(first_idx));
+        m_num_frames = H5DataLoader::countFrames(actual_filename, "positions");
+    } else
+#endif
+    {
+        m_num_frames = countFramesInXyzFile(filename, first_idx);
+    }
+
+    ////////////////////////////////////////////////////////////
 
     // Compute frame indices for all RPMD runs
     m_rpmd_frames = computeFrameIndices(

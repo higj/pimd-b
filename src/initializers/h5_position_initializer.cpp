@@ -1,7 +1,11 @@
-#include "initializers/xyz_position_initializer.h"
-#include "initializers/xyz_data_loader.h"
+#ifdef USE_HDF5
 
-XyzPositionInitializer::XyzPositionInitializer(
+#include "initializers/h5_position_initializer.h"
+#include "initializers/h5_data_loader.h"
+
+#include <format>
+
+H5PositionInitializer::H5PositionInitializer(
     const std::string& filename,
     int first_idx,
     const std::string& init_pos_unit,
@@ -18,14 +22,13 @@ XyzPositionInitializer::XyzPositionInitializer(
     m_init_pos_frame_mode(init_pos_frame_mode) {
 }
 
-void XyzPositionInitializer::initialize() {
-    const std::string xyz_filename = std::vformat(
-        m_filename,
-        std::make_format_args(m_first_idx)
-    );
+void H5PositionInitializer::initialize() {
+    const std::string h5_filename = std::vformat(
+        m_filename, std::make_format_args(m_first_idx));
 
-    XyzDataLoader::loadFromFile(
-        xyz_filename,
+    H5DataLoader::loadFromFile(
+        h5_filename,
+        "positions",
         m_init_pos_unit,
         "length",
         m_init_pos_frame,
@@ -33,3 +36,5 @@ void XyzPositionInitializer::initialize() {
         *m_coord
     );
 }
+
+#endif // USE_HDF5

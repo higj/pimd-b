@@ -13,7 +13,7 @@ void XyzDataLoader::loadFromFile(
     const std::string& data_unit,
     const std::string& unit_family,
     long init_frame,
-    XyzFrameSelectionMode init_frame_mode,
+    FrameSelectionMode init_frame_mode,
     VecArray& destination,
     const double prefactor
 ) {
@@ -29,7 +29,7 @@ void XyzDataLoader::loadFromFile(
     for (long frame_index = 0;; ++frame_index) {
         // In step mode, EOF after a complete frame means that the requested
         // step does not exist. EOF inside a frame is reported as malformed.
-        if (init_frame_mode == XyzFrameSelectionMode::Step && input_file.peek() == std::char_traits<char>::eof()) {
+        if (init_frame_mode == FrameSelectionMode::Step && input_file.peek() == std::char_traits<char>::eof()) {
             throw std::runtime_error(std::format(
                 "XYZ file '{}' does not contain a frame with Step {}.",
                 xyz_filename,
@@ -41,7 +41,7 @@ void XyzDataLoader::loadFromFile(
 
         // Index mode compares the ordinal frame. Step mode parses every scanned
         // comment, deliberately enforcing its strict comment-line contract.
-        const bool selected = init_frame_mode == XyzFrameSelectionMode::Index
+        const bool selected = init_frame_mode == FrameSelectionMode::Index
             ? frame_index == init_frame
             : parseStepNumber(xyz_filename, frame_index, comment) == init_frame;
 

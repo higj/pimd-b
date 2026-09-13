@@ -52,7 +52,7 @@ namespace {
     }
 
     /**
-     * Shared validation logic for "xyz" / "xyz(format)" style position/velocity initialization.
+     * Shared validation logic for "xyz" / "xyz(format)" (and HDF5) style position/velocity initialization.
      * Verifies the (optional) filename format, determines whether on-disk bead numbering starts at
      * 0 or 1, and enforces the mandatory unit and frame-selection parameters.
      *
@@ -68,7 +68,7 @@ namespace {
      * @param[out] frame_mode   Set to the selected frame-selection mode.
      */
     template <typename Reader>
-    void loadXyzInitParams(
+    void loadFileBasedInitParams(
         const Reader& reader,
         const std::string& section,
         const std::string& label,
@@ -78,12 +78,20 @@ namespace {
         std::string& filename,
         std::string& unit,
         long& frame,
-        XyzFrameSelectionMode& frame_mode
+        FrameSelectionMode& frame_mode
     ) {
-        if (specification.empty()) {
+        /*if (specification.empty()) {
             throw std::invalid_argument(
                 std::format(
                     "{} initialization method 'xyz' requires a specification (e.g. filename or format string)", 
+                    label
+                )
+            );
+        }*/
+        if (specification.empty()) {
+            throw std::invalid_argument(
+                std::format(
+                    "{} initialization requires a filename or format string as its argument (e.g. myfile_{{0}}.xyz)",
                     label
                 )
             );
@@ -104,12 +112,11 @@ namespace {
                 std::format("Filename format ({}) for {} initialization validation failed", specification, label));
         }
 
-        // If the initialization method is "xyz" but the user didn't provide a unit,
-        // we throw an error instead of using a default (don't be smarter than the user)
+        // If the user didn't provide a unit, we throw an error instead of using a default (don't be smarter than the user)
         const std::string unit_key = key_prefix + "_unit";
         if (!reader.HasValue(section, unit_key)) {
             throw std::invalid_argument(
-                label + " initialization method is 'xyz' but the units have not been specified (use '" + unit_key + "')");
+                label + " initialization: units must be specified via '" + unit_key + "'");
         }
         unit = reader.Get(section, unit_key, "");
 
@@ -120,9 +127,9 @@ namespace {
 
         const std::string frame_mode_str = reader.GetString(section, key_prefix + "_frame_mode", "index");
         if (frame_mode_str == "index") {
-            frame_mode = XyzFrameSelectionMode::Index;
+            frame_mode = FrameSelectionMode::Index;
         } else if (frame_mode_str == "step") {
-            frame_mode = XyzFrameSelectionMode::Step;
+            frame_mode = FrameSelectionMode::Step;
         } else {
             throw std::invalid_argument(std::format(
                 "Unsupported {}_frame_mode '{}'; expected 'index' or 'step'", key_prefix, frame_mode_str));
@@ -528,15 +535,16 @@ void Params::loadCoordInitParams(SimulationConfig& config) const {
     }
 
     using namespace std::string_view_literals;
-    constexpr auto allowed_coord_init_methods = std::array{ "random"sv, "xyz"sv, "grid"sv }; /// TODO: Use cell instead of grid?
+    constexpr auto allowed_coord_init_methods = std::array{ "random"sv, "xyz"sv, "grid"sv, "hdf5"sv };
 
     if (!StringUtils::labelInArray(init_pos_type, allowed_coord_init_methods))
         throw std::invalid_argument(std::format("The specified coordinate initialization method ({}) is not supported!",
             init_pos_type));
 
+    const bool coord_is_file_based = (init_pos_type == "xyz" || init_pos_type == "hdf5");
+
     if (init_pos_type == "xyz") {
-        /// TODO: Check correctness of the unit (perhaps create a universal function for this, and do this in other places as well)
-        loadXyzInitParams(
+        loadFileBasedInitParams(
             m_reader,
             Sections::SIMULATION,
             "Coordinate",
@@ -548,18 +556,33 @@ void Params::loadCoordInitParams(SimulationConfig& config) const {
             config.init_pos_frame,
             config.init_pos_frame_mode
         );
+    } else if (init_pos_type == "hdf5") {
+#ifdef USE_HDF5
+        loadFileBasedInitParams(
+            m_reader,
+            Sections::SIMULATION,
+            "Coordinate",
+            "initial_position",
+            init_pos_specification,
+            config.init_pos_index_offset,
+            config.init_pos_filename,
+            config.init_pos_unit,
+            config.init_pos_frame,
+            config.init_pos_frame_mode
+        );
+#else
+        throw std::invalid_argument(
+            "Coordinate initialization method 'hdf5' requires the USE_HDF5 build option to be enabled"
+        );
+#endif
     } else if (
         m_reader.HasValue(Sections::SIMULATION, "initial_position_frame") ||
         m_reader.HasValue(Sections::SIMULATION, "initial_position_frame_mode")
-    ) {
+        ) {
         throw std::invalid_argument(
-            "initial_position_frame and initial_position_frame_mode can only be used with initial_position = xyz(...)"
+            "initial_position_frame and initial_position_frame_mode can only be used with initial_position = xyz(...) or hdf5(...)"
         );
-    } else if (
-        init_pos_type != "xyz" &&
-        !init_pos_specification.empty()
-        )
-    {
+    } else if (!coord_is_file_based && !init_pos_specification.empty()) {
         throw std::invalid_argument(
             std::format("Coordinate initialization method '{}' does not accept a specification (got '{}')",
                 init_pos_type, init_pos_specification)
@@ -579,6 +602,7 @@ void Params::loadVelocityInitParams(SimulationConfig& config) const {
     //  "random": samples from Maxwell-Boltzmann distribution
     //  "xyz": reads from strict XYZ format files
     //  "xyz(format)": reads from XYZ format with per-bead files
+    //  "hdf5": reads from HDF5 files (requires USE_HDF5 build option)
     std::string init_vel_type, init_vel_specification;
 
     if (!StringUtils::parseTokenParentheses(
@@ -590,14 +614,16 @@ void Params::loadVelocityInitParams(SimulationConfig& config) const {
     }
 
     using namespace std::string_view_literals;
-    constexpr auto allowed_vel_init_methods = std::array{ "random"sv, "xyz"sv };
+    constexpr auto allowed_vel_init_methods = std::array{ "random"sv, "xyz"sv, "hdf5"sv };
 
     if (!StringUtils::labelInArray(init_vel_type, allowed_vel_init_methods))
         throw std::invalid_argument(std::format("The specified velocity initialization method ({}) is not supported!",
             init_vel_type));
 
+    const bool vel_is_file_based = (init_vel_type == "xyz" || init_vel_type == "hdf5");
+
     if (init_vel_type == "xyz") {
-        loadXyzInitParams(
+        loadFileBasedInitParams(
             m_reader,
             Sections::SIMULATION,
             "Velocity",
@@ -609,23 +635,41 @@ void Params::loadVelocityInitParams(SimulationConfig& config) const {
             config.init_vel_frame,
             config.init_vel_frame_mode
         );
+    } else if (init_vel_type == "hdf5") {
+        /// TODO: Maybe allow this option regardless of USE_HDF5, but throw an error at runtime if the user tries to use it without HDF5 support?
+        /// TODO: Perhaps combine with xyz to avoid code duplication
+#ifdef USE_HDF5
+        loadFileBasedInitParams(
+            m_reader,
+            Sections::SIMULATION,
+            "Velocity",
+            "initial_velocity",
+            init_vel_specification,
+            config.init_vel_index_offset,
+            config.init_vel_filename,
+            config.init_vel_unit,
+            config.init_vel_frame,
+            config.init_vel_frame_mode
+        );
+#else
+        throw std::invalid_argument(
+            "Velocity initialization method 'hdf5' requires the USE_HDF5 build option to be enabled"
+        );
+#endif
     } else if (
         m_reader.HasValue(Sections::SIMULATION, "initial_velocity_frame") ||
-        m_reader.HasValue(Sections::SIMULATION, "initial_velocity_frame_mode")) {
-        throw std::invalid_argument(
-            "initial_velocity_frame and initial_velocity_frame_mode can only be used with initial_velocity = xyz(...)"
-        );
-    } else if (
-        init_vel_type != "xyz" &&
-        !init_vel_specification.empty()
+        m_reader.HasValue(Sections::SIMULATION, "initial_velocity_frame_mode")
         ) {
+        throw std::invalid_argument(
+            "initial_velocity_frame and initial_velocity_frame_mode can only be used with initial_velocity = xyz(...) or hdf5(...)"
+        );
+    } else if (!vel_is_file_based && !init_vel_specification.empty()) {
         throw std::invalid_argument(
             std::format("Velocity initialization method '{}' does not accept a specification (got '{}')",
                 init_vel_type, init_vel_specification)
         );
     }
 
-    /// TODO: Local init_vel_type isn't really necessary
     config.init_vel_type = init_vel_type;
 }
 

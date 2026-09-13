@@ -20,7 +20,7 @@ struct RpmdConfig {
     double nvt_discard_frac;  // Fraction of the NVT trajectory to discard before sampling starts
 };
 
-enum class XyzFrameSelectionMode {
+enum class FrameSelectionMode {
     Index,
     Step
 };
@@ -62,8 +62,8 @@ struct SimulationConfig {
     std::string init_pos_type, init_vel_type;
     std::string init_pos_unit, init_vel_unit;
     long init_pos_frame, init_vel_frame;
-    XyzFrameSelectionMode init_pos_frame_mode = XyzFrameSelectionMode::Index;
-    XyzFrameSelectionMode init_vel_frame_mode = XyzFrameSelectionMode::Index;
+    FrameSelectionMode init_pos_frame_mode = FrameSelectionMode::Index;
+    FrameSelectionMode init_vel_frame_mode = FrameSelectionMode::Index;
     std::string init_pos_filename, init_vel_filename;
     int init_pos_index_offset, init_vel_index_offset;
 

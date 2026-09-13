@@ -29,7 +29,7 @@ public:
         int first_idx,
         const std::string& init_vel_unit,
         long init_vel_frame,
-        XyzFrameSelectionMode init_vel_frame_mode,
+        FrameSelectionMode init_vel_frame_mode,
         const std::shared_ptr<SystemState>& state,
         double mass
     );
@@ -44,5 +44,5 @@ private:
     int m_first_idx;
     std::string m_init_vel_unit;
     long m_init_vel_frame;
-    XyzFrameSelectionMode m_init_vel_frame_mode;
+    FrameSelectionMode m_init_vel_frame_mode;
 };

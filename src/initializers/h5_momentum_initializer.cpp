@@ -1,10 +1,12 @@
-#include "initializers/xyz_momentum_initializer.h"
-#include "initializers/xyz_data_loader.h"
+#ifdef USE_HDF5
+
+#include "initializers/h5_momentum_initializer.h"
+#include "initializers/h5_data_loader.h"
 #include "core/system_state.h"
 
-#include <utility>
+#include <format>
 
-XyzMomentumInitializer::XyzMomentumInitializer(
+H5MomentumInitializer::H5MomentumInitializer(
     const std::string& filename,
     int first_idx,
     const std::string& init_vel_unit,
@@ -21,15 +23,13 @@ XyzMomentumInitializer::XyzMomentumInitializer(
     m_init_vel_frame_mode(init_vel_frame_mode) {
 }
 
-void XyzMomentumInitializer::initialize() {
-    // Format filename with the current bead index (vformat returns literal if no fields)
-    const std::string vel_filename = std::vformat(
-        m_filename,
-        std::make_format_args(m_first_idx)
-    );
+void H5MomentumInitializer::initialize() {
+    const std::string h5_filename = std::vformat(
+        m_filename, std::make_format_args(m_first_idx));
 
-    XyzDataLoader::loadFromFile(
-        vel_filename,
+    H5DataLoader::loadFromFile(
+        h5_filename,
+        "velocities",
         m_init_vel_unit,
         "velocity",
         m_init_vel_frame,
@@ -38,3 +38,5 @@ void XyzMomentumInitializer::initialize() {
         m_mass
     );
 }
+
+#endif // USE_HDF5

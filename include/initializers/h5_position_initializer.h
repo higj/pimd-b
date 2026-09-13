@@ -1,4 +1,5 @@
 #pragma once
+#ifdef USE_HDF5
 
 #include "core/simulation_config.h"
 #include "initializers/position_initializer.h"
@@ -6,17 +7,19 @@
 #include <memory>
 #include <string>
 
-class XyzPositionInitializer final : public PositionInitializer {
+/**
+ * @brief Reads initial positions from one frame of an HDF5 trajectory file.
+ *
+ * The filename may contain one format field replaced by first_idx (same
+ * per-bead convention as XyzPositionInitializer). Frame selection is by
+ * ordinal index or by matching step number, controlled by init_pos_frame_mode.
+ *
+ * The HDF5 file must contain a 3D dataset "positions" with shape
+ * [n_frames, n_atoms, n_coords].
+ */
+class H5PositionInitializer final : public PositionInitializer {
 public:
-    /**
-     * @brief Creates an initializer that reads one frame from an XYZ trajectory.
-     *
-     * The filename may have one format replacement field, which is replaced
-     * with first_idx so individual MPI beads can use separate input files.
-     * init_pos_frame is either a zero-based frame index or a value from a
-     * "Step <number>" comment, according to init_pos_frame_mode.
-     */
-    XyzPositionInitializer(
+    H5PositionInitializer(
         const std::string& filename,
         int first_idx,
         const std::string& init_pos_unit,
@@ -26,9 +29,6 @@ public:
         const BoxContext& box_ctx
     );
 
-    /**
-     * Initializes positions from user-provided files.
-     */
     void initialize() override;
 
 private:
@@ -38,3 +38,5 @@ private:
     long m_init_pos_frame;
     FrameSelectionMode m_init_pos_frame_mode;
 };
+
+#endif // USE_HDF5

@@ -252,8 +252,8 @@ void Simulation::bindPositionInitFactory(
     const std::string filename = config->init_pos_filename;
     const int first_idx = config->this_bead + config->init_pos_index_offset;
     const std::string unit = config->init_pos_unit;
-    //const XyzFrameSelectionMode frame_mode = frame_selection_mode.value_or(config->init_pos_frame_mode);
-    const XyzFrameSelectionMode frame_mode = config->rpmd_config.enabled ? XyzFrameSelectionMode::Index : config->init_pos_frame_mode;
+    //const FrameSelectionMode frame_mode = frame_selection_mode.value_or(config->init_pos_frame_mode);
+    const FrameSelectionMode frame_mode = config->rpmd_config.enabled ? FrameSelectionMode::Index : config->init_pos_frame_mode;
 
     m_position_init_factory = [this, init_type, filename, first_idx, unit, frame_mode, config]
         (const std::optional<long> override_frame)
@@ -276,8 +276,6 @@ void Simulation::bindPositionInitFactory(
                 m_box_ctx
             );
         } else if (init_type == "xyz") {
-            //const long effective_frame = override_frame.has_value() ? override_frame.value() : config->init_pos_frame;
-            //const long effective_frame = override_frame.value_or(config->init_pos_frame);
             long effective_frame;
             if (override_frame.has_value()) {
                 effective_frame = override_frame.value();
@@ -300,6 +298,25 @@ void Simulation::bindPositionInitFactory(
                 std::shared_ptr<VecArray>(m_state, &m_state->coord),
                 m_box_ctx
             );
+#ifdef USE_HDF5
+        } else if (init_type == "hdf5") {
+            long effective_frame;
+            if (override_frame.has_value()) {
+                effective_frame = override_frame.value();
+            } else {
+                effective_frame = config->rpmd_config.enabled ? 0 : config->init_pos_frame;
+            }
+
+            initializer = std::make_unique<H5PositionInitializer>(
+                filename,
+                first_idx,
+                unit,
+                effective_frame,
+                frame_mode,
+                std::shared_ptr<VecArray>(m_state, &m_state->coord),
+                m_box_ctx
+            );
+#endif
         } else {
             throw std::invalid_argument("Unknown position initialization method: " + init_type);
         }
@@ -324,7 +341,7 @@ void Simulation::bindMomentumInitFactory(
     const std::string filename = config->init_vel_filename;
     const int first_idx = config->this_bead + config->init_vel_index_offset;
     const std::string unit = config->init_vel_unit;
-    const XyzFrameSelectionMode frame_mode = config->rpmd_config.enabled ? XyzFrameSelectionMode::Index : config->init_vel_frame_mode;
+    const FrameSelectionMode frame_mode = config->rpmd_config.enabled ? FrameSelectionMode::Index : config->init_vel_frame_mode;
     const double mass = config->mass;
     const double thermo_beta = config->thermo_beta;
 
@@ -345,8 +362,6 @@ void Simulation::bindMomentumInitFactory(
                 thermo_beta
             );
         } else if (init_type == "xyz") {
-            //const long effective_frame = override_frame.has_value() ? override_frame.value() : config->init_vel_frame;
-            //const long effective_frame = override_frame.value_or(config->init_vel_frame);
             long effective_frame;
             if (override_frame.has_value()) {
                 effective_frame = override_frame.value();
@@ -369,6 +384,25 @@ void Simulation::bindMomentumInitFactory(
                 m_state,
                 mass
             );
+#ifdef USE_HDF5
+        } else if (init_type == "hdf5") {
+            long effective_frame;
+            if (override_frame.has_value()) {
+                effective_frame = override_frame.value();
+            } else {
+                effective_frame = config->rpmd_config.enabled ? 0 : config->init_vel_frame;
+            }
+
+            initializer = std::make_unique<H5MomentumInitializer>(
+                filename,
+                first_idx,
+                unit,
+                effective_frame,
+                frame_mode,
+                m_state,
+                mass
+            );
+#endif
         } else {
             throw std::invalid_argument("Unknown momentum initialization method: " + init_type);
         }
