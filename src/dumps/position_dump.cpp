@@ -27,6 +27,12 @@ void PositionDump::output(int step) {
 
     H5Utils::append_int64(m_h5_step_ds, frame, step);
 
+#ifdef SINGLE_RPMD_FILE
+    if (m_is_multi_run) {
+        H5Utils::append_int64(m_h5_run_ds, frame, m_run_idx);
+    }
+#endif
+
     std::vector<double> buf(m_natoms * NDIM);
     for (int ptcl_idx = 0; ptcl_idx < m_natoms; ++ptcl_idx)
     {
@@ -47,8 +53,17 @@ void PositionDump::output(int step) {
     );
 #else
     m_out_file << std::format("{}\n", m_natoms);
+#ifdef SINGLE_RPMD_FILE
+    if (m_is_multi_run) {
+        m_out_file << std::format("Step {} Run {}\n", step, m_run_idx);
+    } else {
+        //m_out_file << std::format(" Atoms. MD step: {}\n", step);
+        m_out_file << std::format("Step {}\n", step);
+    }
+#else
     //m_out_file << std::format(" Atoms. MD step: {}\n", step);
     m_out_file << std::format("Step {}\n", step);
+#endif
 
     for (int ptcl_idx = 0; ptcl_idx < m_natoms; ++ptcl_idx) {
         m_out_file << "1";

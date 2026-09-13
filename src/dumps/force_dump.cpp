@@ -29,6 +29,12 @@ void ForceDump::output(int step) {
 
     H5Utils::append_int64(m_h5_step_ds, frame, step);
 
+#ifdef SINGLE_RPMD_FILE
+    if (m_is_multi_run) {
+        H5Utils::append_int64(m_h5_run_ds, frame, m_run_idx);
+    }
+#endif
+
     std::vector<double> buf(natoms * NDIM);
     for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx)
     {
@@ -50,7 +56,15 @@ void ForceDump::output(int step) {
     );
 #else
     m_out_file << std::format("{}\n", natoms);
+#ifdef SINGLE_RPMD_FILE
+    if (m_is_multi_run) {
+        m_out_file << std::format("Step {} Run {}\n", step, m_run_idx);
+    } else {
+        m_out_file << std::format("Step {}\n", step);
+    }
+#else
     m_out_file << std::format("Step {}\n", step);
+#endif
 
     for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx) {
         m_out_file << (ptcl_idx + 1) << " 1";

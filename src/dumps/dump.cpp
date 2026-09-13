@@ -8,6 +8,12 @@ Dump::Dump(int this_bead, int out_freq, const std::string& out_unit) : m_this_be
 Dump::~Dump()
 {
 #ifdef USE_HDF5
+#ifdef SINGLE_RPMD_FILE
+    if (m_h5_run_ds != H5I_INVALID_HID) {
+        H5Dclose(m_h5_run_ds);
+        m_h5_run_ds = H5I_INVALID_HID;
+    }
+#endif
     if (m_h5file_id != H5I_INVALID_HID) {
         H5Fclose(m_h5file_id);
         m_h5file_id = H5I_INVALID_HID;
@@ -20,6 +26,45 @@ Dump::~Dump()
 }
 
 void Dump::reopenFile(const std::filesystem::path& folder) {
+#ifdef SINGLE_RPMD_FILE
+    // Single-file mode: open once; subsequent calls just advance the run counter.
+#ifdef USE_HDF5
+    if (m_h5file_id != H5I_INVALID_HID) { ++m_run_idx; return; }
+
+    const std::filesystem::path target = folder.parent_path();
+    std::filesystem::create_directories(target);
+    const std::filesystem::path full_path = target / h5FileName();
+
+    m_h5file_id = H5Fcreate(full_path.string().c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+
+    if (m_h5file_id < 0) {
+        throw std::ios_base::failure("Failed to create HDF5 file: " + full_path.string());
+    }
+
+    if (m_is_multi_run) {
+        m_h5_run_ds = H5Utils::make_1d(m_h5file_id, "run", H5T_NATIVE_INT64);
+    }
+    h5CreateDatasets();
+#else
+    if (m_out_file.is_open())
+    {
+        ++m_run_idx; return;
+    }
+
+    const std::filesystem::path target = folder.parent_path();
+    std::filesystem::create_directories(target);
+    const std::filesystem::path full_path = target / fileName();
+
+    m_out_file.open(full_path, std::ios::out | std::ios::app);
+
+    if (!m_out_file.is_open()) {
+        throw std::ios_base::failure("Failed to open " + full_path.string());
+    }
+#endif
+
+#else
+    // Normal mode: close current file/HDF5 and open a new one.
+
     // Ensure the output directory exists
     std::filesystem::create_directories(folder);
 
@@ -54,6 +99,7 @@ void Dump::reopenFile(const std::filesystem::path& folder) {
     if (!m_out_file.is_open()) {
         throw std::ios_base::failure("Failed to open " + full_path.string());
     }
+#endif
 #endif
 }
 

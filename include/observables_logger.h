@@ -62,7 +62,12 @@ public:
      */
     //void reopenFile(const std::filesystem::path& new_filename);
 
+    void setMultiRun(const bool is_multi) { m_is_multi_run = is_multi; }
+
 private:
+    bool m_is_multi_run = false; // Flag indicating if this is a multi-run scenario
+    int m_run_idx = 0;           // Index of the current run (for multi-run scenarios)
+
     struct OutputFile {
         std::filesystem::path filename;
         std::ofstream stream;
@@ -73,6 +78,9 @@ private:
     struct H5ObsFile {
         hid_t file_id = H5I_INVALID_HID;
         hid_t step_ds = H5I_INVALID_HID;
+#ifdef SINGLE_RPMD_FILE
+        hid_t run_ds  = H5I_INVALID_HID;
+#endif
         std::vector<hid_t> col_datasets;  // one per observable quantity, in write order
         hsize_t row_count = 0;
     };

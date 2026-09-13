@@ -47,6 +47,11 @@ ObservablesLogger::~ObservablesLogger()
         if (h5_f.step_ds != H5I_INVALID_HID) {
             H5Dclose(h5_f.step_ds);
         }
+#ifdef SINGLE_RPMD_FILE
+        if (h5_f.run_ds != H5I_INVALID_HID) {
+            H5Dclose(h5_f.run_ds);
+        }
+#endif
         if (h5_f.file_id != H5I_INVALID_HID) {
             H5Fclose(h5_f.file_id);
         }
@@ -65,12 +70,26 @@ ObservablesLogger::~ObservablesLogger()
 void ObservablesLogger::openFile(const std::filesystem::path& filename) {
     if (m_this_bead == 0)
     {
+#ifdef SINGLE_RPMD_FILE
+        if (m_is_multi_run) {
+#ifdef USE_HDF5
+            if (!m_h5_obs_files.empty()) { ++m_run_idx; return; }
+#else
+            if (!m_output_files.empty()) { ++m_run_idx; return; }
+#endif
+        }
+#endif
+
 #ifdef USE_HDF5
         // Close any previously open HDF5 files
         for (auto& h5_f : m_h5_obs_files) {
-            for (const hid_t ds : h5_f.col_datasets)
+            for (const hid_t ds : h5_f.col_datasets) {
                 if (ds != H5I_INVALID_HID) H5Dclose(ds);
+            }
             if (h5_f.step_ds != H5I_INVALID_HID) H5Dclose(h5_f.step_ds);
+#ifdef SINGLE_RPMD_FILE
+            if (h5_f.run_ds != H5I_INVALID_HID) H5Dclose(h5_f.run_ds);
+#endif
             if (h5_f.file_id != H5I_INVALID_HID) H5Fclose(h5_f.file_id);
         }
         m_h5_obs_files.clear();
@@ -90,7 +109,16 @@ void ObservablesLogger::openFile(const std::filesystem::path& filename) {
 #endif
     }
 
+#ifdef SINGLE_RPMD_FILE
+    if (m_is_multi_run) {
+        // Step up from rpmd_N/ to the main output folder, matching Dump::reopenFile behaviour
+        openFileAndWriteHeader(filename.parent_path().parent_path() / filename.filename());
+    } else {
+        openFileAndWriteHeader(filename);
+    }
+#else
     openFileAndWriteHeader(filename);
+#endif
 }
 
 // Calculate and log observables data to the file
@@ -129,10 +157,20 @@ void ObservablesLogger::writeTimeStep(long step)
 
 #ifdef USE_HDF5
     for (const auto& h5_f : m_h5_obs_files) {
+#ifdef SINGLE_RPMD_FILE
+        if (m_is_multi_run) {
+            H5Utils::append_int64(h5_f.run_ds, h5_f.row_count, m_run_idx);
+        }
+#endif
         H5Utils::append_int64(h5_f.step_ds, h5_f.row_count, static_cast<int>(step));
     }
 #else
     for (auto& output_file : m_output_files) {
+#ifdef SINGLE_RPMD_FILE
+        if (m_is_multi_run) {
+            output_file.stream << std::format("{:^8d}", m_run_idx);
+        }
+#endif
         output_file.stream << std::format("{:^16.8e}", static_cast<double>(step));
     }
 #endif
@@ -219,6 +257,11 @@ void ObservablesLogger::openFileAndWriteHeader(const std::filesystem::path& file
             }
 
             h5_f.step_ds = H5Utils::make_1d(h5_f.file_id, "step", H5T_NATIVE_INT64);
+#ifdef SINGLE_RPMD_FILE
+            if (m_is_multi_run) {
+                h5_f.run_ds = H5Utils::make_1d(h5_f.file_id, "run", H5T_NATIVE_INT64);
+            }
+#endif
             m_h5_obs_files.push_back(std::move(h5_f));
         }
 
@@ -273,6 +316,11 @@ void ObservablesLogger::openFileAndWriteHeader(const std::filesystem::path& file
             );
         }
 
+#ifdef SINGLE_RPMD_FILE
+        if (m_is_multi_run) {
+            out_stream << std::format("{:^8s}", "run");
+        }
+#endif
         out_stream << std::format("{:^16s}", "step");
         for (const auto& observable : out_observables) {
             for (const auto& key : observable->quantities | std::views::keys) {

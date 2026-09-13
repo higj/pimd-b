@@ -25,6 +25,7 @@ set(NDIM "1" CACHE STRING "Determine the dimension of space")
 option(FACTORIAL_BOSONIC_ALGORITHM "Set to ON to compile with the naive bosonic algorithm" OFF)
 option(TAU_CONVENTION "Set to OFF to switch to beta convention" ON)
 option(USE_HDF5 "Use HDF5 output format instead of plain text" OFF)
+option(SINGLE_RPMD_FILE "Write all RPMD runs into a single output file" OFF)
 
 # Create the executable
 add_executable(pimdb ${PIMDB_SRC} ${PIMDB_HEADERS} ${PIMDB_LIBS})
@@ -45,6 +46,10 @@ if(USE_HDF5)
     target_link_libraries(pimdb ${HDF5_C_LIBRARIES})
     target_include_directories(pimdb PRIVATE ${HDF5_C_INCLUDE_DIRS})
     message(STATUS "HDF5 output enabled: ${HDF5_C_LIBRARIES}")
+endif()
+
+if(SINGLE_RPMD_FILE)
+    target_compile_definitions(pimdb PRIVATE SINGLE_RPMD_FILE)
 endif()
 
 # MPI

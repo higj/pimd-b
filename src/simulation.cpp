@@ -691,6 +691,14 @@ void Simulation::runRingPolymerMolecularDynamics() {
         m_bead_ctx.this_bead
     );
 
+    // Discriminate between single-run and multiple-run scenarios.
+    // In the case of multiple runs, we need to ensure that the observables logger
+    // and the dump objects are aware of this and handle file management accordingly.
+    m_obs_logger->setMultiRun(true);
+    for (const auto& dump : m_dumps) {
+        dump->setMultiRun(true);
+    }
+
     for (int run = 0; run < m_rpmd_context.num_runs; ++run) {
         printStatus(std::format("Starting NVE run {}/{} (frame index {}/{})", run + 1, m_rpmd_context.num_runs, rpmd_frames[run], last_frame_idx), m_bead_ctx.this_bead);
 
