@@ -7,19 +7,45 @@ VelocityDump::VelocityDump(const VelocityContext& dump_context, int this_bead, i
     Units::validateUnit("velocity", out_unit);
 }
 
-/*void VelocityDump::initialize()
-{
-    // Open the output file for appending, creating it if it doesn't exist
-    // TODO: Consider using std::filesystem to ensure the output directory exists before opening the file
-    m_out_file.open(std::format("{}/velocity_{}.xyz", Output::FOLDER_NAME, m_this_bead), std::ios::out | std::ios::app);
-    //m_out_file << std::format("# Units: {}\n", m_out_unit);
-}*/
+#ifdef USE_HDF5
+void VelocityDump::h5CreateDatasets() {
+    m_h5_step_ds = H5Utils::make_1d(m_h5file_id, "step", H5T_NATIVE_INT64);
+    m_h5_vel_ds = H5Utils::make_frame_ds(m_h5file_id, "velocities",
+        static_cast<hsize_t>(m_natoms),
+        static_cast<hsize_t>(NDIM));
+}
+#endif
 
 void VelocityDump::output(int step)
 {
     if (step % m_out_freq != 0)
         return;
 
+#ifdef USE_HDF5
+    const hsize_t frame = m_h5_frame_count++;
+
+    H5Utils::append_int64(m_h5_step_ds, frame, step);
+
+    std::vector<double> buf(m_natoms * NDIM);
+    for (int ptcl_idx = 0; ptcl_idx < m_natoms; ++ptcl_idx)
+    {
+        for (int axis = 0; axis < NDIM; ++axis)
+        {
+            buf[ptcl_idx * NDIM + axis] = Units::convertToUser(
+                "velocity", 
+                m_out_unit,
+                (*m_context.momenta)(ptcl_idx, axis) / m_context.mass
+            );
+        }
+    }
+
+    H5Utils::append_frame(
+        m_h5_vel_ds, frame,
+        buf.data(),
+        static_cast<hsize_t>(m_natoms),
+        static_cast<hsize_t>(NDIM)
+    );
+#else
     m_out_file << std::format("{}\n", m_natoms);
     m_out_file << std::format("Step {}\n", step);
 
@@ -49,4 +75,5 @@ void VelocityDump::output(int step)
 #endif
         m_out_file << "\n";
     }
+#endif
 }

@@ -8,13 +8,15 @@ ForceDump::ForceDump(const std::shared_ptr<SystemState>& state, int this_bead, i
     Units::validateUnit("force", out_unit);
 }
 
-/*
-void ForceDump::initialize() {
-    
-    m_out_file.open(std::format("{}/force_{}.dat", Output::FOLDER_NAME, m_this_bead), std::ios::out | std::ios::app);
-    //m_out_file.open(std::format("{}/force_{}.dat", Output::FOLDER_NAME, m_state->currentBead()), std::ios::out | std::ios::app);
-    //m_out_file << std::format("# Units: {}\n", m_out_unit);
-}*/
+#ifdef USE_HDF5
+void ForceDump::h5CreateDatasets() {
+    const int natoms = m_state->getNumAtoms();
+    m_h5_step_ds = H5Utils::make_1d(m_h5file_id, "step", H5T_NATIVE_INT64);
+    m_h5_frc_ds = H5Utils::make_frame_ds(m_h5file_id, "forces",
+        static_cast<hsize_t>(natoms),
+        static_cast<hsize_t>(NDIM));
+}
+#endif
 
 void ForceDump::output(int step) {
     if (step % m_out_freq != 0)
@@ -22,6 +24,31 @@ void ForceDump::output(int step) {
 
     const int natoms = m_state->getNumAtoms();
 
+#ifdef USE_HDF5
+    const hsize_t frame = m_h5_frame_count++;
+
+    H5Utils::append_int64(m_h5_step_ds, frame, step);
+
+    std::vector<double> buf(natoms * NDIM);
+    for (int ptcl_idx = 0; ptcl_idx < natoms; ++ptcl_idx)
+    {
+        for (int ax = 0; ax < NDIM; ++ax)
+        {
+            buf[ptcl_idx * NDIM + ax] = Units::convertToUser(
+                "force", 
+                m_out_unit,
+                m_state->getTotalForce(ptcl_idx, ax)
+            );
+        }
+    }
+    H5Utils::append_frame(
+        m_h5_frc_ds, 
+        frame,
+        buf.data(),
+        static_cast<hsize_t>(natoms),
+        static_cast<hsize_t>(NDIM)
+    );
+#else
     m_out_file << std::format("{}\n", natoms);
     m_out_file << std::format("Step {}\n", step);
 
@@ -45,4 +72,5 @@ void ForceDump::output(int step) {
 #endif
         m_out_file << "\n";
     }
+#endif
 }

@@ -31,4 +31,10 @@ protected:
 
 private:
     std::shared_ptr<SystemState> m_state;
+
+#ifdef USE_HDF5
+    hid_t m_h5_step_ds = H5I_INVALID_HID;
+    hid_t m_h5_frc_ds = H5I_INVALID_HID;
+    void h5CreateDatasets() override;
+#endif
 };

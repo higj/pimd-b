@@ -4,6 +4,10 @@
 #include <fstream>
 #include <filesystem>
 
+#ifdef USE_HDF5
+#include "hdf5_utils.h"
+#endif
+
 class Dump {
 public:
     /**
@@ -34,4 +38,15 @@ protected:
     std::ofstream m_out_file;  // Output file stream
 
     [[nodiscard]] virtual std::string fileName() const = 0;
+
+#ifdef USE_HDF5
+    hid_t   m_h5file_id = H5I_INVALID_HID;
+    hsize_t m_h5_frame_count = 0;
+
+    /// Derived class must create its datasets inside the already-open m_h5file_id.
+    virtual void h5CreateDatasets() = 0;
+
+    /// fileName() with the extension replaced by ".h5".
+    std::string h5FileName() const;
+#endif
 };

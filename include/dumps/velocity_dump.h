@@ -28,4 +28,10 @@ protected:
 private:
     VelocityContext m_context;
     int m_natoms;
+
+#ifdef USE_HDF5
+    hid_t m_h5_step_ds = H5I_INVALID_HID;
+    hid_t m_h5_vel_ds = H5I_INVALID_HID;
+    void h5CreateDatasets() override;
+#endif
 };

@@ -8,29 +8,52 @@ PositionDump::PositionDump(const std::shared_ptr<const VecArray>& coord, int thi
     Units::validateUnit("length", out_unit);
 }
 
-/*
-void PositionDump::initialize()
-{
-    m_out_file.open(std::format("{}/position_{}.xyz", Output::FOLDER_NAME, m_this_bead), std::ios::out | std::ios::app);
-    //m_out_file << std::format("# Units: {}\n", m_out_unit);
+#ifdef USE_HDF5
+void PositionDump::h5CreateDatasets() {
+    // step [N],  positions [N, n_atoms, NDIM]
+    m_h5_step_ds = H5Utils::make_1d(m_h5file_id, "step", H5T_NATIVE_INT64);
+    m_h5_pos_ds = H5Utils::make_frame_ds(m_h5file_id, "positions",
+        static_cast<hsize_t>(m_natoms),
+        static_cast<hsize_t>(NDIM));
 }
-*/
+#endif
 
-void PositionDump::output(int step)
-{
+void PositionDump::output(int step) {
     if (step % m_out_freq != 0)
         return;
 
+#ifdef USE_HDF5
+    const hsize_t frame = m_h5_frame_count++;
+
+    H5Utils::append_int64(m_h5_step_ds, frame, step);
+
+    std::vector<double> buf(m_natoms * NDIM);
+    for (int ptcl_idx = 0; ptcl_idx < m_natoms; ++ptcl_idx)
+    {
+        for (int axis = 0; axis < NDIM; ++axis) {
+            buf[ptcl_idx * NDIM + axis] = Units::convertToUser(
+                "length", 
+                m_out_unit,
+                (*m_coord)(ptcl_idx, axis)
+            );
+        }
+    }
+    H5Utils::append_frame(
+        m_h5_pos_ds, 
+        frame,
+        buf.data(),
+        static_cast<hsize_t>(m_natoms),
+        static_cast<hsize_t>(NDIM)
+    );
+#else
     m_out_file << std::format("{}\n", m_natoms);
     //m_out_file << std::format(" Atoms. MD step: {}\n", step);
     m_out_file << std::format("Step {}\n", step);
 
-    for (int ptcl_idx = 0; ptcl_idx < m_natoms; ++ptcl_idx)
-    {
+    for (int ptcl_idx = 0; ptcl_idx < m_natoms; ++ptcl_idx) {
         m_out_file << "1";
 
-        for (int axis = 0; axis < NDIM; ++axis)
-        {
+        for (int axis = 0; axis < NDIM; ++axis) {
             m_out_file << std::format(
                 " {:^20.12e}",
                 Units::convertToUser(
@@ -47,4 +70,5 @@ void PositionDump::output(int step)
 #endif
         m_out_file << "\n";
     }
+#endif
 }
